@@ -42,17 +42,12 @@ The application includes the following tables:
 
 ### Backend Setup
 
-1. Navigate to the backend directory:
-```bash
-cd backend
-```
-
-2. Install dependencies:
+1. Install dependencies:
 ```bash
 npm install
 ```
 
-3. Create a `.env` file based on `.env.example`:
+2. Navigate to backend Create a `.env` file based on `.env.example`:
 ```bash
 cp .env.example .env
 ```
@@ -63,7 +58,7 @@ PORT=3001
 JWT_SECRET=your_strong_random_secret
 DATABASE_URL="postgresql://user:password@host:port/db_name?schema=public" 
 ```
-5. Run migrate command 
+5. Navigate to backend Run generate  command 
 ```bash 
 npx prisma generate
 ```
@@ -77,28 +72,14 @@ npx prisma migrate dev
 npm run seed
 ```
 
-8. Start the backend server:
-```bash
-npm start
-```
-
-The backend will run on http://localhost:3001
-
-### Frontend Setup
-
-1. Navigate to the project root directory
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Start the development server:
+8. Navigate the root directory:
 ```bash
 npm run dev
 ```
 
+The backend will run on http://localhost:3001
 The frontend will run on http://localhost:5173
+
 
 ## Default Login Credentials
 
