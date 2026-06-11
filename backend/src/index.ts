@@ -25,7 +25,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
  
 app.use("/api/auth", authRoutes);
-
 app.use("/api/webhooks", webhookRoutes);
 
 app.get("/health", (_req, res) => {

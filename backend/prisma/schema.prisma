@@ -232,7 +232,7 @@ model LeadSource {
   active   Boolean @default(true)
 
   createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
   subIds           SubId[]
@@ -245,17 +245,12 @@ model SubId {
   id       Int @id @default(autoincrement())
   sourceId Int @map("source_id")
 
-  subId          String  @unique @map("sub_id")
-  campaign       String?
-  adSet          String? @map("ad_set")
-  creative       String?
-  targetAudience String? @map("target_audience")
+  subId    String  @unique @map("sub_id")
+  campaign String?
+  active   Boolean @default(true)
 
-  dailyBudget Decimal? @db.Decimal(10, 2)
-  active      Boolean  @default(true)
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
 
   source LeadSource @relation(fields: [sourceId], references: [id])
 
@@ -346,15 +341,15 @@ model Lead {
 model Call {
   id Int @id @default(autoincrement())
 
-  externalCallId String? @unique @map("external_call_id")
-  leadAttributionId Int? @map("lead_attribution_id")
+  externalCallId    String? @unique @map("external_call_id")
+  leadAttributionId Int?    @map("lead_attribution_id")
 
   leadId       Int? @map("lead_id")
   agentId      Int? @map("agent_id")
   departmentId Int? @map("department_id")
 
   clientPhone String @map("client_phone")
-  clientName String @map("client_name")
+  clientName  String @map("client_name")
 
   direction String
 
@@ -389,8 +384,8 @@ model Call {
 
   agent Agent? @relation(fields: [agentId], references: [id])
 
-  department        Department?      @relation(fields: [departmentId], references: [id])
-  leadAttribution   LeadAttribution? @relation(fields: [leadAttributionId], references: [id])
+  department      Department?      @relation(fields: [departmentId], references: [id])
+  leadAttribution LeadAttribution? @relation(fields: [leadAttributionId], references: [id])
 
   @@index([leadId])
   @@index([agentId])

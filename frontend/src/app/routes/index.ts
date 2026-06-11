@@ -1,5 +1,5 @@
 import ProtectedRoute from "@/components/shared/ProtectedRoute";
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, redirect  } from "react-router-dom";
 import PublicLayout from "../layouts/PublicLayout";
 import DashboardPage from "../pages/dashboard";
 // import DncTablePage from "../pages/dnc/DncTablePageV2";
@@ -25,6 +25,12 @@ export const router = createBrowserRouter([
     // Component: ProtectedLayout,
     children: [
       { path: "dashboard", Component: DashboardPage },
+
+      // catch all routes and redirect to dashboard.
+      {
+      path: "dashboard/*",
+      loader: () => redirect("/dashboard"),
+    },
     ],
   },
 ]);

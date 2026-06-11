@@ -9,11 +9,11 @@ export function verifyForthSignature(
   res: Response,
   next: NextFunction
 ): void {
-  const secret = process.env.FORTH_WEBHOOK_SECRET;
+  const secret = process.env.API_KEY;
 
   if (!secret) {
     console.warn(
-      "[ForthWebhook] FORTH_WEBHOOK_SECRET not set — skipping signature check"
+      "[ForthWebhook] API_KEY not set — skipping signature check"
     );
     next();
     return;
@@ -33,15 +33,15 @@ export function verifyForthSignature(
 
   if (!signature) {
     res.status(401).json({
-      error: "Missing webhook signature header",
+      error: "Missing API key in webhook signature header",
     });
     return;
   }
   try {
-    const isValid =signature == process.env.FORTH_WEBHOOK_SECRET
+    const isValid =signature == process.env.API_KEY
     if (!isValid) {
       res.status(401).json({
-        error: "Invalid webhook signature",
+        error: "Invalid API key webhook signature",
       });
       return;
     }
