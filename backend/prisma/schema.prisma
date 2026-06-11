@@ -1,0 +1,400 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Tenant {
+  id        Int       @id @default(autoincrement())
+  name      String
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at") // Fixed: added @updatedAt
+  deletedAt DateTime? @map("deleted_at")
+
+  users        User[]
+  activityLogs ActivityLog[]
+  webhookLogs  WebhookLog[]
+
+  @@index([deletedAt], name: "idx_tenant_deleted_at")
+  @@map("tenants")
+}
+
+model Role {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at") // Fixed: added @updatedAt
+  deletedAt DateTime? @map("deleted_at")
+
+  users              User[]
+  roleHasPermissions RoleHasPermission[]
+
+  @@map("roles")
+}
+
+model Department {
+  id                 Int       @id @default(autoincrement())
+  name               String
+  code               String
+  zeroTolerance      Boolean   @default(false) @map("zero_tolerance")
+  maxStrikes         Int       @default(2) @map("max_strikes")
+  pipDurationDays    Int       @default(14) @map("pip_duration_days")
+  qaThresholdWarning Int       @default(45) @map("qa_threshold_warning")
+  qaThresholdPip     Int       @default(35) @map("qa_threshold_pip")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at") // Fixed: added @updatedAt
+  deletedAt          DateTime? @map("deleted_at")
+
+  users  User[]
+  agents Agent[]
+  calls  Call[]
+
+  @@map("departments")
+}
+
+model Permission {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at") // Fixed: added @updatedAt
+  deletedAt   DateTime? @map("deleted_at")
+
+  roleHasPermissions RoleHasPermission[]
+
+  @@map("permissions")
+}
+
+model RoleHasPermission {
+  id           Int       @id @default(autoincrement())
+  roleId       Int       @map("role_id")
+  permissionId Int       @map("permission_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at") // Fixed: added @updatedAt
+  deletedAt    DateTime? @map("deleted_at")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_has_permissions")
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  tenantId     Int       @map("tenant_id")
+  departmentId Int       @map("department_id")
+  roleId       Int       @map("role_id")
+  name         String
+  email        String    @unique
+  password     String
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at") // Fixed: added @updatedAt
+  deletedAt    DateTime? @map("deleted_at")
+
+  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  role             Role              @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  department       Department        @relation(fields: [departmentId], references: [id], onDelete: Restrict) // Fixed: changed from Departments to Department
+  sessions         Session[]
+  activityLogs     ActivityLog[]
+  leadAttributions LeadAttribution[]
+
+  @@unique([email, tenantId]) // Added: unique constraint for email per tenant
+  @@index([deletedAt], name: "idx_user_deleted_at")
+  @@map("users")
+}
+
+model Agent {
+  id Int @id @default(autoincrement())
+
+  name  String
+  email String? @unique
+  phone String  @unique
+
+  departmentId Int @map("department_id")
+
+  callerReadyExtensionId String @map("rc_extension_id")
+
+  active Boolean @default(true)
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  department Department @relation(fields: [departmentId], references: [id])
+
+  calls Call[]
+
+  @@map("agents")
+}
+
+model PasswordReset {
+  id        Int      @id @default(autoincrement())
+  email     String
+  token     String   @unique // Added: token should be unique
+  expiresAt DateTime @map("expires_at") // Added: expiration for security
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("password_resets")
+}
+
+model Session {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  token      String   @unique // Added: session token for authentication
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  expiresAt  DateTime @map("expires_at") // Added: session expiration
+  lastActive DateTime @default(now()) @map("last_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model ActivityLog {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  tenantId    Int      @map("tenant_id")
+  action      String
+  description String?
+  ipAddress   String?  @map("ip_address") // Added: for auditing
+  userAgent   String?  @map("user_agent") // Added: for auditing
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+model Job {
+  id          BigInt    @id @default(autoincrement())
+  queue       String
+  payload     Json // Changed: should be Json type instead of String for flexibility
+  attempts    Int       @default(0)
+  reservedAt  DateTime? @map("reserved_at")
+  availableAt DateTime  @map("available_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([queue])
+  @@index([availableAt])
+  @@index([reservedAt])
+  @@map("jobs")
+}
+
+model WebhookLog {
+  id        Int    @id @default(autoincrement())
+  tenantId  Int    @map("tenant_id")
+  source    String // forth | skywave
+  eventType String @map("event_type")
+  payload   Json // Raw webhook payload
+  headers   Json? // Headers for debugging
+
+  // Processing result
+  processed    Boolean   @default(false)
+  processedAt  DateTime? @map("processed_at")
+  errorMessage String?   @map("error_message")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([source])
+  @@index([eventType])
+  @@index([processed])
+  @@index([createdAt])
+  @@map("webhook_logs")
+}
+
+model LeadSource {
+  id       Int     @id @default(autoincrement())
+  name     String  @unique
+  platform String?
+  active   Boolean @default(true)
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  subIds           SubId[]
+  leadAttributions LeadAttribution[]
+
+  @@map("lead_sources")
+}
+
+model SubId {
+  id       Int @id @default(autoincrement())
+  sourceId Int @map("source_id")
+
+  subId          String  @unique @map("sub_id")
+  campaign       String?
+  adSet          String? @map("ad_set")
+  creative       String?
+  targetAudience String? @map("target_audience")
+
+  dailyBudget Decimal? @db.Decimal(10, 2)
+  active      Boolean  @default(true)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  source LeadSource @relation(fields: [sourceId], references: [id])
+
+  leadAttributions LeadAttribution[]
+
+  @@index([sourceId])
+  @@map("sub_ids")
+}
+
+model LeadAttribution {
+  id Int @id @default(autoincrement())
+
+  sourceId Int? @map("source_id")
+  subIdId  Int? @map("sub_id_id")
+
+  leadDate DateTime @default(now()) @map("lead_date")
+
+  contactMade Boolean   @default(false) @map("contact_made")
+  contactAt   DateTime? @map("contact_at")
+
+  billable Boolean @default(false)
+
+  enrolled   Boolean   @default(false)
+  enrolledAt DateTime? @map("enrolled_at")
+
+  dealValue   Decimal? @db.Decimal(10, 2)
+  programType String?  @map("program_type")
+
+  agentId Int? @map("agent_id")
+
+  contactRateScore    Decimal? @map("contact_rate_score") @db.Decimal(5, 2)
+  billableRateScore   Decimal? @map("billable_rate_score") @db.Decimal(5, 2)
+  enrollmentRateScore Decimal? @map("enrollment_rate_score") @db.Decimal(5, 2)
+  dealValueScore      Decimal? @map("deal_value_score") @db.Decimal(5, 2)
+  callDurationScore   Decimal? @map("call_duration_score") @db.Decimal(5, 2)
+
+  qaScoreContribution Decimal? @map("qa_score_contribution") @db.Decimal(5, 2)
+
+  compositeLeadScore Decimal? @map("composite_lead_score") @db.Decimal(5, 2)
+
+  scaleKillFlag String? @map("scale_kill_flag")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  source LeadSource? @relation(fields: [sourceId], references: [id])
+  subId  SubId?      @relation(fields: [subIdId], references: [id])
+
+  agent User? @relation(fields: [agentId], references: [id])
+
+  calls Call[]
+  lead  Lead?
+
+  @@index([sourceId])
+  @@index([subIdId])
+  @@index([agentId])
+  @@map("lead_attributions")
+}
+
+model Lead {
+  id Int @id @default(autoincrement())
+
+  leadAttributionId Int @unique @map("lead_attribution_id")
+
+  firstName String? @map("first_name")
+  lastName  String? @map("last_name")
+
+  email String?
+  phone String
+
+  state String?
+  city  String?
+
+  status String? // New, Contacted, Qualified, Enrolled, Lost
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  leadAttribution LeadAttribution @relation(fields: [leadAttributionId], references: [id])
+
+  calls Call[]
+
+  @@index([phone])
+  @@index([status])
+  @@map("leads")
+}
+
+model Call {
+  id Int @id @default(autoincrement())
+
+  externalCallId String? @unique @map("external_call_id")
+  leadAttributionId Int? @map("lead_attribution_id")
+
+  leadId       Int? @map("lead_id")
+  agentId      Int? @map("agent_id")
+  departmentId Int? @map("department_id")
+
+  clientPhone String @map("client_phone")
+  clientName String @map("client_name")
+
+  direction String
+
+  startedAt DateTime  @map("started_at")
+  endedAt   DateTime? @map("ended_at")
+
+  durationSeconds Int? @map("duration_seconds")
+
+  recordingUrl  String? @map("recording_url")
+  transcriptUrl String? @map("transcript_url")
+
+  talkRatioAgent  Decimal? @db.Decimal(5, 2)
+  talkRatioClient Decimal? @db.Decimal(5, 2)
+
+  wordsPerMinute Int? @map("words_per_minute")
+
+  wpmClassification String? @map("wpm_classification")
+
+  interruptionCount Int @default(0) @map("interruption_count")
+
+  sentimentOpening String? @map("sentiment_opening")
+  sentimentOverall String? @map("sentiment_overall")
+
+  outcome  String?
+  campaign String?
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  lead Lead? @relation(fields: [leadId], references: [id])
+
+  agent Agent? @relation(fields: [agentId], references: [id])
+
+  department        Department?      @relation(fields: [departmentId], references: [id])
+  leadAttribution   LeadAttribution? @relation(fields: [leadAttributionId], references: [id])
+
+  @@index([leadId])
+  @@index([agentId])
+  @@index([startedAt])
+  @@index([outcome])
+  @@map("calls")
+}
