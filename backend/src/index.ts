@@ -5,7 +5,9 @@ import express from "express";
 import errorHandler from "./middleware/errorHandler";
 import authRoutes from "./modules/auth/authRoute";
 import webhookRoutes from "./webhook/routes";
-import agentController from "./modules/agent/controller"
+import dashBoardData from "./dashboard/index";
+
+
 dotenv.config();
 
 const app = express();
@@ -26,6 +28,7 @@ app.use(express.json());
  
 app.use("/api/auth", authRoutes);
 app.use("/api/webhooks", webhookRoutes);
+app.use("/api/dashboard", dashBoardData);
 
 app.get("/health", (_req, res) => {
   res.json({

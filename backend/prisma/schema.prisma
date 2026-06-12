@@ -393,3 +393,21 @@ model Call {
   @@index([outcome])
   @@map("calls")
 }
+
+model ZendeskTicket {
+  id                     Int       @id @default(autoincrement())
+  ticketId               Int       @unique @map("ticket_id")
+  subject                String?   @db.Text
+  status                 String?   @db.VarChar(50)
+  priority               String?   @db.VarChar(50)
+  assigneeId             BigInt?   @map("assignee_id")
+  requesterId            BigInt?   @map("requester_id")
+  groupId                BigInt?   @map("group_id")
+  formId                 BigInt?   @map("form_id")
+  entity                 String?   @db.VarChar(20)
+  webhookReciveAtZendesk DateTime? @map("webhook_trigger")
+  createdAt              DateTime? @default(now()) @map("created_at")
+  updatedAt              DateTime? @updatedAt @default(now()) @map("updated_at")
+
+  @@map("zendesk_tickets")
+}

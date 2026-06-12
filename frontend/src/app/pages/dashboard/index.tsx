@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { API_URL } from '@/config';
 
 // ============================================
 // TYPES
@@ -419,14 +420,24 @@ const Dashboard: React.FC = () => {
   const [dateTo, setDateTo] = useState('2026-03-29');
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
 
+  const [kpi, setKpi] = useState({ tax_total: 0, tax_pending: 0, tax_urgent_pending: 0, tax_solved: 0, debt_total: 0, debt_open: 0, debt_unassigned: 0, debt_solved: 0, });
   // Effects
   useEffect(() => {
     applyFilters();
-  }, [filters, allCalls]);
+    if (activePage === 'zendesk') {
+      fetchZendeskData();
+    }
+  }, [filters, allCalls, activePage]);
+
+  const fetchZendeskData = async () => {
+    const response = await fetch(`${API_URL}/api/dashboard/zendesk`);
+    const data = await response.json();
+    setKpi(data);
+  };
 
   // Functions
   const applyFilters = () => {
-    console.log(allCalls,'allCallsallCalls');
+    console.log(allCalls, 'allCallsallCalls');
     const filtered = allCalls.filter(c => {
       if (filters.outcome && c.outcome !== filters.outcome) return false;
       if (filters.flag && !c.flags.includes(filters.flag)) return false;
@@ -1367,7 +1378,7 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
         <div className="kpi-card"><div className="kpi-card-label">Debt Total Net</div><div className="kpi-card-sub">Current week</div><div className="kpi-card-val">$0</div></div>
-        <div className="kpi-card"><div className="kpi-card-label">Debt - MTD Net</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val green" style={{fontSize:'26px'}}>$0</div></div>
+        <div className="kpi-card"><div className="kpi-card-label">Debt - MTD Net</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val green" style={{ fontSize: '26px' }}>$0</div></div>
       </div>
     </div>
   );
@@ -1515,19 +1526,19 @@ const Dashboard: React.FC = () => {
         <div>
           <div className="fs-10 uppercase fw-600 text-muted mb-12" style={{ letterSpacing: '0.08em' }}>TAX</div>
           <div className="kpi-grid kpi-grid-2 mb-12">
-            <div className="kpi-card"><div className="kpi-card-label">TAX Total Tickets</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val lg">0</div></div>
-            <div className="kpi-card"><div className="kpi-card-label">TAX Tickets Pending</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val lg">0</div></div>
-            <div className="kpi-card"><div className="kpi-card-label">TAX Urgent Tickets Pending</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val gold lg">0</div></div>
-            <div className="kpi-card"><div className="kpi-card-label">TAX Tickets Solved</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val green lg">0</div></div>
+            <div className="kpi-card"><div className="kpi-card-label">TAX Total Tickets</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val lg">{kpi.tax_total}</div></div>
+            <div className="kpi-card"><div className="kpi-card-label">TAX Tickets Pending</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val lg">{kpi.tax_pending}</div></div>
+            <div className="kpi-card"><div className="kpi-card-label">TAX Urgent Tickets Pending</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val gold lg">{kpi.tax_urgent_pending}</div></div>
+            <div className="kpi-card"><div className="kpi-card-label">TAX Tickets Solved</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val green lg">{kpi.tax_solved}</div></div>
           </div>
         </div>
         <div>
           <div className="fs-10 uppercase fw-600 text-muted mb-12" style={{ letterSpacing: '0.08em' }}>DEBT</div>
           <div className="kpi-grid kpi-grid-2 mb-12">
-            <div className="kpi-card"><div className="kpi-card-label">DEBT Total Tickets</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val lg">0</div></div>
-            <div className="kpi-card"><div className="kpi-card-label">DEBT Open Tickets</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val lg">0</div></div>
-            <div className="kpi-card"><div className="kpi-card-label">DEBT Unassigned Tickets</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val red lg">0</div></div>
-            <div className="kpi-card"><div className="kpi-card-label">DEBT Solved Tickets</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val green lg">0</div></div>
+            <div className="kpi-card"><div className="kpi-card-label">DEBT Total Tickets</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val lg">{kpi.debt_total}</div></div>
+            <div className="kpi-card"><div className="kpi-card-label">DEBT Open Tickets</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val lg">{kpi.debt_open}</div></div>
+            <div className="kpi-card"><div className="kpi-card-label">DEBT Unassigned Tickets</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val red lg">{kpi.debt_unassigned}</div></div>
+            <div className="kpi-card"><div className="kpi-card-label">DEBT Solved Tickets</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val green lg">{kpi.debt_solved}</div></div>
           </div>
         </div>
       </div>

@@ -1,0 +1,640 @@
+[
+  {
+    "receivedAt": "2026-06-12T12:28:38.635Z",
+    "event": "zendesk-webhook",
+    "data": {
+      "account_id": 22453773,
+      "detail": {
+        "actor_id": "51515346535955",
+        "assignee_id": "45452599574675",
+        "brand_id": "34213510875539",
+        "created_at": "2026-06-04T20:21:16Z",
+        "custom_status": "34213496924435",
+        "description": "## In replies all text above this line is added to the ticket ##\n\n<b>(Reply to this email to follow up on this issue)</b>\n\nNote: If you're cc'd on the ticket, please  <b>reply all</b> to ensure comments are added to the ticket. \n\n----------------------------------------------\n\nTwilio Support, Jun 4, 2026, 1:21 PM PDT\n\n[6/4/2026, 1:02:48 PM PDT]\n\n**sara@citytax.com:** How to Increase messaging limit by vetting apply\n\n[6/4/2026, 1:03:16 PM PDT]\n\n**Sofía:** Hello Sara,   Thank you for reaching out to Twilio support, my name is Sofía and I will be helping you with this matter.\n\n[6/4/2026, 1:04:18 PM PDT]\n\n**Sofía:** Got it! I understand you are looking to apply for a secondary vetting to increase the throughput limits. This process is done from our end, this has a $41 fee associated with the same.\n\n[6/4/2026, 1:04:53 PM PDT]\n\n**Sofía:** If you agree, please share the Account SID and the Brand SID associated with this request and we can start this process.\n\n[6/4/2026, 1:06:38 PM PDT]\n\n**sara@citytax.com:** Brand Id : BNe70c0bc50944d19bf1a8abed86ca5e0a Account SID: AC78d62a5fe0dd507b885b510f81eb2a52\n\n[6/4/2026, 1:08:12 PM PDT]\n\n**Sofía:** Thank you, I have created an internal request for this, at the moment, we will need to convert this chat into the Ticket#27349257 while we obtain updates from this request.\n\n[6/4/2026, 1:08:24 PM PDT]\n\n**Sofía:** At the moment, while I still have you in this live chat is there anything else I can help you with?\n\n[6/4/2026, 1:09:38 PM PDT]\n\n**sara@citytax.com:** Have you submit the ticket for Vetting Or it is done from my End because you maintion that it is done form you end\n\n[6/4/2026, 1:10:18 PM PDT]\n\n**Sofía:** I have submitted the internal request for the vetting, the support ticket I have provided is to keep you posted with the developments of the same.\n\n[6/4/2026, 1:11:01 PM PDT]\n\n**Sofía:** We have this guide to locate the Tickets in the Twilio console: https://help.twilio.com/articles/223136247-Managing-Your-Twilio-Support-Tickets\n\n[6/4/2026, 1:12:44 PM PDT]\n\n**sara@citytax.com:** So how much time it takes to approve\n\n[6/4/2026, 1:13:09 PM PDT]\n\n**Sofía:** The timeframe depends, normally it can take up to a week.\n\n[6/4/2026, 1:13:47 PM PDT]\n\n**sara@citytax.com:** please get this done asap\n\n[6/4/2026, 1:14:20 PM PDT]\n\n**Sofía:** Yes, as soon as we have updates we will be sharing them on the ticket thread\n\n[6/4/2026, 1:15:24 PM PDT]\n\n**sara@citytax.com:** ok thaks\n\n[6/4/2026, 1:15:53 PM PDT]\n\n**Sofía:** You are welcome! Looking forward to update you soon, hope you have a good day!\n\n[6/4/2026, 1:16:23 PM PDT]\n\n**sara@citytax.com:** 😊\n\n<p style=\"font-family:Lucida Grande; font-size: 14px;\"> Did this solve your issue? You can set this ticket to solved by clicking the link below:\n<br><a href=\"https://selfserve.support.twilio.com/ticket/solve?id=27349257&code=29WYRG-L0LEV\" rel=\"nofollow\">This ticket is solved</a>\n</p>\n\n\n<br>This is in reference to ticket # 27349257\n\n--------------------------------\nThis email is a service from Twilio.\n\n\n\n\n\n\n\n\n\n[29WYRG-L0LEV]",
+        "external_id": null,
+        "form_id": "34213496795155",
+        "group_id": "50440545727891",
+        "id": "53519",
+        "is_public": true,
+        "organization_id": null,
+        "priority": null,
+        "requester_id": "51515346535955",
+        "status": "OPEN",
+        "subject": "[Twilio] Re: Chat Question from sara@citytax.com",
+        "submitter_id": "51515346535955",
+        "tags": [
+          "taxticket"
+        ],
+        "type": null,
+        "updated_at": "2026-06-09T16:48:09Z",
+        "via": {
+          "channel": "mail"
+        }
+      },
+      "event": {
+        "comment": {
+          "author": {
+            "id": "51515346535955",
+            "is_staff": false,
+            "name": "Twilio Support"
+          },
+          "body": "## In replies all text above this line is added to the ticket ##\n\n**(Reply to this email to follow up on this issue)**\n\nNote: If you're cc'd on the ticket, please **reply all** to ensure comments are added to the ticket.\n\n\n\n    ![](https://twilio.zendesk.com/images/2016/default-avatar-80.png)\n\n**Brayan Rodriguez** (Twilio)\n\n\n\nJun 9, 2026, 9:48 AM PDT\n\n\nHi Sara,\n\nI hope you're doing great and thank you for reaching us, my name is Brayan and I will be more than glad to assist you today since my peer is not currently available.\n\nPlease allow me a few to review the details associated to your Brand Submission and the desired upgrade in Messaging Limitations, I'll get back to you shortly with next steps.\n\nThank you for your patience and understanding.\n\nBest Regards,\n\nBrayan\nTwilio Support\n\nDid this solve your issue? You can set this ticket to solved by clicking the link below:\n\nThis ticket is solved\n\nThis is in reference to ticket # 27349257\n\n This email is a service from Twilio. Delivered by Zendesk.\n\n[29WYRG-L0LEV]",
+          "html_body": "<div class=\"zd-comment zd-comment-pre-styled\" dir=\"auto\"><div style=\"line-height: 18px; font-size: 12px; color: #444444; padding: 10px;\">\n <div style=\"color: #b5b5b5;\">## In replies all text above this line is added to the ticket ##</div>\n <p dir=\"auto\"><b>(Reply to this email to follow up on this issue)</b></p><p dir=\"auto\">Note: If you're cc'd on the ticket, please <b>reply all</b> to ensure comments are added to the ticket. </p><p dir=\"auto\"></p><div style=\"margin-top: 25px;\"><table class=\"zd-liquid-comment\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"> <tbody><tr> <td width=\"100%\" style=\"border-top-width: 1px; border-top-color: #c5c5c5; border-top-style: dotted; border-collapse: collapse; padding: 15px 0;\"> <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"table-layout: fixed;\"> <tbody><tr> <td valign=\"top\" style=\"width: 40px; border-collapse: collapse; padding: 0 15px;\"> <img width=\"40\" height=\"40\" alt=\"\" style=\"height: auto; line-height: 100%; outline: none; text-decoration: none; -webkit-border-radius: 5px; border-radius: 5px;\" src=\"https://twilio.zendesk.com/images/2016/default-avatar-80.png\"> </td> <td width=\"100%\" style=\"border-collapse: collapse; margin: 0; padding: 0;\" valign=\"top\"> <p style=\" font-size: 15px; line-height: 18px; margin-bottom: 0; margin-top: 0; color: #1b1d1e; padding: 0;\" dir=\"auto\"> <strong>Brayan Rodriguez</strong> (Twilio) </p> <p style=\" font-size: 13px; line-height: 25px; margin-bottom: 15px; margin-top: 0; color: #bbbbbb; padding: 0;\" dir=\"auto\"> Jun 9, 2026, 9:48 AM PDT </p> <div class=\"zd-comment\" dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Hi Sara,<br>&nbsp;<br>I hope you're doing great and thank you for reaching us, my name is Brayan and I will be more than glad to assist you today since my peer is not currently available.<br>&nbsp;<br>Please allow me a few to review the details associated to your Brand Submission and the desired upgrade in Messaging Limitations, I'll get back to you shortly with next steps.<br>&nbsp;<br>Thank you for your patience and understanding.<br><span class=\"collapse-signature\"></span><div class=\"signature\"><p dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Best Regards,</p><p dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Brayan<br>\nTwilio Support</p></div></div><p dir=\"auto\"> </p></td> </tr> </tbody></table> </td> </tr></tbody></table></div><p dir=\"auto\"></p><p style=\" font-size: 14px;\" dir=\"auto\"> Did this solve your issue? You can set this ticket to solved by clicking the link below:<br><br><a href=\"https://selfserve.support.twilio.com/ticket/solve?id=27349257&amp;code=29WYRG-L0LEV\" rel=\"noreferrer\">This ticket is solved</a><br></p><p dir=\"auto\"><br>This is in reference to ticket # 27349257</p>\n <div style=\"color: #9e9e9e; padding-top: 10px; border-top-width: 1px; border-top-color: #eeeeee; border-top-style: solid; margin: 10px 0 14px;\">\n This email is a service from Twilio. Delivered by <a href=\"http://www.zendesk.com\" style=\"color: black;\" rel=\"noreferrer\">Zendesk</a>.\n </div>\n </div>\n<span style=\"color: #FFFFFF;\">[29WYRG-L0LEV]</span></div>",
+          "id": "52445172212499",
+          "is_public": true
+        },
+        "meta": {
+          "sequence": {
+            "id": "3532343435313632353437373331",
+            "position": 1
+          }
+        }
+      },
+      "id": "60ae7b44-f756-4157-b5a8-a52bf98547da",
+      "subject": "zen:ticket:53519",
+      "time": "2026-06-09T16:48:09.219889619Z",
+      "type": "zen:event-type:ticket.comment_added",
+      "zendesk_event_version": "2022-11-06"
+    }
+  },
+  {
+    "receivedAt": "2026-06-12T12:38:22.259Z",
+    "event": "zendesk-webhook",
+    "data": {
+      "account_id": 22453773,
+      "detail": {
+        "actor_id": "51515346535955",
+        "assignee_id": "45452599574675",
+        "brand_id": "34213510875539",
+        "created_at": "2026-06-04T20:21:16Z",
+        "custom_status": "34213496924435",
+        "description": "## In replies all text above this line is added to the ticket ##\n\n<b>(Reply to this email to follow up on this issue)</b>\n\nNote: If you're cc'd on the ticket, please  <b>reply all</b> to ensure comments are added to the ticket. \n\n----------------------------------------------\n\nTwilio Support, Jun 4, 2026, 1:21 PM PDT\n\n[6/4/2026, 1:02:48 PM PDT]\n\n**sara@citytax.com:** How to Increase messaging limit by vetting apply\n\n[6/4/2026, 1:03:16 PM PDT]\n\n**Sofía:** Hello Sara,   Thank you for reaching out to Twilio support, my name is Sofía and I will be helping you with this matter.\n\n[6/4/2026, 1:04:18 PM PDT]\n\n**Sofía:** Got it! I understand you are looking to apply for a secondary vetting to increase the throughput limits. This process is done from our end, this has a $41 fee associated with the same.\n\n[6/4/2026, 1:04:53 PM PDT]\n\n**Sofía:** If you agree, please share the Account SID and the Brand SID associated with this request and we can start this process.\n\n[6/4/2026, 1:06:38 PM PDT]\n\n**sara@citytax.com:** Brand Id : BNe70c0bc50944d19bf1a8abed86ca5e0a Account SID: AC78d62a5fe0dd507b885b510f81eb2a52\n\n[6/4/2026, 1:08:12 PM PDT]\n\n**Sofía:** Thank you, I have created an internal request for this, at the moment, we will need to convert this chat into the Ticket#27349257 while we obtain updates from this request.\n\n[6/4/2026, 1:08:24 PM PDT]\n\n**Sofía:** At the moment, while I still have you in this live chat is there anything else I can help you with?\n\n[6/4/2026, 1:09:38 PM PDT]\n\n**sara@citytax.com:** Have you submit the ticket for Vetting Or it is done from my End because you maintion that it is done form you end\n\n[6/4/2026, 1:10:18 PM PDT]\n\n**Sofía:** I have submitted the internal request for the vetting, the support ticket I have provided is to keep you posted with the developments of the same.\n\n[6/4/2026, 1:11:01 PM PDT]\n\n**Sofía:** We have this guide to locate the Tickets in the Twilio console: https://help.twilio.com/articles/223136247-Managing-Your-Twilio-Support-Tickets\n\n[6/4/2026, 1:12:44 PM PDT]\n\n**sara@citytax.com:** So how much time it takes to approve\n\n[6/4/2026, 1:13:09 PM PDT]\n\n**Sofía:** The timeframe depends, normally it can take up to a week.\n\n[6/4/2026, 1:13:47 PM PDT]\n\n**sara@citytax.com:** please get this done asap\n\n[6/4/2026, 1:14:20 PM PDT]\n\n**Sofía:** Yes, as soon as we have updates we will be sharing them on the ticket thread\n\n[6/4/2026, 1:15:24 PM PDT]\n\n**sara@citytax.com:** ok thaks\n\n[6/4/2026, 1:15:53 PM PDT]\n\n**Sofía:** You are welcome! Looking forward to update you soon, hope you have a good day!\n\n[6/4/2026, 1:16:23 PM PDT]\n\n**sara@citytax.com:** 😊\n\n<p style=\"font-family:Lucida Grande; font-size: 14px;\"> Did this solve your issue? You can set this ticket to solved by clicking the link below:\n<br><a href=\"https://selfserve.support.twilio.com/ticket/solve?id=27349257&code=29WYRG-L0LEV\" rel=\"nofollow\">This ticket is solved</a>\n</p>\n\n\n<br>This is in reference to ticket # 27349257\n\n--------------------------------\nThis email is a service from Twilio.\n\n\n\n\n\n\n\n\n\n[29WYRG-L0LEV]",
+        "external_id": null,
+        "form_id": "34213496795155",
+        "group_id": "50440545727891",
+        "id": "53519",
+        "is_public": true,
+        "organization_id": null,
+        "priority": null,
+        "requester_id": "51515346535955",
+        "status": "OPEN",
+        "subject": "[Twilio] Re: Chat Question from sara@citytax.com",
+        "submitter_id": "51515346535955",
+        "tags": [
+          "taxticket"
+        ],
+        "type": null,
+        "updated_at": "2026-06-09T16:48:09Z",
+        "via": {
+          "channel": "mail"
+        }
+      },
+      "event": {
+        "comment": {
+          "author": {
+            "id": "51515346535955",
+            "is_staff": false,
+            "name": "Twilio Support"
+          },
+          "body": "## In replies all text above this line is added to the ticket ##\n\n**(Reply to this email to follow up on this issue)**\n\nNote: If you're cc'd on the ticket, please **reply all** to ensure comments are added to the ticket.\n\n\n\n    ![](https://twilio.zendesk.com/images/2016/default-avatar-80.png)\n\n**Brayan Rodriguez** (Twilio)\n\n\n\nJun 9, 2026, 9:48 AM PDT\n\n\nHi Sara,\n\nI hope you're doing great and thank you for reaching us, my name is Brayan and I will be more than glad to assist you today since my peer is not currently available.\n\nPlease allow me a few to review the details associated to your Brand Submission and the desired upgrade in Messaging Limitations, I'll get back to you shortly with next steps.\n\nThank you for your patience and understanding.\n\nBest Regards,\n\nBrayan\nTwilio Support\n\nDid this solve your issue? You can set this ticket to solved by clicking the link below:\n\nThis ticket is solved\n\nThis is in reference to ticket # 27349257\n\n This email is a service from Twilio. Delivered by Zendesk.\n\n[29WYRG-L0LEV]",
+          "html_body": "<div class=\"zd-comment zd-comment-pre-styled\" dir=\"auto\"><div style=\"line-height: 18px; font-size: 12px; color: #444444; padding: 10px;\">\n <div style=\"color: #b5b5b5;\">## In replies all text above this line is added to the ticket ##</div>\n <p dir=\"auto\"><b>(Reply to this email to follow up on this issue)</b></p><p dir=\"auto\">Note: If you're cc'd on the ticket, please <b>reply all</b> to ensure comments are added to the ticket. </p><p dir=\"auto\"></p><div style=\"margin-top: 25px;\"><table class=\"zd-liquid-comment\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"> <tbody><tr> <td width=\"100%\" style=\"border-top-width: 1px; border-top-color: #c5c5c5; border-top-style: dotted; border-collapse: collapse; padding: 15px 0;\"> <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"table-layout: fixed;\"> <tbody><tr> <td valign=\"top\" style=\"width: 40px; border-collapse: collapse; padding: 0 15px;\"> <img width=\"40\" height=\"40\" alt=\"\" style=\"height: auto; line-height: 100%; outline: none; text-decoration: none; -webkit-border-radius: 5px; border-radius: 5px;\" src=\"https://twilio.zendesk.com/images/2016/default-avatar-80.png\"> </td> <td width=\"100%\" style=\"border-collapse: collapse; margin: 0; padding: 0;\" valign=\"top\"> <p style=\" font-size: 15px; line-height: 18px; margin-bottom: 0; margin-top: 0; color: #1b1d1e; padding: 0;\" dir=\"auto\"> <strong>Brayan Rodriguez</strong> (Twilio) </p> <p style=\" font-size: 13px; line-height: 25px; margin-bottom: 15px; margin-top: 0; color: #bbbbbb; padding: 0;\" dir=\"auto\"> Jun 9, 2026, 9:48 AM PDT </p> <div class=\"zd-comment\" dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Hi Sara,<br>&nbsp;<br>I hope you're doing great and thank you for reaching us, my name is Brayan and I will be more than glad to assist you today since my peer is not currently available.<br>&nbsp;<br>Please allow me a few to review the details associated to your Brand Submission and the desired upgrade in Messaging Limitations, I'll get back to you shortly with next steps.<br>&nbsp;<br>Thank you for your patience and understanding.<br><span class=\"collapse-signature\"></span><div class=\"signature\"><p dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Best Regards,</p><p dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Brayan<br>\nTwilio Support</p></div></div><p dir=\"auto\"> </p></td> </tr> </tbody></table> </td> </tr></tbody></table></div><p dir=\"auto\"></p><p style=\" font-size: 14px;\" dir=\"auto\"> Did this solve your issue? You can set this ticket to solved by clicking the link below:<br><br><a href=\"https://selfserve.support.twilio.com/ticket/solve?id=27349257&amp;code=29WYRG-L0LEV\" rel=\"noreferrer\">This ticket is solved</a><br></p><p dir=\"auto\"><br>This is in reference to ticket # 27349257</p>\n <div style=\"color: #9e9e9e; padding-top: 10px; border-top-width: 1px; border-top-color: #eeeeee; border-top-style: solid; margin: 10px 0 14px;\">\n This email is a service from Twilio. Delivered by <a href=\"http://www.zendesk.com\" style=\"color: black;\" rel=\"noreferrer\">Zendesk</a>.\n </div>\n </div>\n<span style=\"color: #FFFFFF;\">[29WYRG-L0LEV]</span></div>",
+          "id": "52445172212499",
+          "is_public": true
+        },
+        "meta": {
+          "sequence": {
+            "id": "3532343435313632353437373331",
+            "position": 1
+          }
+        }
+      },
+      "id": "60ae7b44-f756-4157-b5a8-a52bf98547da",
+      "subject": "zen:ticket:53519",
+      "time": "2026-06-09T16:48:09.219889619Z",
+      "type": "zen:event-type:ticket.comment_added",
+      "zendesk_event_version": "2022-11-06"
+    }
+  },
+  {
+    "receivedAt": "2026-06-12T13:37:11.240Z",
+    "event": "zendesk-webhook",
+    "data": {
+      "account_id": 22453773,
+      "detail": {
+        "actor_id": "51515346535955",
+        "assignee_id": "45452599574675",
+        "brand_id": "34213510875539",
+        "created_at": "2026-06-04T20:21:16Z",
+        "custom_status": "34213496924435",
+        "description": "## In replies all text above this line is added to the ticket ##\n\n<b>(Reply to this email to follow up on this issue)</b>\n\nNote: If you're cc'd on the ticket, please  <b>reply all</b> to ensure comments are added to the ticket. \n\n----------------------------------------------\n\nTwilio Support, Jun 4, 2026, 1:21 PM PDT\n\n[6/4/2026, 1:02:48 PM PDT]\n\n**sara@citytax.com:** How to Increase messaging limit by vetting apply\n\n[6/4/2026, 1:03:16 PM PDT]\n\n**Sofía:** Hello Sara,   Thank you for reaching out to Twilio support, my name is Sofía and I will be helping you with this matter.\n\n[6/4/2026, 1:04:18 PM PDT]\n\n**Sofía:** Got it! I understand you are looking to apply for a secondary vetting to increase the throughput limits. This process is done from our end, this has a $41 fee associated with the same.\n\n[6/4/2026, 1:04:53 PM PDT]\n\n**Sofía:** If you agree, please share the Account SID and the Brand SID associated with this request and we can start this process.\n\n[6/4/2026, 1:06:38 PM PDT]\n\n**sara@citytax.com:** Brand Id : BNe70c0bc50944d19bf1a8abed86ca5e0a Account SID: AC78d62a5fe0dd507b885b510f81eb2a52\n\n[6/4/2026, 1:08:12 PM PDT]\n\n**Sofía:** Thank you, I have created an internal request for this, at the moment, we will need to convert this chat into the Ticket#27349257 while we obtain updates from this request.\n\n[6/4/2026, 1:08:24 PM PDT]\n\n**Sofía:** At the moment, while I still have you in this live chat is there anything else I can help you with?\n\n[6/4/2026, 1:09:38 PM PDT]\n\n**sara@citytax.com:** Have you submit the ticket for Vetting Or it is done from my End because you maintion that it is done form you end\n\n[6/4/2026, 1:10:18 PM PDT]\n\n**Sofía:** I have submitted the internal request for the vetting, the support ticket I have provided is to keep you posted with the developments of the same.\n\n[6/4/2026, 1:11:01 PM PDT]\n\n**Sofía:** We have this guide to locate the Tickets in the Twilio console: https://help.twilio.com/articles/223136247-Managing-Your-Twilio-Support-Tickets\n\n[6/4/2026, 1:12:44 PM PDT]\n\n**sara@citytax.com:** So how much time it takes to approve\n\n[6/4/2026, 1:13:09 PM PDT]\n\n**Sofía:** The timeframe depends, normally it can take up to a week.\n\n[6/4/2026, 1:13:47 PM PDT]\n\n**sara@citytax.com:** please get this done asap\n\n[6/4/2026, 1:14:20 PM PDT]\n\n**Sofía:** Yes, as soon as we have updates we will be sharing them on the ticket thread\n\n[6/4/2026, 1:15:24 PM PDT]\n\n**sara@citytax.com:** ok thaks\n\n[6/4/2026, 1:15:53 PM PDT]\n\n**Sofía:** You are welcome! Looking forward to update you soon, hope you have a good day!\n\n[6/4/2026, 1:16:23 PM PDT]\n\n**sara@citytax.com:** 😊\n\n<p style=\"font-family:Lucida Grande; font-size: 14px;\"> Did this solve your issue? You can set this ticket to solved by clicking the link below:\n<br><a href=\"https://selfserve.support.twilio.com/ticket/solve?id=27349257&code=29WYRG-L0LEV\" rel=\"nofollow\">This ticket is solved</a>\n</p>\n\n\n<br>This is in reference to ticket # 27349257\n\n--------------------------------\nThis email is a service from Twilio.\n\n\n\n\n\n\n\n\n\n[29WYRG-L0LEV]",
+        "external_id": null,
+        "form_id": "34213496795155",
+        "group_id": "50440545727891",
+        "id": "535190",
+        "is_public": true,
+        "organization_id": null,
+        "priority": null,
+        "requester_id": "51515346535955",
+        "status": "OPEN",
+        "subject": "[Twilio] Re: Chat Question from sara@citytax.com",
+        "submitter_id": "51515346535955",
+        "tags": [
+          "taxticket"
+        ],
+        "type": null,
+        "updated_at": "2026-06-09T16:48:09Z",
+        "via": {
+          "channel": "mail"
+        }
+      },
+      "event": {
+        "comment": {
+          "author": {
+            "id": "51515346535955",
+            "is_staff": false,
+            "name": "Twilio Support"
+          },
+          "body": "## In replies all text above this line is added to the ticket ##\n\n**(Reply to this email to follow up on this issue)**\n\nNote: If you're cc'd on the ticket, please **reply all** to ensure comments are added to the ticket.\n\n\n\n    ![](https://twilio.zendesk.com/images/2016/default-avatar-80.png)\n\n**Brayan Rodriguez** (Twilio)\n\n\n\nJun 9, 2026, 9:48 AM PDT\n\n\nHi Sara,\n\nI hope you're doing great and thank you for reaching us, my name is Brayan and I will be more than glad to assist you today since my peer is not currently available.\n\nPlease allow me a few to review the details associated to your Brand Submission and the desired upgrade in Messaging Limitations, I'll get back to you shortly with next steps.\n\nThank you for your patience and understanding.\n\nBest Regards,\n\nBrayan\nTwilio Support\n\nDid this solve your issue? You can set this ticket to solved by clicking the link below:\n\nThis ticket is solved\n\nThis is in reference to ticket # 27349257\n\n This email is a service from Twilio. Delivered by Zendesk.\n\n[29WYRG-L0LEV]",
+          "html_body": "<div class=\"zd-comment zd-comment-pre-styled\" dir=\"auto\"><div style=\"line-height: 18px; font-size: 12px; color: #444444; padding: 10px;\">\n <div style=\"color: #b5b5b5;\">## In replies all text above this line is added to the ticket ##</div>\n <p dir=\"auto\"><b>(Reply to this email to follow up on this issue)</b></p><p dir=\"auto\">Note: If you're cc'd on the ticket, please <b>reply all</b> to ensure comments are added to the ticket. </p><p dir=\"auto\"></p><div style=\"margin-top: 25px;\"><table class=\"zd-liquid-comment\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"> <tbody><tr> <td width=\"100%\" style=\"border-top-width: 1px; border-top-color: #c5c5c5; border-top-style: dotted; border-collapse: collapse; padding: 15px 0;\"> <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"table-layout: fixed;\"> <tbody><tr> <td valign=\"top\" style=\"width: 40px; border-collapse: collapse; padding: 0 15px;\"> <img width=\"40\" height=\"40\" alt=\"\" style=\"height: auto; line-height: 100%; outline: none; text-decoration: none; -webkit-border-radius: 5px; border-radius: 5px;\" src=\"https://twilio.zendesk.com/images/2016/default-avatar-80.png\"> </td> <td width=\"100%\" style=\"border-collapse: collapse; margin: 0; padding: 0;\" valign=\"top\"> <p style=\" font-size: 15px; line-height: 18px; margin-bottom: 0; margin-top: 0; color: #1b1d1e; padding: 0;\" dir=\"auto\"> <strong>Brayan Rodriguez</strong> (Twilio) </p> <p style=\" font-size: 13px; line-height: 25px; margin-bottom: 15px; margin-top: 0; color: #bbbbbb; padding: 0;\" dir=\"auto\"> Jun 9, 2026, 9:48 AM PDT </p> <div class=\"zd-comment\" dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Hi Sara,<br>&nbsp;<br>I hope you're doing great and thank you for reaching us, my name is Brayan and I will be more than glad to assist you today since my peer is not currently available.<br>&nbsp;<br>Please allow me a few to review the details associated to your Brand Submission and the desired upgrade in Messaging Limitations, I'll get back to you shortly with next steps.<br>&nbsp;<br>Thank you for your patience and understanding.<br><span class=\"collapse-signature\"></span><div class=\"signature\"><p dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Best Regards,</p><p dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Brayan<br>\nTwilio Support</p></div></div><p dir=\"auto\"> </p></td> </tr> </tbody></table> </td> </tr></tbody></table></div><p dir=\"auto\"></p><p style=\" font-size: 14px;\" dir=\"auto\"> Did this solve your issue? You can set this ticket to solved by clicking the link below:<br><br><a href=\"https://selfserve.support.twilio.com/ticket/solve?id=27349257&amp;code=29WYRG-L0LEV\" rel=\"noreferrer\">This ticket is solved</a><br></p><p dir=\"auto\"><br>This is in reference to ticket # 27349257</p>\n <div style=\"color: #9e9e9e; padding-top: 10px; border-top-width: 1px; border-top-color: #eeeeee; border-top-style: solid; margin: 10px 0 14px;\">\n This email is a service from Twilio. Delivered by <a href=\"http://www.zendesk.com\" style=\"color: black;\" rel=\"noreferrer\">Zendesk</a>.\n </div>\n </div>\n<span style=\"color: #FFFFFF;\">[29WYRG-L0LEV]</span></div>",
+          "id": "52445172212499",
+          "is_public": true
+        },
+        "meta": {
+          "sequence": {
+            "id": "3532343435313632353437373331",
+            "position": 1
+          }
+        }
+      },
+      "id": "60ae7b44-f756-4157-b5a8-a52bf98547da",
+      "subject": "zen:ticket:53519",
+      "time": "2026-06-09T16:48:09.219889619Z",
+      "type": "zen:event-type:ticket.comment_added",
+      "zendesk_event_version": "2022-11-06"
+    }
+  },
+  {
+    "receivedAt": "2026-06-12T13:37:24.715Z",
+    "event": "zendesk-webhook",
+    "data": {
+      "account_id": 22453773,
+      "detail": {
+        "actor_id": "51515346535955",
+        "assignee_id": "45452599574675",
+        "brand_id": "34213510875539",
+        "created_at": "2026-06-04T20:21:16Z",
+        "custom_status": "34213496924435",
+        "description": "## In replies all text above this line is added to the ticket ##\n\n<b>(Reply to this email to follow up on this issue)</b>\n\nNote: If you're cc'd on the ticket, please  <b>reply all</b> to ensure comments are added to the ticket. \n\n----------------------------------------------\n\nTwilio Support, Jun 4, 2026, 1:21 PM PDT\n\n[6/4/2026, 1:02:48 PM PDT]\n\n**sara@citytax.com:** How to Increase messaging limit by vetting apply\n\n[6/4/2026, 1:03:16 PM PDT]\n\n**Sofía:** Hello Sara,   Thank you for reaching out to Twilio support, my name is Sofía and I will be helping you with this matter.\n\n[6/4/2026, 1:04:18 PM PDT]\n\n**Sofía:** Got it! I understand you are looking to apply for a secondary vetting to increase the throughput limits. This process is done from our end, this has a $41 fee associated with the same.\n\n[6/4/2026, 1:04:53 PM PDT]\n\n**Sofía:** If you agree, please share the Account SID and the Brand SID associated with this request and we can start this process.\n\n[6/4/2026, 1:06:38 PM PDT]\n\n**sara@citytax.com:** Brand Id : BNe70c0bc50944d19bf1a8abed86ca5e0a Account SID: AC78d62a5fe0dd507b885b510f81eb2a52\n\n[6/4/2026, 1:08:12 PM PDT]\n\n**Sofía:** Thank you, I have created an internal request for this, at the moment, we will need to convert this chat into the Ticket#27349257 while we obtain updates from this request.\n\n[6/4/2026, 1:08:24 PM PDT]\n\n**Sofía:** At the moment, while I still have you in this live chat is there anything else I can help you with?\n\n[6/4/2026, 1:09:38 PM PDT]\n\n**sara@citytax.com:** Have you submit the ticket for Vetting Or it is done from my End because you maintion that it is done form you end\n\n[6/4/2026, 1:10:18 PM PDT]\n\n**Sofía:** I have submitted the internal request for the vetting, the support ticket I have provided is to keep you posted with the developments of the same.\n\n[6/4/2026, 1:11:01 PM PDT]\n\n**Sofía:** We have this guide to locate the Tickets in the Twilio console: https://help.twilio.com/articles/223136247-Managing-Your-Twilio-Support-Tickets\n\n[6/4/2026, 1:12:44 PM PDT]\n\n**sara@citytax.com:** So how much time it takes to approve\n\n[6/4/2026, 1:13:09 PM PDT]\n\n**Sofía:** The timeframe depends, normally it can take up to a week.\n\n[6/4/2026, 1:13:47 PM PDT]\n\n**sara@citytax.com:** please get this done asap\n\n[6/4/2026, 1:14:20 PM PDT]\n\n**Sofía:** Yes, as soon as we have updates we will be sharing them on the ticket thread\n\n[6/4/2026, 1:15:24 PM PDT]\n\n**sara@citytax.com:** ok thaks\n\n[6/4/2026, 1:15:53 PM PDT]\n\n**Sofía:** You are welcome! Looking forward to update you soon, hope you have a good day!\n\n[6/4/2026, 1:16:23 PM PDT]\n\n**sara@citytax.com:** 😊\n\n<p style=\"font-family:Lucida Grande; font-size: 14px;\"> Did this solve your issue? You can set this ticket to solved by clicking the link below:\n<br><a href=\"https://selfserve.support.twilio.com/ticket/solve?id=27349257&code=29WYRG-L0LEV\" rel=\"nofollow\">This ticket is solved</a>\n</p>\n\n\n<br>This is in reference to ticket # 27349257\n\n--------------------------------\nThis email is a service from Twilio.\n\n\n\n\n\n\n\n\n\n[29WYRG-L0LEV]",
+        "external_id": null,
+        "form_id": "34213496795155",
+        "group_id": "50440545727891",
+        "id": "5351900",
+        "is_public": true,
+        "organization_id": null,
+        "priority": null,
+        "requester_id": "51515346535955",
+        "status": "OPEN",
+        "subject": "[Twilio] Re: Chat Question from sara@citytax.com",
+        "submitter_id": "51515346535955",
+        "tags": [
+          "taxticket"
+        ],
+        "type": null,
+        "updated_at": "2026-06-09T16:48:09Z",
+        "via": {
+          "channel": "mail"
+        }
+      },
+      "event": {
+        "comment": {
+          "author": {
+            "id": "51515346535955",
+            "is_staff": false,
+            "name": "Twilio Support"
+          },
+          "body": "## In replies all text above this line is added to the ticket ##\n\n**(Reply to this email to follow up on this issue)**\n\nNote: If you're cc'd on the ticket, please **reply all** to ensure comments are added to the ticket.\n\n\n\n    ![](https://twilio.zendesk.com/images/2016/default-avatar-80.png)\n\n**Brayan Rodriguez** (Twilio)\n\n\n\nJun 9, 2026, 9:48 AM PDT\n\n\nHi Sara,\n\nI hope you're doing great and thank you for reaching us, my name is Brayan and I will be more than glad to assist you today since my peer is not currently available.\n\nPlease allow me a few to review the details associated to your Brand Submission and the desired upgrade in Messaging Limitations, I'll get back to you shortly with next steps.\n\nThank you for your patience and understanding.\n\nBest Regards,\n\nBrayan\nTwilio Support\n\nDid this solve your issue? You can set this ticket to solved by clicking the link below:\n\nThis ticket is solved\n\nThis is in reference to ticket # 27349257\n\n This email is a service from Twilio. Delivered by Zendesk.\n\n[29WYRG-L0LEV]",
+          "html_body": "<div class=\"zd-comment zd-comment-pre-styled\" dir=\"auto\"><div style=\"line-height: 18px; font-size: 12px; color: #444444; padding: 10px;\">\n <div style=\"color: #b5b5b5;\">## In replies all text above this line is added to the ticket ##</div>\n <p dir=\"auto\"><b>(Reply to this email to follow up on this issue)</b></p><p dir=\"auto\">Note: If you're cc'd on the ticket, please <b>reply all</b> to ensure comments are added to the ticket. </p><p dir=\"auto\"></p><div style=\"margin-top: 25px;\"><table class=\"zd-liquid-comment\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"> <tbody><tr> <td width=\"100%\" style=\"border-top-width: 1px; border-top-color: #c5c5c5; border-top-style: dotted; border-collapse: collapse; padding: 15px 0;\"> <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"table-layout: fixed;\"> <tbody><tr> <td valign=\"top\" style=\"width: 40px; border-collapse: collapse; padding: 0 15px;\"> <img width=\"40\" height=\"40\" alt=\"\" style=\"height: auto; line-height: 100%; outline: none; text-decoration: none; -webkit-border-radius: 5px; border-radius: 5px;\" src=\"https://twilio.zendesk.com/images/2016/default-avatar-80.png\"> </td> <td width=\"100%\" style=\"border-collapse: collapse; margin: 0; padding: 0;\" valign=\"top\"> <p style=\" font-size: 15px; line-height: 18px; margin-bottom: 0; margin-top: 0; color: #1b1d1e; padding: 0;\" dir=\"auto\"> <strong>Brayan Rodriguez</strong> (Twilio) </p> <p style=\" font-size: 13px; line-height: 25px; margin-bottom: 15px; margin-top: 0; color: #bbbbbb; padding: 0;\" dir=\"auto\"> Jun 9, 2026, 9:48 AM PDT </p> <div class=\"zd-comment\" dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Hi Sara,<br>&nbsp;<br>I hope you're doing great and thank you for reaching us, my name is Brayan and I will be more than glad to assist you today since my peer is not currently available.<br>&nbsp;<br>Please allow me a few to review the details associated to your Brand Submission and the desired upgrade in Messaging Limitations, I'll get back to you shortly with next steps.<br>&nbsp;<br>Thank you for your patience and understanding.<br><span class=\"collapse-signature\"></span><div class=\"signature\"><p dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Best Regards,</p><p dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Brayan<br>\nTwilio Support</p></div></div><p dir=\"auto\"> </p></td> </tr> </tbody></table> </td> </tr></tbody></table></div><p dir=\"auto\"></p><p style=\" font-size: 14px;\" dir=\"auto\"> Did this solve your issue? You can set this ticket to solved by clicking the link below:<br><br><a href=\"https://selfserve.support.twilio.com/ticket/solve?id=27349257&amp;code=29WYRG-L0LEV\" rel=\"noreferrer\">This ticket is solved</a><br></p><p dir=\"auto\"><br>This is in reference to ticket # 27349257</p>\n <div style=\"color: #9e9e9e; padding-top: 10px; border-top-width: 1px; border-top-color: #eeeeee; border-top-style: solid; margin: 10px 0 14px;\">\n This email is a service from Twilio. Delivered by <a href=\"http://www.zendesk.com\" style=\"color: black;\" rel=\"noreferrer\">Zendesk</a>.\n </div>\n </div>\n<span style=\"color: #FFFFFF;\">[29WYRG-L0LEV]</span></div>",
+          "id": "52445172212499",
+          "is_public": true
+        },
+        "meta": {
+          "sequence": {
+            "id": "3532343435313632353437373331",
+            "position": 1
+          }
+        }
+      },
+      "id": "60ae7b44-f756-4157-b5a8-a52bf98547da",
+      "subject": "zen:ticket:53519",
+      "time": "2026-06-09T16:48:09.219889619Z",
+      "type": "zen:event-type:ticket.comment_added",
+      "zendesk_event_version": "2022-11-06"
+    }
+  },
+  {
+    "receivedAt": "2026-06-12T13:37:29.981Z",
+    "event": "zendesk-webhook",
+    "data": {
+      "account_id": 22453773,
+      "detail": {
+        "actor_id": "51515346535955",
+        "assignee_id": "45452599574675",
+        "brand_id": "34213510875539",
+        "created_at": "2026-06-04T20:21:16Z",
+        "custom_status": "34213496924435",
+        "description": "## In replies all text above this line is added to the ticket ##\n\n<b>(Reply to this email to follow up on this issue)</b>\n\nNote: If you're cc'd on the ticket, please  <b>reply all</b> to ensure comments are added to the ticket. \n\n----------------------------------------------\n\nTwilio Support, Jun 4, 2026, 1:21 PM PDT\n\n[6/4/2026, 1:02:48 PM PDT]\n\n**sara@citytax.com:** How to Increase messaging limit by vetting apply\n\n[6/4/2026, 1:03:16 PM PDT]\n\n**Sofía:** Hello Sara,   Thank you for reaching out to Twilio support, my name is Sofía and I will be helping you with this matter.\n\n[6/4/2026, 1:04:18 PM PDT]\n\n**Sofía:** Got it! I understand you are looking to apply for a secondary vetting to increase the throughput limits. This process is done from our end, this has a $41 fee associated with the same.\n\n[6/4/2026, 1:04:53 PM PDT]\n\n**Sofía:** If you agree, please share the Account SID and the Brand SID associated with this request and we can start this process.\n\n[6/4/2026, 1:06:38 PM PDT]\n\n**sara@citytax.com:** Brand Id : BNe70c0bc50944d19bf1a8abed86ca5e0a Account SID: AC78d62a5fe0dd507b885b510f81eb2a52\n\n[6/4/2026, 1:08:12 PM PDT]\n\n**Sofía:** Thank you, I have created an internal request for this, at the moment, we will need to convert this chat into the Ticket#27349257 while we obtain updates from this request.\n\n[6/4/2026, 1:08:24 PM PDT]\n\n**Sofía:** At the moment, while I still have you in this live chat is there anything else I can help you with?\n\n[6/4/2026, 1:09:38 PM PDT]\n\n**sara@citytax.com:** Have you submit the ticket for Vetting Or it is done from my End because you maintion that it is done form you end\n\n[6/4/2026, 1:10:18 PM PDT]\n\n**Sofía:** I have submitted the internal request for the vetting, the support ticket I have provided is to keep you posted with the developments of the same.\n\n[6/4/2026, 1:11:01 PM PDT]\n\n**Sofía:** We have this guide to locate the Tickets in the Twilio console: https://help.twilio.com/articles/223136247-Managing-Your-Twilio-Support-Tickets\n\n[6/4/2026, 1:12:44 PM PDT]\n\n**sara@citytax.com:** So how much time it takes to approve\n\n[6/4/2026, 1:13:09 PM PDT]\n\n**Sofía:** The timeframe depends, normally it can take up to a week.\n\n[6/4/2026, 1:13:47 PM PDT]\n\n**sara@citytax.com:** please get this done asap\n\n[6/4/2026, 1:14:20 PM PDT]\n\n**Sofía:** Yes, as soon as we have updates we will be sharing them on the ticket thread\n\n[6/4/2026, 1:15:24 PM PDT]\n\n**sara@citytax.com:** ok thaks\n\n[6/4/2026, 1:15:53 PM PDT]\n\n**Sofía:** You are welcome! Looking forward to update you soon, hope you have a good day!\n\n[6/4/2026, 1:16:23 PM PDT]\n\n**sara@citytax.com:** 😊\n\n<p style=\"font-family:Lucida Grande; font-size: 14px;\"> Did this solve your issue? You can set this ticket to solved by clicking the link below:\n<br><a href=\"https://selfserve.support.twilio.com/ticket/solve?id=27349257&code=29WYRG-L0LEV\" rel=\"nofollow\">This ticket is solved</a>\n</p>\n\n\n<br>This is in reference to ticket # 27349257\n\n--------------------------------\nThis email is a service from Twilio.\n\n\n\n\n\n\n\n\n\n[29WYRG-L0LEV]",
+        "external_id": null,
+        "form_id": "34213496795155",
+        "group_id": "50440545727891",
+        "id": "53519004",
+        "is_public": true,
+        "organization_id": null,
+        "priority": null,
+        "requester_id": "51515346535955",
+        "status": "OPEN",
+        "subject": "[Twilio] Re: Chat Question from sara@citytax.com",
+        "submitter_id": "51515346535955",
+        "tags": [
+          "taxticket"
+        ],
+        "type": null,
+        "updated_at": "2026-06-09T16:48:09Z",
+        "via": {
+          "channel": "mail"
+        }
+      },
+      "event": {
+        "comment": {
+          "author": {
+            "id": "51515346535955",
+            "is_staff": false,
+            "name": "Twilio Support"
+          },
+          "body": "## In replies all text above this line is added to the ticket ##\n\n**(Reply to this email to follow up on this issue)**\n\nNote: If you're cc'd on the ticket, please **reply all** to ensure comments are added to the ticket.\n\n\n\n    ![](https://twilio.zendesk.com/images/2016/default-avatar-80.png)\n\n**Brayan Rodriguez** (Twilio)\n\n\n\nJun 9, 2026, 9:48 AM PDT\n\n\nHi Sara,\n\nI hope you're doing great and thank you for reaching us, my name is Brayan and I will be more than glad to assist you today since my peer is not currently available.\n\nPlease allow me a few to review the details associated to your Brand Submission and the desired upgrade in Messaging Limitations, I'll get back to you shortly with next steps.\n\nThank you for your patience and understanding.\n\nBest Regards,\n\nBrayan\nTwilio Support\n\nDid this solve your issue? You can set this ticket to solved by clicking the link below:\n\nThis ticket is solved\n\nThis is in reference to ticket # 27349257\n\n This email is a service from Twilio. Delivered by Zendesk.\n\n[29WYRG-L0LEV]",
+          "html_body": "<div class=\"zd-comment zd-comment-pre-styled\" dir=\"auto\"><div style=\"line-height: 18px; font-size: 12px; color: #444444; padding: 10px;\">\n <div style=\"color: #b5b5b5;\">## In replies all text above this line is added to the ticket ##</div>\n <p dir=\"auto\"><b>(Reply to this email to follow up on this issue)</b></p><p dir=\"auto\">Note: If you're cc'd on the ticket, please <b>reply all</b> to ensure comments are added to the ticket. </p><p dir=\"auto\"></p><div style=\"margin-top: 25px;\"><table class=\"zd-liquid-comment\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"> <tbody><tr> <td width=\"100%\" style=\"border-top-width: 1px; border-top-color: #c5c5c5; border-top-style: dotted; border-collapse: collapse; padding: 15px 0;\"> <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"table-layout: fixed;\"> <tbody><tr> <td valign=\"top\" style=\"width: 40px; border-collapse: collapse; padding: 0 15px;\"> <img width=\"40\" height=\"40\" alt=\"\" style=\"height: auto; line-height: 100%; outline: none; text-decoration: none; -webkit-border-radius: 5px; border-radius: 5px;\" src=\"https://twilio.zendesk.com/images/2016/default-avatar-80.png\"> </td> <td width=\"100%\" style=\"border-collapse: collapse; margin: 0; padding: 0;\" valign=\"top\"> <p style=\" font-size: 15px; line-height: 18px; margin-bottom: 0; margin-top: 0; color: #1b1d1e; padding: 0;\" dir=\"auto\"> <strong>Brayan Rodriguez</strong> (Twilio) </p> <p style=\" font-size: 13px; line-height: 25px; margin-bottom: 15px; margin-top: 0; color: #bbbbbb; padding: 0;\" dir=\"auto\"> Jun 9, 2026, 9:48 AM PDT </p> <div class=\"zd-comment\" dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Hi Sara,<br>&nbsp;<br>I hope you're doing great and thank you for reaching us, my name is Brayan and I will be more than glad to assist you today since my peer is not currently available.<br>&nbsp;<br>Please allow me a few to review the details associated to your Brand Submission and the desired upgrade in Messaging Limitations, I'll get back to you shortly with next steps.<br>&nbsp;<br>Thank you for your patience and understanding.<br><span class=\"collapse-signature\"></span><div class=\"signature\"><p dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Best Regards,</p><p dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Brayan<br>\nTwilio Support</p></div></div><p dir=\"auto\"> </p></td> </tr> </tbody></table> </td> </tr></tbody></table></div><p dir=\"auto\"></p><p style=\" font-size: 14px;\" dir=\"auto\"> Did this solve your issue? You can set this ticket to solved by clicking the link below:<br><br><a href=\"https://selfserve.support.twilio.com/ticket/solve?id=27349257&amp;code=29WYRG-L0LEV\" rel=\"noreferrer\">This ticket is solved</a><br></p><p dir=\"auto\"><br>This is in reference to ticket # 27349257</p>\n <div style=\"color: #9e9e9e; padding-top: 10px; border-top-width: 1px; border-top-color: #eeeeee; border-top-style: solid; margin: 10px 0 14px;\">\n This email is a service from Twilio. Delivered by <a href=\"http://www.zendesk.com\" style=\"color: black;\" rel=\"noreferrer\">Zendesk</a>.\n </div>\n </div>\n<span style=\"color: #FFFFFF;\">[29WYRG-L0LEV]</span></div>",
+          "id": "52445172212499",
+          "is_public": true
+        },
+        "meta": {
+          "sequence": {
+            "id": "3532343435313632353437373331",
+            "position": 1
+          }
+        }
+      },
+      "id": "60ae7b44-f756-4157-b5a8-a52bf98547da",
+      "subject": "zen:ticket:53519",
+      "time": "2026-06-09T16:48:09.219889619Z",
+      "type": "zen:event-type:ticket.comment_added",
+      "zendesk_event_version": "2022-11-06"
+    }
+  },
+  {
+    "receivedAt": "2026-06-12T13:37:34.943Z",
+    "event": "zendesk-webhook",
+    "data": {
+      "account_id": 22453773,
+      "detail": {
+        "actor_id": "51515346535955",
+        "assignee_id": "45452599574675",
+        "brand_id": "34213510875539",
+        "created_at": "2026-06-04T20:21:16Z",
+        "custom_status": "34213496924435",
+        "description": "## In replies all text above this line is added to the ticket ##\n\n<b>(Reply to this email to follow up on this issue)</b>\n\nNote: If you're cc'd on the ticket, please  <b>reply all</b> to ensure comments are added to the ticket. \n\n----------------------------------------------\n\nTwilio Support, Jun 4, 2026, 1:21 PM PDT\n\n[6/4/2026, 1:02:48 PM PDT]\n\n**sara@citytax.com:** How to Increase messaging limit by vetting apply\n\n[6/4/2026, 1:03:16 PM PDT]\n\n**Sofía:** Hello Sara,   Thank you for reaching out to Twilio support, my name is Sofía and I will be helping you with this matter.\n\n[6/4/2026, 1:04:18 PM PDT]\n\n**Sofía:** Got it! I understand you are looking to apply for a secondary vetting to increase the throughput limits. This process is done from our end, this has a $41 fee associated with the same.\n\n[6/4/2026, 1:04:53 PM PDT]\n\n**Sofía:** If you agree, please share the Account SID and the Brand SID associated with this request and we can start this process.\n\n[6/4/2026, 1:06:38 PM PDT]\n\n**sara@citytax.com:** Brand Id : BNe70c0bc50944d19bf1a8abed86ca5e0a Account SID: AC78d62a5fe0dd507b885b510f81eb2a52\n\n[6/4/2026, 1:08:12 PM PDT]\n\n**Sofía:** Thank you, I have created an internal request for this, at the moment, we will need to convert this chat into the Ticket#27349257 while we obtain updates from this request.\n\n[6/4/2026, 1:08:24 PM PDT]\n\n**Sofía:** At the moment, while I still have you in this live chat is there anything else I can help you with?\n\n[6/4/2026, 1:09:38 PM PDT]\n\n**sara@citytax.com:** Have you submit the ticket for Vetting Or it is done from my End because you maintion that it is done form you end\n\n[6/4/2026, 1:10:18 PM PDT]\n\n**Sofía:** I have submitted the internal request for the vetting, the support ticket I have provided is to keep you posted with the developments of the same.\n\n[6/4/2026, 1:11:01 PM PDT]\n\n**Sofía:** We have this guide to locate the Tickets in the Twilio console: https://help.twilio.com/articles/223136247-Managing-Your-Twilio-Support-Tickets\n\n[6/4/2026, 1:12:44 PM PDT]\n\n**sara@citytax.com:** So how much time it takes to approve\n\n[6/4/2026, 1:13:09 PM PDT]\n\n**Sofía:** The timeframe depends, normally it can take up to a week.\n\n[6/4/2026, 1:13:47 PM PDT]\n\n**sara@citytax.com:** please get this done asap\n\n[6/4/2026, 1:14:20 PM PDT]\n\n**Sofía:** Yes, as soon as we have updates we will be sharing them on the ticket thread\n\n[6/4/2026, 1:15:24 PM PDT]\n\n**sara@citytax.com:** ok thaks\n\n[6/4/2026, 1:15:53 PM PDT]\n\n**Sofía:** You are welcome! Looking forward to update you soon, hope you have a good day!\n\n[6/4/2026, 1:16:23 PM PDT]\n\n**sara@citytax.com:** 😊\n\n<p style=\"font-family:Lucida Grande; font-size: 14px;\"> Did this solve your issue? You can set this ticket to solved by clicking the link below:\n<br><a href=\"https://selfserve.support.twilio.com/ticket/solve?id=27349257&code=29WYRG-L0LEV\" rel=\"nofollow\">This ticket is solved</a>\n</p>\n\n\n<br>This is in reference to ticket # 27349257\n\n--------------------------------\nThis email is a service from Twilio.\n\n\n\n\n\n\n\n\n\n[29WYRG-L0LEV]",
+        "external_id": null,
+        "form_id": "34213496795155",
+        "group_id": "50440545727891",
+        "id": "535190045",
+        "is_public": true,
+        "organization_id": null,
+        "priority": null,
+        "requester_id": "51515346535955",
+        "status": "OPEN",
+        "subject": "[Twilio] Re: Chat Question from sara@citytax.com",
+        "submitter_id": "51515346535955",
+        "tags": [
+          "taxticket"
+        ],
+        "type": null,
+        "updated_at": "2026-06-09T16:48:09Z",
+        "via": {
+          "channel": "mail"
+        }
+      },
+      "event": {
+        "comment": {
+          "author": {
+            "id": "51515346535955",
+            "is_staff": false,
+            "name": "Twilio Support"
+          },
+          "body": "## In replies all text above this line is added to the ticket ##\n\n**(Reply to this email to follow up on this issue)**\n\nNote: If you're cc'd on the ticket, please **reply all** to ensure comments are added to the ticket.\n\n\n\n    ![](https://twilio.zendesk.com/images/2016/default-avatar-80.png)\n\n**Brayan Rodriguez** (Twilio)\n\n\n\nJun 9, 2026, 9:48 AM PDT\n\n\nHi Sara,\n\nI hope you're doing great and thank you for reaching us, my name is Brayan and I will be more than glad to assist you today since my peer is not currently available.\n\nPlease allow me a few to review the details associated to your Brand Submission and the desired upgrade in Messaging Limitations, I'll get back to you shortly with next steps.\n\nThank you for your patience and understanding.\n\nBest Regards,\n\nBrayan\nTwilio Support\n\nDid this solve your issue? You can set this ticket to solved by clicking the link below:\n\nThis ticket is solved\n\nThis is in reference to ticket # 27349257\n\n This email is a service from Twilio. Delivered by Zendesk.\n\n[29WYRG-L0LEV]",
+          "html_body": "<div class=\"zd-comment zd-comment-pre-styled\" dir=\"auto\"><div style=\"line-height: 18px; font-size: 12px; color: #444444; padding: 10px;\">\n <div style=\"color: #b5b5b5;\">## In replies all text above this line is added to the ticket ##</div>\n <p dir=\"auto\"><b>(Reply to this email to follow up on this issue)</b></p><p dir=\"auto\">Note: If you're cc'd on the ticket, please <b>reply all</b> to ensure comments are added to the ticket. </p><p dir=\"auto\"></p><div style=\"margin-top: 25px;\"><table class=\"zd-liquid-comment\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"> <tbody><tr> <td width=\"100%\" style=\"border-top-width: 1px; border-top-color: #c5c5c5; border-top-style: dotted; border-collapse: collapse; padding: 15px 0;\"> <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"table-layout: fixed;\"> <tbody><tr> <td valign=\"top\" style=\"width: 40px; border-collapse: collapse; padding: 0 15px;\"> <img width=\"40\" height=\"40\" alt=\"\" style=\"height: auto; line-height: 100%; outline: none; text-decoration: none; -webkit-border-radius: 5px; border-radius: 5px;\" src=\"https://twilio.zendesk.com/images/2016/default-avatar-80.png\"> </td> <td width=\"100%\" style=\"border-collapse: collapse; margin: 0; padding: 0;\" valign=\"top\"> <p style=\" font-size: 15px; line-height: 18px; margin-bottom: 0; margin-top: 0; color: #1b1d1e; padding: 0;\" dir=\"auto\"> <strong>Brayan Rodriguez</strong> (Twilio) </p> <p style=\" font-size: 13px; line-height: 25px; margin-bottom: 15px; margin-top: 0; color: #bbbbbb; padding: 0;\" dir=\"auto\"> Jun 9, 2026, 9:48 AM PDT </p> <div class=\"zd-comment\" dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Hi Sara,<br>&nbsp;<br>I hope you're doing great and thank you for reaching us, my name is Brayan and I will be more than glad to assist you today since my peer is not currently available.<br>&nbsp;<br>Please allow me a few to review the details associated to your Brand Submission and the desired upgrade in Messaging Limitations, I'll get back to you shortly with next steps.<br>&nbsp;<br>Thank you for your patience and understanding.<br><span class=\"collapse-signature\"></span><div class=\"signature\"><p dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Best Regards,</p><p dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Brayan<br>\nTwilio Support</p></div></div><p dir=\"auto\"> </p></td> </tr> </tbody></table> </td> </tr></tbody></table></div><p dir=\"auto\"></p><p style=\" font-size: 14px;\" dir=\"auto\"> Did this solve your issue? You can set this ticket to solved by clicking the link below:<br><br><a href=\"https://selfserve.support.twilio.com/ticket/solve?id=27349257&amp;code=29WYRG-L0LEV\" rel=\"noreferrer\">This ticket is solved</a><br></p><p dir=\"auto\"><br>This is in reference to ticket # 27349257</p>\n <div style=\"color: #9e9e9e; padding-top: 10px; border-top-width: 1px; border-top-color: #eeeeee; border-top-style: solid; margin: 10px 0 14px;\">\n This email is a service from Twilio. Delivered by <a href=\"http://www.zendesk.com\" style=\"color: black;\" rel=\"noreferrer\">Zendesk</a>.\n </div>\n </div>\n<span style=\"color: #FFFFFF;\">[29WYRG-L0LEV]</span></div>",
+          "id": "52445172212499",
+          "is_public": true
+        },
+        "meta": {
+          "sequence": {
+            "id": "3532343435313632353437373331",
+            "position": 1
+          }
+        }
+      },
+      "id": "60ae7b44-f756-4157-b5a8-a52bf98547da",
+      "subject": "zen:ticket:53519",
+      "time": "2026-06-09T16:48:09.219889619Z",
+      "type": "zen:event-type:ticket.comment_added",
+      "zendesk_event_version": "2022-11-06"
+    }
+  },
+  {
+    "receivedAt": "2026-06-12T13:39:36.708Z",
+    "event": "zendesk-webhook",
+    "data": {
+      "account_id": 22453773,
+      "detail": {
+        "actor_id": "51515346535955",
+        "assignee_id": "45452599574675",
+        "brand_id": "34213510875539",
+        "created_at": "2026-06-12T20:21:16Z",
+        "custom_status": "34213496924435",
+        "description": "## In replies all text above this line is added to the ticket ##\n\n<b>(Reply to this email to follow up on this issue)</b>\n\nNote: If you're cc'd on the ticket, please  <b>reply all</b> to ensure comments are added to the ticket. \n\n----------------------------------------------\n\nTwilio Support, Jun 4, 2026, 1:21 PM PDT\n\n[6/4/2026, 1:02:48 PM PDT]\n\n**sara@citytax.com:** How to Increase messaging limit by vetting apply\n\n[6/4/2026, 1:03:16 PM PDT]\n\n**Sofía:** Hello Sara,   Thank you for reaching out to Twilio support, my name is Sofía and I will be helping you with this matter.\n\n[6/4/2026, 1:04:18 PM PDT]\n\n**Sofía:** Got it! I understand you are looking to apply for a secondary vetting to increase the throughput limits. This process is done from our end, this has a $41 fee associated with the same.\n\n[6/4/2026, 1:04:53 PM PDT]\n\n**Sofía:** If you agree, please share the Account SID and the Brand SID associated with this request and we can start this process.\n\n[6/4/2026, 1:06:38 PM PDT]\n\n**sara@citytax.com:** Brand Id : BNe70c0bc50944d19bf1a8abed86ca5e0a Account SID: AC78d62a5fe0dd507b885b510f81eb2a52\n\n[6/4/2026, 1:08:12 PM PDT]\n\n**Sofía:** Thank you, I have created an internal request for this, at the moment, we will need to convert this chat into the Ticket#27349257 while we obtain updates from this request.\n\n[6/4/2026, 1:08:24 PM PDT]\n\n**Sofía:** At the moment, while I still have you in this live chat is there anything else I can help you with?\n\n[6/4/2026, 1:09:38 PM PDT]\n\n**sara@citytax.com:** Have you submit the ticket for Vetting Or it is done from my End because you maintion that it is done form you end\n\n[6/4/2026, 1:10:18 PM PDT]\n\n**Sofía:** I have submitted the internal request for the vetting, the support ticket I have provided is to keep you posted with the developments of the same.\n\n[6/4/2026, 1:11:01 PM PDT]\n\n**Sofía:** We have this guide to locate the Tickets in the Twilio console: https://help.twilio.com/articles/223136247-Managing-Your-Twilio-Support-Tickets\n\n[6/4/2026, 1:12:44 PM PDT]\n\n**sara@citytax.com:** So how much time it takes to approve\n\n[6/4/2026, 1:13:09 PM PDT]\n\n**Sofía:** The timeframe depends, normally it can take up to a week.\n\n[6/4/2026, 1:13:47 PM PDT]\n\n**sara@citytax.com:** please get this done asap\n\n[6/4/2026, 1:14:20 PM PDT]\n\n**Sofía:** Yes, as soon as we have updates we will be sharing them on the ticket thread\n\n[6/4/2026, 1:15:24 PM PDT]\n\n**sara@citytax.com:** ok thaks\n\n[6/4/2026, 1:15:53 PM PDT]\n\n**Sofía:** You are welcome! Looking forward to update you soon, hope you have a good day!\n\n[6/4/2026, 1:16:23 PM PDT]\n\n**sara@citytax.com:** 😊\n\n<p style=\"font-family:Lucida Grande; font-size: 14px;\"> Did this solve your issue? You can set this ticket to solved by clicking the link below:\n<br><a href=\"https://selfserve.support.twilio.com/ticket/solve?id=27349257&code=29WYRG-L0LEV\" rel=\"nofollow\">This ticket is solved</a>\n</p>\n\n\n<br>This is in reference to ticket # 27349257\n\n--------------------------------\nThis email is a service from Twilio.\n\n\n\n\n\n\n\n\n\n[29WYRG-L0LEV]",
+        "external_id": null,
+        "form_id": "34213496795155",
+        "group_id": "50440545727891",
+        "id": "53533",
+        "is_public": true,
+        "organization_id": null,
+        "priority": null,
+        "requester_id": "51515346535955",
+        "status": "OPEN",
+        "subject": "[Twilio] Re: Chat Question from sara@citytax.com",
+        "submitter_id": "51515346535955",
+        "tags": [
+          "taxticket"
+        ],
+        "type": null,
+        "updated_at": "2026-06-09T16:48:09Z",
+        "via": {
+          "channel": "mail"
+        }
+      },
+      "event": {
+        "comment": {
+          "author": {
+            "id": "51515346535955",
+            "is_staff": false,
+            "name": "Twilio Support"
+          },
+          "body": "## In replies all text above this line is added to the ticket ##\n\n**(Reply to this email to follow up on this issue)**\n\nNote: If you're cc'd on the ticket, please **reply all** to ensure comments are added to the ticket.\n\n\n\n    ![](https://twilio.zendesk.com/images/2016/default-avatar-80.png)\n\n**Brayan Rodriguez** (Twilio)\n\n\n\nJun 9, 2026, 9:48 AM PDT\n\n\nHi Sara,\n\nI hope you're doing great and thank you for reaching us, my name is Brayan and I will be more than glad to assist you today since my peer is not currently available.\n\nPlease allow me a few to review the details associated to your Brand Submission and the desired upgrade in Messaging Limitations, I'll get back to you shortly with next steps.\n\nThank you for your patience and understanding.\n\nBest Regards,\n\nBrayan\nTwilio Support\n\nDid this solve your issue? You can set this ticket to solved by clicking the link below:\n\nThis ticket is solved\n\nThis is in reference to ticket # 27349257\n\n This email is a service from Twilio. Delivered by Zendesk.\n\n[29WYRG-L0LEV]",
+          "html_body": "<div class=\"zd-comment zd-comment-pre-styled\" dir=\"auto\"><div style=\"line-height: 18px; font-size: 12px; color: #444444; padding: 10px;\">\n <div style=\"color: #b5b5b5;\">## In replies all text above this line is added to the ticket ##</div>\n <p dir=\"auto\"><b>(Reply to this email to follow up on this issue)</b></p><p dir=\"auto\">Note: If you're cc'd on the ticket, please <b>reply all</b> to ensure comments are added to the ticket. </p><p dir=\"auto\"></p><div style=\"margin-top: 25px;\"><table class=\"zd-liquid-comment\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"> <tbody><tr> <td width=\"100%\" style=\"border-top-width: 1px; border-top-color: #c5c5c5; border-top-style: dotted; border-collapse: collapse; padding: 15px 0;\"> <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"table-layout: fixed;\"> <tbody><tr> <td valign=\"top\" style=\"width: 40px; border-collapse: collapse; padding: 0 15px;\"> <img width=\"40\" height=\"40\" alt=\"\" style=\"height: auto; line-height: 100%; outline: none; text-decoration: none; -webkit-border-radius: 5px; border-radius: 5px;\" src=\"https://twilio.zendesk.com/images/2016/default-avatar-80.png\"> </td> <td width=\"100%\" style=\"border-collapse: collapse; margin: 0; padding: 0;\" valign=\"top\"> <p style=\" font-size: 15px; line-height: 18px; margin-bottom: 0; margin-top: 0; color: #1b1d1e; padding: 0;\" dir=\"auto\"> <strong>Brayan Rodriguez</strong> (Twilio) </p> <p style=\" font-size: 13px; line-height: 25px; margin-bottom: 15px; margin-top: 0; color: #bbbbbb; padding: 0;\" dir=\"auto\"> Jun 9, 2026, 9:48 AM PDT </p> <div class=\"zd-comment\" dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Hi Sara,<br>&nbsp;<br>I hope you're doing great and thank you for reaching us, my name is Brayan and I will be more than glad to assist you today since my peer is not currently available.<br>&nbsp;<br>Please allow me a few to review the details associated to your Brand Submission and the desired upgrade in Messaging Limitations, I'll get back to you shortly with next steps.<br>&nbsp;<br>Thank you for your patience and understanding.<br><span class=\"collapse-signature\"></span><div class=\"signature\"><p dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Best Regards,</p><p dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Brayan<br>\nTwilio Support</p></div></div><p dir=\"auto\"> </p></td> </tr> </tbody></table> </td> </tr></tbody></table></div><p dir=\"auto\"></p><p style=\" font-size: 14px;\" dir=\"auto\"> Did this solve your issue? You can set this ticket to solved by clicking the link below:<br><br><a href=\"https://selfserve.support.twilio.com/ticket/solve?id=27349257&amp;code=29WYRG-L0LEV\" rel=\"noreferrer\">This ticket is solved</a><br></p><p dir=\"auto\"><br>This is in reference to ticket # 27349257</p>\n <div style=\"color: #9e9e9e; padding-top: 10px; border-top-width: 1px; border-top-color: #eeeeee; border-top-style: solid; margin: 10px 0 14px;\">\n This email is a service from Twilio. Delivered by <a href=\"http://www.zendesk.com\" style=\"color: black;\" rel=\"noreferrer\">Zendesk</a>.\n </div>\n </div>\n<span style=\"color: #FFFFFF;\">[29WYRG-L0LEV]</span></div>",
+          "id": "52445172212499",
+          "is_public": true
+        },
+        "meta": {
+          "sequence": {
+            "id": "3532343435313632353437373331",
+            "position": 1
+          }
+        }
+      },
+      "id": "60ae7b44-f756-4157-b5a8-a52bf98547da",
+      "subject": "zen:ticket:53519",
+      "time": "2026-06-09T16:48:09.219889619Z",
+      "type": "zen:event-type:ticket.comment_added",
+      "zendesk_event_version": "2022-11-06"
+    }
+  },
+  {
+    "receivedAt": "2026-06-12T13:39:39.258Z",
+    "event": "zendesk-webhook",
+    "data": {
+      "account_id": 22453773,
+      "detail": {
+        "actor_id": "51515346535955",
+        "assignee_id": "45452599574675",
+        "brand_id": "34213510875539",
+        "created_at": "2026-06-12T20:21:16Z",
+        "custom_status": "34213496924435",
+        "description": "## In replies all text above this line is added to the ticket ##\n\n<b>(Reply to this email to follow up on this issue)</b>\n\nNote: If you're cc'd on the ticket, please  <b>reply all</b> to ensure comments are added to the ticket. \n\n----------------------------------------------\n\nTwilio Support, Jun 4, 2026, 1:21 PM PDT\n\n[6/4/2026, 1:02:48 PM PDT]\n\n**sara@citytax.com:** How to Increase messaging limit by vetting apply\n\n[6/4/2026, 1:03:16 PM PDT]\n\n**Sofía:** Hello Sara,   Thank you for reaching out to Twilio support, my name is Sofía and I will be helping you with this matter.\n\n[6/4/2026, 1:04:18 PM PDT]\n\n**Sofía:** Got it! I understand you are looking to apply for a secondary vetting to increase the throughput limits. This process is done from our end, this has a $41 fee associated with the same.\n\n[6/4/2026, 1:04:53 PM PDT]\n\n**Sofía:** If you agree, please share the Account SID and the Brand SID associated with this request and we can start this process.\n\n[6/4/2026, 1:06:38 PM PDT]\n\n**sara@citytax.com:** Brand Id : BNe70c0bc50944d19bf1a8abed86ca5e0a Account SID: AC78d62a5fe0dd507b885b510f81eb2a52\n\n[6/4/2026, 1:08:12 PM PDT]\n\n**Sofía:** Thank you, I have created an internal request for this, at the moment, we will need to convert this chat into the Ticket#27349257 while we obtain updates from this request.\n\n[6/4/2026, 1:08:24 PM PDT]\n\n**Sofía:** At the moment, while I still have you in this live chat is there anything else I can help you with?\n\n[6/4/2026, 1:09:38 PM PDT]\n\n**sara@citytax.com:** Have you submit the ticket for Vetting Or it is done from my End because you maintion that it is done form you end\n\n[6/4/2026, 1:10:18 PM PDT]\n\n**Sofía:** I have submitted the internal request for the vetting, the support ticket I have provided is to keep you posted with the developments of the same.\n\n[6/4/2026, 1:11:01 PM PDT]\n\n**Sofía:** We have this guide to locate the Tickets in the Twilio console: https://help.twilio.com/articles/223136247-Managing-Your-Twilio-Support-Tickets\n\n[6/4/2026, 1:12:44 PM PDT]\n\n**sara@citytax.com:** So how much time it takes to approve\n\n[6/4/2026, 1:13:09 PM PDT]\n\n**Sofía:** The timeframe depends, normally it can take up to a week.\n\n[6/4/2026, 1:13:47 PM PDT]\n\n**sara@citytax.com:** please get this done asap\n\n[6/4/2026, 1:14:20 PM PDT]\n\n**Sofía:** Yes, as soon as we have updates we will be sharing them on the ticket thread\n\n[6/4/2026, 1:15:24 PM PDT]\n\n**sara@citytax.com:** ok thaks\n\n[6/4/2026, 1:15:53 PM PDT]\n\n**Sofía:** You are welcome! Looking forward to update you soon, hope you have a good day!\n\n[6/4/2026, 1:16:23 PM PDT]\n\n**sara@citytax.com:** 😊\n\n<p style=\"font-family:Lucida Grande; font-size: 14px;\"> Did this solve your issue? You can set this ticket to solved by clicking the link below:\n<br><a href=\"https://selfserve.support.twilio.com/ticket/solve?id=27349257&code=29WYRG-L0LEV\" rel=\"nofollow\">This ticket is solved</a>\n</p>\n\n\n<br>This is in reference to ticket # 27349257\n\n--------------------------------\nThis email is a service from Twilio.\n\n\n\n\n\n\n\n\n\n[29WYRG-L0LEV]",
+        "external_id": null,
+        "form_id": "34213496795155",
+        "group_id": "50440545727891",
+        "id": "535334",
+        "is_public": true,
+        "organization_id": null,
+        "priority": null,
+        "requester_id": "51515346535955",
+        "status": "OPEN",
+        "subject": "[Twilio] Re: Chat Question from sara@citytax.com",
+        "submitter_id": "51515346535955",
+        "tags": [
+          "taxticket"
+        ],
+        "type": null,
+        "updated_at": "2026-06-09T16:48:09Z",
+        "via": {
+          "channel": "mail"
+        }
+      },
+      "event": {
+        "comment": {
+          "author": {
+            "id": "51515346535955",
+            "is_staff": false,
+            "name": "Twilio Support"
+          },
+          "body": "## In replies all text above this line is added to the ticket ##\n\n**(Reply to this email to follow up on this issue)**\n\nNote: If you're cc'd on the ticket, please **reply all** to ensure comments are added to the ticket.\n\n\n\n    ![](https://twilio.zendesk.com/images/2016/default-avatar-80.png)\n\n**Brayan Rodriguez** (Twilio)\n\n\n\nJun 9, 2026, 9:48 AM PDT\n\n\nHi Sara,\n\nI hope you're doing great and thank you for reaching us, my name is Brayan and I will be more than glad to assist you today since my peer is not currently available.\n\nPlease allow me a few to review the details associated to your Brand Submission and the desired upgrade in Messaging Limitations, I'll get back to you shortly with next steps.\n\nThank you for your patience and understanding.\n\nBest Regards,\n\nBrayan\nTwilio Support\n\nDid this solve your issue? You can set this ticket to solved by clicking the link below:\n\nThis ticket is solved\n\nThis is in reference to ticket # 27349257\n\n This email is a service from Twilio. Delivered by Zendesk.\n\n[29WYRG-L0LEV]",
+          "html_body": "<div class=\"zd-comment zd-comment-pre-styled\" dir=\"auto\"><div style=\"line-height: 18px; font-size: 12px; color: #444444; padding: 10px;\">\n <div style=\"color: #b5b5b5;\">## In replies all text above this line is added to the ticket ##</div>\n <p dir=\"auto\"><b>(Reply to this email to follow up on this issue)</b></p><p dir=\"auto\">Note: If you're cc'd on the ticket, please <b>reply all</b> to ensure comments are added to the ticket. </p><p dir=\"auto\"></p><div style=\"margin-top: 25px;\"><table class=\"zd-liquid-comment\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"> <tbody><tr> <td width=\"100%\" style=\"border-top-width: 1px; border-top-color: #c5c5c5; border-top-style: dotted; border-collapse: collapse; padding: 15px 0;\"> <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"table-layout: fixed;\"> <tbody><tr> <td valign=\"top\" style=\"width: 40px; border-collapse: collapse; padding: 0 15px;\"> <img width=\"40\" height=\"40\" alt=\"\" style=\"height: auto; line-height: 100%; outline: none; text-decoration: none; -webkit-border-radius: 5px; border-radius: 5px;\" src=\"https://twilio.zendesk.com/images/2016/default-avatar-80.png\"> </td> <td width=\"100%\" style=\"border-collapse: collapse; margin: 0; padding: 0;\" valign=\"top\"> <p style=\" font-size: 15px; line-height: 18px; margin-bottom: 0; margin-top: 0; color: #1b1d1e; padding: 0;\" dir=\"auto\"> <strong>Brayan Rodriguez</strong> (Twilio) </p> <p style=\" font-size: 13px; line-height: 25px; margin-bottom: 15px; margin-top: 0; color: #bbbbbb; padding: 0;\" dir=\"auto\"> Jun 9, 2026, 9:48 AM PDT </p> <div class=\"zd-comment\" dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Hi Sara,<br>&nbsp;<br>I hope you're doing great and thank you for reaching us, my name is Brayan and I will be more than glad to assist you today since my peer is not currently available.<br>&nbsp;<br>Please allow me a few to review the details associated to your Brand Submission and the desired upgrade in Messaging Limitations, I'll get back to you shortly with next steps.<br>&nbsp;<br>Thank you for your patience and understanding.<br><span class=\"collapse-signature\"></span><div class=\"signature\"><p dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Best Regards,</p><p dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Brayan<br>\nTwilio Support</p></div></div><p dir=\"auto\"> </p></td> </tr> </tbody></table> </td> </tr></tbody></table></div><p dir=\"auto\"></p><p style=\" font-size: 14px;\" dir=\"auto\"> Did this solve your issue? You can set this ticket to solved by clicking the link below:<br><br><a href=\"https://selfserve.support.twilio.com/ticket/solve?id=27349257&amp;code=29WYRG-L0LEV\" rel=\"noreferrer\">This ticket is solved</a><br></p><p dir=\"auto\"><br>This is in reference to ticket # 27349257</p>\n <div style=\"color: #9e9e9e; padding-top: 10px; border-top-width: 1px; border-top-color: #eeeeee; border-top-style: solid; margin: 10px 0 14px;\">\n This email is a service from Twilio. Delivered by <a href=\"http://www.zendesk.com\" style=\"color: black;\" rel=\"noreferrer\">Zendesk</a>.\n </div>\n </div>\n<span style=\"color: #FFFFFF;\">[29WYRG-L0LEV]</span></div>",
+          "id": "52445172212499",
+          "is_public": true
+        },
+        "meta": {
+          "sequence": {
+            "id": "3532343435313632353437373331",
+            "position": 1
+          }
+        }
+      },
+      "id": "60ae7b44-f756-4157-b5a8-a52bf98547da",
+      "subject": "zen:ticket:53519",
+      "time": "2026-06-09T16:48:09.219889619Z",
+      "type": "zen:event-type:ticket.comment_added",
+      "zendesk_event_version": "2022-11-06"
+    }
+  },
+  {
+    "receivedAt": "2026-06-12T13:39:43.254Z",
+    "event": "zendesk-webhook",
+    "data": {
+      "account_id": 22453773,
+      "detail": {
+        "actor_id": "51515346535955",
+        "assignee_id": "45452599574675",
+        "brand_id": "34213510875539",
+        "created_at": "2026-06-12T20:21:16Z",
+        "custom_status": "34213496924435",
+        "description": "## In replies all text above this line is added to the ticket ##\n\n<b>(Reply to this email to follow up on this issue)</b>\n\nNote: If you're cc'd on the ticket, please  <b>reply all</b> to ensure comments are added to the ticket. \n\n----------------------------------------------\n\nTwilio Support, Jun 4, 2026, 1:21 PM PDT\n\n[6/4/2026, 1:02:48 PM PDT]\n\n**sara@citytax.com:** How to Increase messaging limit by vetting apply\n\n[6/4/2026, 1:03:16 PM PDT]\n\n**Sofía:** Hello Sara,   Thank you for reaching out to Twilio support, my name is Sofía and I will be helping you with this matter.\n\n[6/4/2026, 1:04:18 PM PDT]\n\n**Sofía:** Got it! I understand you are looking to apply for a secondary vetting to increase the throughput limits. This process is done from our end, this has a $41 fee associated with the same.\n\n[6/4/2026, 1:04:53 PM PDT]\n\n**Sofía:** If you agree, please share the Account SID and the Brand SID associated with this request and we can start this process.\n\n[6/4/2026, 1:06:38 PM PDT]\n\n**sara@citytax.com:** Brand Id : BNe70c0bc50944d19bf1a8abed86ca5e0a Account SID: AC78d62a5fe0dd507b885b510f81eb2a52\n\n[6/4/2026, 1:08:12 PM PDT]\n\n**Sofía:** Thank you, I have created an internal request for this, at the moment, we will need to convert this chat into the Ticket#27349257 while we obtain updates from this request.\n\n[6/4/2026, 1:08:24 PM PDT]\n\n**Sofía:** At the moment, while I still have you in this live chat is there anything else I can help you with?\n\n[6/4/2026, 1:09:38 PM PDT]\n\n**sara@citytax.com:** Have you submit the ticket for Vetting Or it is done from my End because you maintion that it is done form you end\n\n[6/4/2026, 1:10:18 PM PDT]\n\n**Sofía:** I have submitted the internal request for the vetting, the support ticket I have provided is to keep you posted with the developments of the same.\n\n[6/4/2026, 1:11:01 PM PDT]\n\n**Sofía:** We have this guide to locate the Tickets in the Twilio console: https://help.twilio.com/articles/223136247-Managing-Your-Twilio-Support-Tickets\n\n[6/4/2026, 1:12:44 PM PDT]\n\n**sara@citytax.com:** So how much time it takes to approve\n\n[6/4/2026, 1:13:09 PM PDT]\n\n**Sofía:** The timeframe depends, normally it can take up to a week.\n\n[6/4/2026, 1:13:47 PM PDT]\n\n**sara@citytax.com:** please get this done asap\n\n[6/4/2026, 1:14:20 PM PDT]\n\n**Sofía:** Yes, as soon as we have updates we will be sharing them on the ticket thread\n\n[6/4/2026, 1:15:24 PM PDT]\n\n**sara@citytax.com:** ok thaks\n\n[6/4/2026, 1:15:53 PM PDT]\n\n**Sofía:** You are welcome! Looking forward to update you soon, hope you have a good day!\n\n[6/4/2026, 1:16:23 PM PDT]\n\n**sara@citytax.com:** 😊\n\n<p style=\"font-family:Lucida Grande; font-size: 14px;\"> Did this solve your issue? You can set this ticket to solved by clicking the link below:\n<br><a href=\"https://selfserve.support.twilio.com/ticket/solve?id=27349257&code=29WYRG-L0LEV\" rel=\"nofollow\">This ticket is solved</a>\n</p>\n\n\n<br>This is in reference to ticket # 27349257\n\n--------------------------------\nThis email is a service from Twilio.\n\n\n\n\n\n\n\n\n\n[29WYRG-L0LEV]",
+        "external_id": null,
+        "form_id": "34213496795155",
+        "group_id": "50440545727891",
+        "id": "535335",
+        "is_public": true,
+        "organization_id": null,
+        "priority": null,
+        "requester_id": "51515346535955",
+        "status": "OPEN",
+        "subject": "[Twilio] Re: Chat Question from sara@citytax.com",
+        "submitter_id": "51515346535955",
+        "tags": [
+          "taxticket"
+        ],
+        "type": null,
+        "updated_at": "2026-06-09T16:48:09Z",
+        "via": {
+          "channel": "mail"
+        }
+      },
+      "event": {
+        "comment": {
+          "author": {
+            "id": "51515346535955",
+            "is_staff": false,
+            "name": "Twilio Support"
+          },
+          "body": "## In replies all text above this line is added to the ticket ##\n\n**(Reply to this email to follow up on this issue)**\n\nNote: If you're cc'd on the ticket, please **reply all** to ensure comments are added to the ticket.\n\n\n\n    ![](https://twilio.zendesk.com/images/2016/default-avatar-80.png)\n\n**Brayan Rodriguez** (Twilio)\n\n\n\nJun 9, 2026, 9:48 AM PDT\n\n\nHi Sara,\n\nI hope you're doing great and thank you for reaching us, my name is Brayan and I will be more than glad to assist you today since my peer is not currently available.\n\nPlease allow me a few to review the details associated to your Brand Submission and the desired upgrade in Messaging Limitations, I'll get back to you shortly with next steps.\n\nThank you for your patience and understanding.\n\nBest Regards,\n\nBrayan\nTwilio Support\n\nDid this solve your issue? You can set this ticket to solved by clicking the link below:\n\nThis ticket is solved\n\nThis is in reference to ticket # 27349257\n\n This email is a service from Twilio. Delivered by Zendesk.\n\n[29WYRG-L0LEV]",
+          "html_body": "<div class=\"zd-comment zd-comment-pre-styled\" dir=\"auto\"><div style=\"line-height: 18px; font-size: 12px; color: #444444; padding: 10px;\">\n <div style=\"color: #b5b5b5;\">## In replies all text above this line is added to the ticket ##</div>\n <p dir=\"auto\"><b>(Reply to this email to follow up on this issue)</b></p><p dir=\"auto\">Note: If you're cc'd on the ticket, please <b>reply all</b> to ensure comments are added to the ticket. </p><p dir=\"auto\"></p><div style=\"margin-top: 25px;\"><table class=\"zd-liquid-comment\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"> <tbody><tr> <td width=\"100%\" style=\"border-top-width: 1px; border-top-color: #c5c5c5; border-top-style: dotted; border-collapse: collapse; padding: 15px 0;\"> <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"table-layout: fixed;\"> <tbody><tr> <td valign=\"top\" style=\"width: 40px; border-collapse: collapse; padding: 0 15px;\"> <img width=\"40\" height=\"40\" alt=\"\" style=\"height: auto; line-height: 100%; outline: none; text-decoration: none; -webkit-border-radius: 5px; border-radius: 5px;\" src=\"https://twilio.zendesk.com/images/2016/default-avatar-80.png\"> </td> <td width=\"100%\" style=\"border-collapse: collapse; margin: 0; padding: 0;\" valign=\"top\"> <p style=\" font-size: 15px; line-height: 18px; margin-bottom: 0; margin-top: 0; color: #1b1d1e; padding: 0;\" dir=\"auto\"> <strong>Brayan Rodriguez</strong> (Twilio) </p> <p style=\" font-size: 13px; line-height: 25px; margin-bottom: 15px; margin-top: 0; color: #bbbbbb; padding: 0;\" dir=\"auto\"> Jun 9, 2026, 9:48 AM PDT </p> <div class=\"zd-comment\" dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Hi Sara,<br>&nbsp;<br>I hope you're doing great and thank you for reaching us, my name is Brayan and I will be more than glad to assist you today since my peer is not currently available.<br>&nbsp;<br>Please allow me a few to review the details associated to your Brand Submission and the desired upgrade in Messaging Limitations, I'll get back to you shortly with next steps.<br>&nbsp;<br>Thank you for your patience and understanding.<br><span class=\"collapse-signature\"></span><div class=\"signature\"><p dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Best Regards,</p><p dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Brayan<br>\nTwilio Support</p></div></div><p dir=\"auto\"> </p></td> </tr> </tbody></table> </td> </tr></tbody></table></div><p dir=\"auto\"></p><p style=\" font-size: 14px;\" dir=\"auto\"> Did this solve your issue? You can set this ticket to solved by clicking the link below:<br><br><a href=\"https://selfserve.support.twilio.com/ticket/solve?id=27349257&amp;code=29WYRG-L0LEV\" rel=\"noreferrer\">This ticket is solved</a><br></p><p dir=\"auto\"><br>This is in reference to ticket # 27349257</p>\n <div style=\"color: #9e9e9e; padding-top: 10px; border-top-width: 1px; border-top-color: #eeeeee; border-top-style: solid; margin: 10px 0 14px;\">\n This email is a service from Twilio. Delivered by <a href=\"http://www.zendesk.com\" style=\"color: black;\" rel=\"noreferrer\">Zendesk</a>.\n </div>\n </div>\n<span style=\"color: #FFFFFF;\">[29WYRG-L0LEV]</span></div>",
+          "id": "52445172212499",
+          "is_public": true
+        },
+        "meta": {
+          "sequence": {
+            "id": "3532343435313632353437373331",
+            "position": 1
+          }
+        }
+      },
+      "id": "60ae7b44-f756-4157-b5a8-a52bf98547da",
+      "subject": "zen:ticket:53519",
+      "time": "2026-06-09T16:48:09.219889619Z",
+      "type": "zen:event-type:ticket.comment_added",
+      "zendesk_event_version": "2022-11-06"
+    }
+  },
+  {
+    "receivedAt": "2026-06-12T13:43:14.488Z",
+    "event": "zendesk-webhook",
+    "data": {
+      "account_id": 22453773,
+      "detail": {
+        "actor_id": "51515346535955",
+        "assignee_id": "45452599574675",
+        "brand_id": "34213510875539",
+        "created_at": "2026-06-12T20:21:16Z",
+        "custom_status": "34213496924435",
+        "description": "## In replies all text above this line is added to the ticket ##\n\n<b>(Reply to this email to follow up on this issue)</b>\n\nNote: If you're cc'd on the ticket, please  <b>reply all</b> to ensure comments are added to the ticket. \n\n----------------------------------------------\n\nTwilio Support, Jun 4, 2026, 1:21 PM PDT\n\n[6/4/2026, 1:02:48 PM PDT]\n\n**sara@citytax.com:** How to Increase messaging limit by vetting apply\n\n[6/4/2026, 1:03:16 PM PDT]\n\n**Sofía:** Hello Sara,   Thank you for reaching out to Twilio support, my name is Sofía and I will be helping you with this matter.\n\n[6/4/2026, 1:04:18 PM PDT]\n\n**Sofía:** Got it! I understand you are looking to apply for a secondary vetting to increase the throughput limits. This process is done from our end, this has a $41 fee associated with the same.\n\n[6/4/2026, 1:04:53 PM PDT]\n\n**Sofía:** If you agree, please share the Account SID and the Brand SID associated with this request and we can start this process.\n\n[6/4/2026, 1:06:38 PM PDT]\n\n**sara@citytax.com:** Brand Id : BNe70c0bc50944d19bf1a8abed86ca5e0a Account SID: AC78d62a5fe0dd507b885b510f81eb2a52\n\n[6/4/2026, 1:08:12 PM PDT]\n\n**Sofía:** Thank you, I have created an internal request for this, at the moment, we will need to convert this chat into the Ticket#27349257 while we obtain updates from this request.\n\n[6/4/2026, 1:08:24 PM PDT]\n\n**Sofía:** At the moment, while I still have you in this live chat is there anything else I can help you with?\n\n[6/4/2026, 1:09:38 PM PDT]\n\n**sara@citytax.com:** Have you submit the ticket for Vetting Or it is done from my End because you maintion that it is done form you end\n\n[6/4/2026, 1:10:18 PM PDT]\n\n**Sofía:** I have submitted the internal request for the vetting, the support ticket I have provided is to keep you posted with the developments of the same.\n\n[6/4/2026, 1:11:01 PM PDT]\n\n**Sofía:** We have this guide to locate the Tickets in the Twilio console: https://help.twilio.com/articles/223136247-Managing-Your-Twilio-Support-Tickets\n\n[6/4/2026, 1:12:44 PM PDT]\n\n**sara@citytax.com:** So how much time it takes to approve\n\n[6/4/2026, 1:13:09 PM PDT]\n\n**Sofía:** The timeframe depends, normally it can take up to a week.\n\n[6/4/2026, 1:13:47 PM PDT]\n\n**sara@citytax.com:** please get this done asap\n\n[6/4/2026, 1:14:20 PM PDT]\n\n**Sofía:** Yes, as soon as we have updates we will be sharing them on the ticket thread\n\n[6/4/2026, 1:15:24 PM PDT]\n\n**sara@citytax.com:** ok thaks\n\n[6/4/2026, 1:15:53 PM PDT]\n\n**Sofía:** You are welcome! Looking forward to update you soon, hope you have a good day!\n\n[6/4/2026, 1:16:23 PM PDT]\n\n**sara@citytax.com:** 😊\n\n<p style=\"font-family:Lucida Grande; font-size: 14px;\"> Did this solve your issue? You can set this ticket to solved by clicking the link below:\n<br><a href=\"https://selfserve.support.twilio.com/ticket/solve?id=27349257&code=29WYRG-L0LEV\" rel=\"nofollow\">This ticket is solved</a>\n</p>\n\n\n<br>This is in reference to ticket # 27349257\n\n--------------------------------\nThis email is a service from Twilio.\n\n\n\n\n\n\n\n\n\n[29WYRG-L0LEV]",
+        "external_id": null,
+        "form_id": "34213496795155",
+        "group_id": "50440545727891",
+        "id": "5358335",
+        "is_public": true,
+        "organization_id": null,
+        "priority": null,
+        "requester_id": "51515346535955",
+        "status": "OPEN",
+        "subject": "[Twilio] Re: Chat Question from sara@citytax.com",
+        "submitter_id": "51515346535955",
+        "tags": [
+          "taxticket"
+        ],
+        "type": null,
+        "updated_at": "2026-06-09T16:48:09Z",
+        "via": {
+          "channel": "mail"
+        }
+      },
+      "event": {
+        "comment": {
+          "author": {
+            "id": "51515346535955",
+            "is_staff": false,
+            "name": "Twilio Support"
+          },
+          "body": "## In replies all text above this line is added to the ticket ##\n\n**(Reply to this email to follow up on this issue)**\n\nNote: If you're cc'd on the ticket, please **reply all** to ensure comments are added to the ticket.\n\n\n\n    ![](https://twilio.zendesk.com/images/2016/default-avatar-80.png)\n\n**Brayan Rodriguez** (Twilio)\n\n\n\nJun 9, 2026, 9:48 AM PDT\n\n\nHi Sara,\n\nI hope you're doing great and thank you for reaching us, my name is Brayan and I will be more than glad to assist you today since my peer is not currently available.\n\nPlease allow me a few to review the details associated to your Brand Submission and the desired upgrade in Messaging Limitations, I'll get back to you shortly with next steps.\n\nThank you for your patience and understanding.\n\nBest Regards,\n\nBrayan\nTwilio Support\n\nDid this solve your issue? You can set this ticket to solved by clicking the link below:\n\nThis ticket is solved\n\nThis is in reference to ticket # 27349257\n\n This email is a service from Twilio. Delivered by Zendesk.\n\n[29WYRG-L0LEV]",
+          "html_body": "<div class=\"zd-comment zd-comment-pre-styled\" dir=\"auto\"><div style=\"line-height: 18px; font-size: 12px; color: #444444; padding: 10px;\">\n <div style=\"color: #b5b5b5;\">## In replies all text above this line is added to the ticket ##</div>\n <p dir=\"auto\"><b>(Reply to this email to follow up on this issue)</b></p><p dir=\"auto\">Note: If you're cc'd on the ticket, please <b>reply all</b> to ensure comments are added to the ticket. </p><p dir=\"auto\"></p><div style=\"margin-top: 25px;\"><table class=\"zd-liquid-comment\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"> <tbody><tr> <td width=\"100%\" style=\"border-top-width: 1px; border-top-color: #c5c5c5; border-top-style: dotted; border-collapse: collapse; padding: 15px 0;\"> <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"table-layout: fixed;\"> <tbody><tr> <td valign=\"top\" style=\"width: 40px; border-collapse: collapse; padding: 0 15px;\"> <img width=\"40\" height=\"40\" alt=\"\" style=\"height: auto; line-height: 100%; outline: none; text-decoration: none; -webkit-border-radius: 5px; border-radius: 5px;\" src=\"https://twilio.zendesk.com/images/2016/default-avatar-80.png\"> </td> <td width=\"100%\" style=\"border-collapse: collapse; margin: 0; padding: 0;\" valign=\"top\"> <p style=\" font-size: 15px; line-height: 18px; margin-bottom: 0; margin-top: 0; color: #1b1d1e; padding: 0;\" dir=\"auto\"> <strong>Brayan Rodriguez</strong> (Twilio) </p> <p style=\" font-size: 13px; line-height: 25px; margin-bottom: 15px; margin-top: 0; color: #bbbbbb; padding: 0;\" dir=\"auto\"> Jun 9, 2026, 9:48 AM PDT </p> <div class=\"zd-comment\" dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Hi Sara,<br>&nbsp;<br>I hope you're doing great and thank you for reaching us, my name is Brayan and I will be more than glad to assist you today since my peer is not currently available.<br>&nbsp;<br>Please allow me a few to review the details associated to your Brand Submission and the desired upgrade in Messaging Limitations, I'll get back to you shortly with next steps.<br>&nbsp;<br>Thank you for your patience and understanding.<br><span class=\"collapse-signature\"></span><div class=\"signature\"><p dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Best Regards,</p><p dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Brayan<br>\nTwilio Support</p></div></div><p dir=\"auto\"> </p></td> </tr> </tbody></table> </td> </tr></tbody></table></div><p dir=\"auto\"></p><p style=\" font-size: 14px;\" dir=\"auto\"> Did this solve your issue? You can set this ticket to solved by clicking the link below:<br><br><a href=\"https://selfserve.support.twilio.com/ticket/solve?id=27349257&amp;code=29WYRG-L0LEV\" rel=\"noreferrer\">This ticket is solved</a><br></p><p dir=\"auto\"><br>This is in reference to ticket # 27349257</p>\n <div style=\"color: #9e9e9e; padding-top: 10px; border-top-width: 1px; border-top-color: #eeeeee; border-top-style: solid; margin: 10px 0 14px;\">\n This email is a service from Twilio. Delivered by <a href=\"http://www.zendesk.com\" style=\"color: black;\" rel=\"noreferrer\">Zendesk</a>.\n </div>\n </div>\n<span style=\"color: #FFFFFF;\">[29WYRG-L0LEV]</span></div>",
+          "id": "52445172212499",
+          "is_public": true
+        },
+        "meta": {
+          "sequence": {
+            "id": "3532343435313632353437373331",
+            "position": 1
+          }
+        }
+      },
+      "id": "60ae7b44-f756-4157-b5a8-a52bf98547da",
+      "subject": "zen:ticket:53519",
+      "time": "2026-06-09T16:48:09.219889619Z",
+      "type": "zen:event-type:ticket.comment_added",
+      "zendesk_event_version": "2022-11-06"
+    }
+  },
+  {
+    "receivedAt": "2026-06-12T13:45:03.477Z",
+    "event": "zendesk-webhook",
+    "data": {
+      "account_id": 22453773,
+      "detail": {
+        "actor_id": "51515346535955",
+        "assignee_id": "45452599574675",
+        "brand_id": "34213510875539",
+        "created_at": "2026-06-12T20:21:16Z",
+        "custom_status": "34213496924435",
+        "description": "## In replies all text above this line is added to the ticket ##\n\n<b>(Reply to this email to follow up on this issue)</b>\n\nNote: If you're cc'd on the ticket, please  <b>reply all</b> to ensure comments are added to the ticket. \n\n----------------------------------------------\n\nTwilio Support, Jun 4, 2026, 1:21 PM PDT\n\n[6/4/2026, 1:02:48 PM PDT]\n\n**sara@citytax.com:** How to Increase messaging limit by vetting apply\n\n[6/4/2026, 1:03:16 PM PDT]\n\n**Sofía:** Hello Sara,   Thank you for reaching out to Twilio support, my name is Sofía and I will be helping you with this matter.\n\n[6/4/2026, 1:04:18 PM PDT]\n\n**Sofía:** Got it! I understand you are looking to apply for a secondary vetting to increase the throughput limits. This process is done from our end, this has a $41 fee associated with the same.\n\n[6/4/2026, 1:04:53 PM PDT]\n\n**Sofía:** If you agree, please share the Account SID and the Brand SID associated with this request and we can start this process.\n\n[6/4/2026, 1:06:38 PM PDT]\n\n**sara@citytax.com:** Brand Id : BNe70c0bc50944d19bf1a8abed86ca5e0a Account SID: AC78d62a5fe0dd507b885b510f81eb2a52\n\n[6/4/2026, 1:08:12 PM PDT]\n\n**Sofía:** Thank you, I have created an internal request for this, at the moment, we will need to convert this chat into the Ticket#27349257 while we obtain updates from this request.\n\n[6/4/2026, 1:08:24 PM PDT]\n\n**Sofía:** At the moment, while I still have you in this live chat is there anything else I can help you with?\n\n[6/4/2026, 1:09:38 PM PDT]\n\n**sara@citytax.com:** Have you submit the ticket for Vetting Or it is done from my End because you maintion that it is done form you end\n\n[6/4/2026, 1:10:18 PM PDT]\n\n**Sofía:** I have submitted the internal request for the vetting, the support ticket I have provided is to keep you posted with the developments of the same.\n\n[6/4/2026, 1:11:01 PM PDT]\n\n**Sofía:** We have this guide to locate the Tickets in the Twilio console: https://help.twilio.com/articles/223136247-Managing-Your-Twilio-Support-Tickets\n\n[6/4/2026, 1:12:44 PM PDT]\n\n**sara@citytax.com:** So how much time it takes to approve\n\n[6/4/2026, 1:13:09 PM PDT]\n\n**Sofía:** The timeframe depends, normally it can take up to a week.\n\n[6/4/2026, 1:13:47 PM PDT]\n\n**sara@citytax.com:** please get this done asap\n\n[6/4/2026, 1:14:20 PM PDT]\n\n**Sofía:** Yes, as soon as we have updates we will be sharing them on the ticket thread\n\n[6/4/2026, 1:15:24 PM PDT]\n\n**sara@citytax.com:** ok thaks\n\n[6/4/2026, 1:15:53 PM PDT]\n\n**Sofía:** You are welcome! Looking forward to update you soon, hope you have a good day!\n\n[6/4/2026, 1:16:23 PM PDT]\n\n**sara@citytax.com:** 😊\n\n<p style=\"font-family:Lucida Grande; font-size: 14px;\"> Did this solve your issue? You can set this ticket to solved by clicking the link below:\n<br><a href=\"https://selfserve.support.twilio.com/ticket/solve?id=27349257&code=29WYRG-L0LEV\" rel=\"nofollow\">This ticket is solved</a>\n</p>\n\n\n<br>This is in reference to ticket # 27349257\n\n--------------------------------\nThis email is a service from Twilio.\n\n\n\n\n\n\n\n\n\n[29WYRG-L0LEV]",
+        "external_id": null,
+        "form_id": "34213496795155",
+        "group_id": "50440545727891",
+        "id": "5358388",
+        "is_public": true,
+        "organization_id": null,
+        "priority": null,
+        "requester_id": "51515346535955",
+        "status": "OPEN",
+        "subject": "[Twilio] Re: Chat Question from sara@citytax.com",
+        "submitter_id": "51515346535955",
+        "tags": [
+          "taxticket"
+        ],
+        "type": null,
+        "updated_at": "2026-06-09T16:48:09Z",
+        "via": {
+          "channel": "mail"
+        }
+      },
+      "event": {
+        "comment": {
+          "author": {
+            "id": "51515346535955",
+            "is_staff": false,
+            "name": "Twilio Support"
+          },
+          "body": "## In replies all text above this line is added to the ticket ##\n\n**(Reply to this email to follow up on this issue)**\n\nNote: If you're cc'd on the ticket, please **reply all** to ensure comments are added to the ticket.\n\n\n\n    ![](https://twilio.zendesk.com/images/2016/default-avatar-80.png)\n\n**Brayan Rodriguez** (Twilio)\n\n\n\nJun 9, 2026, 9:48 AM PDT\n\n\nHi Sara,\n\nI hope you're doing great and thank you for reaching us, my name is Brayan and I will be more than glad to assist you today since my peer is not currently available.\n\nPlease allow me a few to review the details associated to your Brand Submission and the desired upgrade in Messaging Limitations, I'll get back to you shortly with next steps.\n\nThank you for your patience and understanding.\n\nBest Regards,\n\nBrayan\nTwilio Support\n\nDid this solve your issue? You can set this ticket to solved by clicking the link below:\n\nThis ticket is solved\n\nThis is in reference to ticket # 27349257\n\n This email is a service from Twilio. Delivered by Zendesk.\n\n[29WYRG-L0LEV]",
+          "html_body": "<div class=\"zd-comment zd-comment-pre-styled\" dir=\"auto\"><div style=\"line-height: 18px; font-size: 12px; color: #444444; padding: 10px;\">\n <div style=\"color: #b5b5b5;\">## In replies all text above this line is added to the ticket ##</div>\n <p dir=\"auto\"><b>(Reply to this email to follow up on this issue)</b></p><p dir=\"auto\">Note: If you're cc'd on the ticket, please <b>reply all</b> to ensure comments are added to the ticket. </p><p dir=\"auto\"></p><div style=\"margin-top: 25px;\"><table class=\"zd-liquid-comment\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"> <tbody><tr> <td width=\"100%\" style=\"border-top-width: 1px; border-top-color: #c5c5c5; border-top-style: dotted; border-collapse: collapse; padding: 15px 0;\"> <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"table-layout: fixed;\"> <tbody><tr> <td valign=\"top\" style=\"width: 40px; border-collapse: collapse; padding: 0 15px;\"> <img width=\"40\" height=\"40\" alt=\"\" style=\"height: auto; line-height: 100%; outline: none; text-decoration: none; -webkit-border-radius: 5px; border-radius: 5px;\" src=\"https://twilio.zendesk.com/images/2016/default-avatar-80.png\"> </td> <td width=\"100%\" style=\"border-collapse: collapse; margin: 0; padding: 0;\" valign=\"top\"> <p style=\" font-size: 15px; line-height: 18px; margin-bottom: 0; margin-top: 0; color: #1b1d1e; padding: 0;\" dir=\"auto\"> <strong>Brayan Rodriguez</strong> (Twilio) </p> <p style=\" font-size: 13px; line-height: 25px; margin-bottom: 15px; margin-top: 0; color: #bbbbbb; padding: 0;\" dir=\"auto\"> Jun 9, 2026, 9:48 AM PDT </p> <div class=\"zd-comment\" dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Hi Sara,<br>&nbsp;<br>I hope you're doing great and thank you for reaching us, my name is Brayan and I will be more than glad to assist you today since my peer is not currently available.<br>&nbsp;<br>Please allow me a few to review the details associated to your Brand Submission and the desired upgrade in Messaging Limitations, I'll get back to you shortly with next steps.<br>&nbsp;<br>Thank you for your patience and understanding.<br><span class=\"collapse-signature\"></span><div class=\"signature\"><p dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Best Regards,</p><p dir=\"auto\" style=\"color: #2b2e2f; line-height: 22px; margin: 15px 0;\">Brayan<br>\nTwilio Support</p></div></div><p dir=\"auto\"> </p></td> </tr> </tbody></table> </td> </tr></tbody></table></div><p dir=\"auto\"></p><p style=\" font-size: 14px;\" dir=\"auto\"> Did this solve your issue? You can set this ticket to solved by clicking the link below:<br><br><a href=\"https://selfserve.support.twilio.com/ticket/solve?id=27349257&amp;code=29WYRG-L0LEV\" rel=\"noreferrer\">This ticket is solved</a><br></p><p dir=\"auto\"><br>This is in reference to ticket # 27349257</p>\n <div style=\"color: #9e9e9e; padding-top: 10px; border-top-width: 1px; border-top-color: #eeeeee; border-top-style: solid; margin: 10px 0 14px;\">\n This email is a service from Twilio. Delivered by <a href=\"http://www.zendesk.com\" style=\"color: black;\" rel=\"noreferrer\">Zendesk</a>.\n </div>\n </div>\n<span style=\"color: #FFFFFF;\">[29WYRG-L0LEV]</span></div>",
+          "id": "52445172212499",
+          "is_public": true
+        },
+        "meta": {
+          "sequence": {
+            "id": "3532343435313632353437373331",
+            "position": 1
+          }
+        }
+      },
+      "id": "60ae7b44-f756-4157-b5a8-a52bf98547da",
+      "subject": "zen:ticket:53519",
+      "time": "2026-06-09T16:48:09.219889619Z",
+      "type": "zen:event-type:ticket.comment_added",
+      "zendesk_event_version": "2022-11-06"
+    }
+  }
+]
