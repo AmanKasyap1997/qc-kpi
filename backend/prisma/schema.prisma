@@ -44,12 +44,12 @@ model Role {
 model Department {
   id                 Int       @id @default(autoincrement())
   name               String
-  code               String
-  zeroTolerance      Boolean   @default(false) @map("zero_tolerance")
-  maxStrikes         Int       @default(2) @map("max_strikes")
-  pipDurationDays    Int       @default(14) @map("pip_duration_days")
-  qaThresholdWarning Int       @default(45) @map("qa_threshold_warning")
-  qaThresholdPip     Int       @default(35) @map("qa_threshold_pip")
+  code               String     @unique
+  zeroTolerance      Boolean?   @default(false) @map("zero_tolerance")
+  maxStrikes         Int?       @default(2) @map("max_strikes")
+  pipDurationDays    Int?       @default(14) @map("pip_duration_days")
+  qaThresholdWarning Int?       @default(45) @map("qa_threshold_warning")
+  qaThresholdPip     Int?       @default(35) @map("qa_threshold_pip")
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at") // Fixed: added @updatedAt
   deletedAt          DateTime? @map("deleted_at")
@@ -122,7 +122,7 @@ model Agent {
 
   departmentId Int @map("department_id")
 
-  callerReadyExtensionId String @map("rc_extension_id")
+  callerReadyExtensionId String @unique @map("rc_extension_id")
 
   active Boolean @default(true)
 

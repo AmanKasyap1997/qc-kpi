@@ -6,7 +6,7 @@ import errorHandler from "./middleware/errorHandler";
 import authRoutes from "./modules/auth/authRoute";
 import webhookRoutes from "./webhook/routes";
 import dashBoardData from "./dashboard/index";
-
+import { startAgentSyncJob } from "./jobs/syncAgents";
 
 dotenv.config();
 
@@ -25,7 +25,7 @@ app.use(
 );
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
- 
+
 app.use("/api/auth", authRoutes);
 app.use("/api/webhooks", webhookRoutes);
 app.use("/api/dashboard", dashBoardData);
@@ -36,6 +36,8 @@ app.get("/health", (_req, res) => {
     message: "Server is running",
   });
 });
+
+startAgentSyncJob();
 
 app.use(errorHandler);
 

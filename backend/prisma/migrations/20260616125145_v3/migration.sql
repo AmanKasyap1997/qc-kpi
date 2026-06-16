@@ -25,11 +25,11 @@ CREATE TABLE "departments" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
     "code" TEXT NOT NULL,
-    "zero_tolerance" BOOLEAN NOT NULL DEFAULT false,
-    "max_strikes" INTEGER NOT NULL DEFAULT 2,
-    "pip_duration_days" INTEGER NOT NULL DEFAULT 14,
-    "qa_threshold_warning" INTEGER NOT NULL DEFAULT 45,
-    "qa_threshold_pip" INTEGER NOT NULL DEFAULT 35,
+    "zero_tolerance" BOOLEAN DEFAULT false,
+    "max_strikes" INTEGER DEFAULT 2,
+    "pip_duration_days" INTEGER DEFAULT 14,
+    "qa_threshold_warning" INTEGER DEFAULT 45,
+    "qa_threshold_pip" INTEGER DEFAULT 35,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "deleted_at" TIMESTAMP(3),
@@ -168,7 +168,7 @@ CREATE TABLE "lead_sources" (
     "platform" TEXT,
     "active" BOOLEAN NOT NULL DEFAULT true,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
+    "updated_at" TIMESTAMP(3),
     "deleted_at" TIMESTAMP(3),
 
     CONSTRAINT "lead_sources_pkey" PRIMARY KEY ("id")
@@ -180,13 +180,9 @@ CREATE TABLE "sub_ids" (
     "source_id" INTEGER NOT NULL,
     "sub_id" TEXT NOT NULL,
     "campaign" TEXT,
-    "ad_set" TEXT,
-    "creative" TEXT,
-    "target_audience" TEXT,
-    "dailyBudget" DECIMAL(10,2),
     "active" BOOLEAN NOT NULL DEFAULT true,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
+    "updated_at" TIMESTAMP(3),
 
     CONSTRAINT "sub_ids_pkey" PRIMARY KEY ("id")
 );
@@ -268,6 +264,25 @@ CREATE TABLE "calls" (
     CONSTRAINT "calls_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "zendesk_tickets" (
+    "id" SERIAL NOT NULL,
+    "ticket_id" INTEGER NOT NULL,
+    "subject" TEXT,
+    "status" VARCHAR(50),
+    "priority" VARCHAR(50),
+    "assignee_id" BIGINT,
+    "requester_id" BIGINT,
+    "group_id" BIGINT,
+    "form_id" BIGINT,
+    "entity" VARCHAR(20),
+    "webhook_trigger" TIMESTAMP(3),
+    "created_at" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "zendesk_tickets_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE INDEX "idx_tenant_deleted_at" ON "tenants"("deleted_at");
 
@@ -294,6 +309,9 @@ CREATE UNIQUE INDEX "agents_email_key" ON "agents"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "agents_phone_key" ON "agents"("phone");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "agents_rc_extension_id_key" ON "agents"("rc_extension_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "password_resets_token_key" ON "password_resets"("token");
@@ -384,6 +402,9 @@ CREATE INDEX "calls_started_at_idx" ON "calls"("started_at");
 
 -- CreateIndex
 CREATE INDEX "calls_outcome_idx" ON "calls"("outcome");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "zendesk_tickets_ticket_id_key" ON "zendesk_tickets"("ticket_id");
 
 -- AddForeignKey
 ALTER TABLE "role_has_permissions" ADD CONSTRAINT "role_has_permissions_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
