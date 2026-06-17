@@ -29,6 +29,16 @@ export async function run() {
 
   if (!superAdminRole) throw new Error('❌ Super Admin role missing. Add to role seeder.')
 
+  const salesDepartment = await prisma.department.findFirst({
+    where: {
+      name: 'Sales'
+    }
+  });
+
+  // 2. Safety check: Ensure the department was actually found
+  if (!salesDepartment) {
+    throw new Error("Sales department not found. Make sure department seeding runs before user seeding.");
+  }
 
   // ----------------------------------------
   // Create SUPER ADMIN
@@ -44,7 +54,7 @@ export async function run() {
     const superAdmin = await prisma.user.create({
       data: {
         tenantId: tenant.id,
-        departmentId:1,
+        departmentId: salesDepartment.id,
         roleId: superAdminRole.id,
         name: 'Super Admin User',
         email: superAdminEmail,
@@ -72,7 +82,7 @@ export async function run() {
     const admin = await prisma.user.create({
       data: {
         tenantId: tenant.id,
-        departmentId:1,
+        departmentId: salesDepartment.id,
         roleId: adminRole.id,
         name: 'Admin User',
         email: adminEmail,

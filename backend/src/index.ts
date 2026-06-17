@@ -37,7 +37,7 @@ app.get("/health", (_req, res) => {
   });
 });
 
-startAgentSyncJob();
+// startAgentSyncJob();
 
 app.use(errorHandler);
 
