@@ -55,6 +55,6 @@ export async function captureGHLRawBody(req: Request, res: Response) {
     } finally {
         console.log('RELEASING DB CONNECTION');
 
-        // client.release();
+        client.release();
     }
 }

@@ -33,7 +33,7 @@ export async function handelAgentsLogic(agents: any) {
             departmentId = deptResult.rows[0]?.id || null;
         }
         const query = `INSERT INTO agents (name,email,phone,rc_extension_id,department_id,updated_at) VALUES ($1,$2,$3,$4,$5, NOW()) ON CONFLICT (phone) DO UPDATE SET updated_at = NOW() RETURNING *;`;
-        const phone = agent.rep_did;
+        const phone = agent.rep_did?.replace(/\D/g, '');
         if (!phone) continue;
         await db.query(query, [agent.rep_name, agent.email, phone, agent.contact_id, departmentId]);
     }
