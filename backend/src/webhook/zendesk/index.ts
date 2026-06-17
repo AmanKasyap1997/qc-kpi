@@ -43,25 +43,25 @@ export async function captureZendeskRawBody(req: Request, res: Response) {
 
         const ticketDbId = (await db.query(`INSERT INTO zendesk_tickets (ticket_id, subject, status, priority, assignee_id, requester_id, group_id, form_id, entity, webhook_trigger, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT (ticket_id) DO UPDATE SET updated_at = NOW() RETURNING id`, [ticketId, payload.detail?.subject ?? null, payload.detail?.status ?? null, payload.detail?.priority ?? null, toIntOrNull(payload.detail?.assignee_id), toIntOrNull(payload.detail?.requester_id), toIntOrNull(payload.detail?.group_id), toIntOrNull(payload.detail?.form_id), entity, new Date().toISOString(), payload.detail?.created_at])).rows[0].id;
 
-        const logEntry = {
-            receivedAt: new Date().toISOString(),
-            event: "zendesk-webhook",
-            data: payload,
-        };
+        // const logEntry = {
+        //     receivedAt: new Date().toISOString(),
+        //     event: "zendesk-webhook",
+        //     data: payload,
+        // };
 
-        let existingLogs = [];
+        // let existingLogs = [];
 
-        if (fs.existsSync(LOG_FILE)) {
-            try {
-                const fileContent = fs.readFileSync(LOG_FILE, "utf8");
-                existingLogs = fileContent ? JSON.parse(fileContent) : [];
-            } catch {
-                existingLogs = [];
-            }
-        }
+        // if (fs.existsSync(LOG_FILE)) {
+        //     try {
+        //         const fileContent = fs.readFileSync(LOG_FILE, "utf8");
+        //         existingLogs = fileContent ? JSON.parse(fileContent) : [];
+        //     } catch {
+        //         existingLogs = [];
+        //     }
+        // }
 
-        existingLogs.push(logEntry);
-        fs.writeFileSync(LOG_FILE, JSON.stringify(existingLogs, null, 2));
+        // existingLogs.push(logEntry);
+        // fs.writeFileSync(LOG_FILE, JSON.stringify(existingLogs, null, 2));
 
         return res.status(200).json({
             status: "Success",

@@ -5,7 +5,7 @@ import { syncCallerReadyDepartments } from "../integrations/getDepartmentDetails
 let isRunning = false;
 
 export function startAgentSyncJob() {
-    cron.schedule("*/1 * * * *", async () => {
+    cron.schedule("*/10 * * * *", async () => {
         if (isRunning) {
             console.log("⛔ Sync already running, skipping...");
             return;

@@ -397,7 +397,8 @@ const showToast = (type: 'critical' | 'warning' | 'success' | 'info', title: str
 const Dashboard: React.FC = () => {
   // State
   const [activePage, setActivePage] = useState('qa-live');
-  const [allCalls] = useState<Call[]>(generateMockCalls);
+  const [allCalls, setAllCalls] = useState<Call[]>(generateMockCalls);
+  const [loadingCalls, setLoadingCalls] = useState<boolean>(true);
   const [academyCalls] = useState<AcademyCall[]>(buildAcademyCalls(allCalls));
   const [sdrAgents] = useState<SdrAgent[]>(buildSdrAgents);
   const [toasts, setToasts] = useState<Array<{ id: number; type: string; title: string; msg: string }>>([]);
@@ -428,6 +429,88 @@ const Dashboard: React.FC = () => {
       fetchZendeskData();
     }
   }, [filters, allCalls, activePage]);
+
+  useEffect(() => {
+    const fetchLiveFeedData = async () => {
+      try {
+        setLoadingCalls(true);
+        const response = await fetch(`${API_URL}/api/dashboard/calls`);
+        if (!response.ok) throw new Error('Network error syncing calls database.');
+
+        const result = await response.json();
+        if (result.success && Array.isArray(result.data)) {
+          // Parse stringified dates back into full standard Date instances
+          const structuredData = result.data.map((c: any) => ({
+            ...c,
+            date: new Date(c.date)
+          }));
+          setAllCalls(structuredData);
+        }
+      } catch (err: any) {
+        showToast('critical', 'Database Link Error', err.message || 'Could not fetch call records.', setToasts);
+      } finally {
+        setLoadingCalls(false);
+      }
+    };
+
+    fetchLiveFeedData();
+  }, []);
+  const outcomeCounts = useMemo(() => {
+    // 1. Initialize your dynamic counter object with 0s
+    const counts = { enrolled: 0, pitch: 0, callback: 0, declined: 0, hotique: 0, };
+    // 2. Loop through all calls exactly once
+    allCalls.forEach(c => {
+      // Normalize string to lowercase to prevent typos/casing mismatches
+      const outcome = c.outcome?.toLowerCase();
+      if (outcome === 'enrolled') counts.enrolled++;
+      else if (outcome === 'pitch') counts.pitch++;
+      else if (outcome === 'callback') counts.callback++;
+      else if (outcome === 'declined') counts.declined++;
+      else if (outcome === 'hotique') counts.hotique++;
+    });
+
+    return counts;
+  }, [allCalls]);
+
+  const avgQaScore = useMemo(() => {
+    if (allCalls.length === 0) return 0;
+    const totalScore = allCalls.reduce((sum, call) => sum + call.score, 0);
+    const avg = totalScore / allCalls.length;
+    // Rounds to 1 decimal place (e.g., 54.1)
+    return Math.round(avg * 10) / 10;
+  }, [allCalls]);
+
+
+  // Place this line below your other useMemo / state declarations inside the Dashboard component
+  const dynamicLeaderboard = useMemo(() => {
+    const agentMap: Record<string, { name: string; totalScore: number; calls: number; dept: string }> = {};
+
+    allCalls.forEach(call => {
+      if (!agentMap[call.agentName]) {
+        agentMap[call.agentName] = {
+          name: call.agentName,
+          totalScore: 0,
+          calls: 0,
+          dept: call.agentDept
+        };
+      }
+      agentMap[call.agentName].totalScore += call.score;
+      agentMap[call.agentName].calls += 1;
+    });
+
+    const leaderList = Object.values(agentMap).map(agent => {
+      const rawAvg = agent.totalScore / agent.calls;
+      return {
+        name: agent.name,
+        score: Math.round(rawAvg * 10) / 10,
+        calls: agent.calls,
+        dept: agent.dept
+      };
+    });
+
+    return leaderList.sort((a, b) => b.score - a.score).slice(0, 12);
+  }, [allCalls]);
+
 
   const fetchZendeskData = async () => {
     const response = await fetch(`${API_URL}/api/dashboard/zendesk`);
@@ -552,11 +635,18 @@ const Dashboard: React.FC = () => {
   };
 
   const renderCallRows = () => {
+    if (loadingCalls) {
+      return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px', textTransform: 'uppercase', color: 'var(--text2)', fontSize: '11px' }}>🔄 Syncing Live Calls Feed Database...</div>;
+    }
+    if (filteredCalls.length === 0) {
+      return <div style={{ display: 'flex', justifyContent: 'center', padding: '20px', color: 'var(--text3)', fontSize: '11px' }}>Currentely no data available for this selection.</div>;
+    }
     return filteredCalls.map(c => {
       const color = agentColor(c.agentIdx);
       const init = initials(c.agentName);
       const dateStr = c.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + c.date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-      const flagsHtml = c.flags.map(f => <span key={f} className="badge red" style={{ fontSize: '9px' }}>{f}</span>);
+      const flagsHtml = c.flags.map(f => <span key={f} className="badge red" style={{ fontSize: '9px', marginRight: '4px' }}>{f}</span>);
+
       return (
         <div
           key={c.id}
@@ -573,28 +663,43 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
           <div className="font-mono fw-700" style={{ fontSize: '18px', textAlign: 'right', color: scoreColor(c.score) }}>{c.score}</div>
-          <div className="font-mono fs-11 text-muted">{c.duration}</div>
+          <div className="font-mono fs-11 text-muted" style={{ marginLeft: '0px' }}>{c.duration}</div>
           <div><span className={`badge ${outcomeClass(c.outcome)}`} style={{ fontSize: '10px' }}>{c.outcome}</span></div>
-          <div className="fs-11 text-muted">{c.agentDept}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
-            <span className="fs-10 text-muted">{c.campaign.split('—')[0].trim()}</span>
-            {flagsHtml}
-          </div>
+          <div className="fs-11 text-muted" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.campaign}</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>{flagsHtml.length > 0 ? flagsHtml : <span style={{ color: 'var(--text4)', fontSize: '10px' }}>—</span>}</div>
         </div>
       );
     });
   };
 
   const renderSidebarLB = () => {
-    const sorted = [...AGENTS].sort((a, b) => b.score - a.score).slice(0, 12);
-    return sorted.map((a, i) => {
-      const color = agentColor(AGENTS.indexOf(a));
+    // Check if live records are still syncing or empty
+    if (dynamicLeaderboard.length === 0) {
+      return (
+        <div style={{ padding: '10px 0', fontSize: '11px', color: 'var(--text3)' }}>
+          No agent data logs synced yet.
+        </div>
+      );
+    }
+
+    return dynamicLeaderboard.map((a, i) => {
+      const colorIndex = a.name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      const color = agentColor(colorIndex);
       const sc = scoreColor(a.score);
       return (
         <div key={a.name} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 0', borderBottom: '1px solid var(--border)' }}>
           <span className="fs-10 text-muted font-mono" style={{ minWidth: '14px' }}>{i + 1}</span>
-          <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '7px', fontWeight: 700, color: '#000', flexShrink: 0 }}>{initials(a.name)}</div>
-          <span className="fs-11" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)' }}>{a.name}</span>
+          <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '7px', fontWeight: 700, color: '#000', flexShrink: 0 }}>
+            {initials(a.name)}
+          </div>
+          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <span className="fs-11" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)' }}>
+              {a.name}
+            </span>
+            {/* <span className="fs-9 text-muted" style={{ fontSize: '9px', marginTop: '-2px' }}>
+              {a.calls} {a.calls === 1 ? 'call' : 'calls'}
+            </span> */}
+          </div>
           <span className="font-mono fs-11 fw-600" style={{ color: sc }}>{a.score}</span>
         </div>
       );
@@ -1572,7 +1677,7 @@ const Dashboard: React.FC = () => {
             <div className={`nav-item ${activePage === 'qa-live' ? 'active' : ''}`} onClick={() => setActivePage('qa-live')}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
               Live Feed
-              <span className="nav-badge">3</span>
+              <span className="nav-badge">{allCalls.length.toLocaleString()}</span>
             </div>
             <div className={`nav-item ${activePage === 'leaderboard' ? 'active' : ''}`} onClick={() => setActivePage('leaderboard')}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
@@ -1667,9 +1772,9 @@ const Dashboard: React.FC = () => {
           <div className="topbar-title">{PAGE_TITLES[activePage]?.[0] || activePage}</div>
           <div className="topbar-meta">{PAGE_TITLES[activePage]?.[1] || 'City Financial'}</div>
           <div className="topbar-stats">
-            <div className="topbar-stat"><div className="topbar-stat-val">1,023</div><div className="topbar-stat-label">Calls</div></div>
-            <div className="topbar-stat"><div className="topbar-stat-val gold">54.1</div><div className="topbar-stat-label">Avg QA</div></div>
-            <div className="topbar-stat"><div className="topbar-stat-val green">22</div><div className="topbar-stat-label">Enrolled</div></div>
+            <div className="topbar-stat"><div className="topbar-stat-val">{allCalls.length.toLocaleString()}</div><div className="topbar-stat-label">Calls</div></div>
+            <div className="topbar-stat"><div className="topbar-stat-val gold">{allCalls.length === 0 ? "0.0" : avgQaScore.toFixed(1)}</div><div className="topbar-stat-label">Avg QA</div></div>
+            <div className="topbar-stat"><div className="topbar-stat-val green">{outcomeCounts.enrolled}</div><div className="topbar-stat-label">Enrolled</div></div>
           </div>
           <div className="topbar-divider"></div>
           <div className="date-range">
@@ -1717,7 +1822,7 @@ const Dashboard: React.FC = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '260px 70px 90px 100px 130px 1fr', padding: '6px 12px', background: 'var(--bg2)', borderBottom: '1px solid var(--border)', position: 'sticky', top: '38px', zIndex: 10 }}>
                   <div className="fs-10 uppercase text-muted">Agent / Date</div>
                   <div className="fs-10 uppercase text-muted" style={{ textAlign: 'right' }}>Score</div>
-                  <div className="fs-10 uppercase text-muted">Duration</div>
+                  <div className="fs-10 uppercase text-muted gap-1">Duration</div>
                   <div className="fs-10 uppercase text-muted">Outcome</div>
                   <div className="fs-10 uppercase text-muted">Dept</div>
                   <div className="fs-10 uppercase text-muted">Campaign / Flags</div>
@@ -1738,13 +1843,13 @@ const Dashboard: React.FC = () => {
                 <div className="split-sidebar-section">
                   <div className="split-sidebar-title">Outcomes Today</div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '8px' }}>
-                    <div style={{ textAlign: 'center' }}><div className="font-mono fw-700 text-green" style={{ fontSize: '18px' }}>22</div><div className="fs-10 text-muted uppercase">Enrolled</div></div>
-                    <div style={{ textAlign: 'center' }}><div className="font-mono fw-700 text-gold" style={{ fontSize: '18px' }}>26</div><div className="fs-10 text-muted uppercase">Pitch</div></div>
-                    <div style={{ textAlign: 'center' }}><div className="font-mono fw-700" style={{ fontSize: '18px', color: 'var(--blue)' }}>106</div><div className="fs-10 text-muted uppercase">Callback</div></div>
+                    <div style={{ textAlign: 'center' }}><div className="font-mono fw-700 text-green" style={{ fontSize: '18px' }}>{outcomeCounts.enrolled}</div><div className="fs-10 text-muted uppercase">Enrolled</div></div>
+                    <div style={{ textAlign: 'center' }}><div className="font-mono fw-700 text-gold" style={{ fontSize: '18px' }}>{outcomeCounts.pitch}</div><div className="fs-10 text-muted uppercase">Pitch</div></div>
+                    <div style={{ textAlign: 'center' }}><div className="font-mono fw-700" style={{ fontSize: '18px', color: 'var(--blue)' }}>{outcomeCounts.callback}</div><div className="fs-10 text-muted uppercase">Callback</div></div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                    <div style={{ textAlign: 'center' }}><div className="font-mono fw-700 text-red" style={{ fontSize: '18px' }}>67</div><div className="fs-10 text-muted uppercase">Declined</div></div>
-                    <div style={{ textAlign: 'center' }}><div className="font-mono fw-700" style={{ fontSize: '18px', color: 'var(--orange)' }}>197</div><div className="fs-10 text-muted uppercase">Hotique</div></div>
+                    <div style={{ textAlign: 'center' }}><div className="font-mono fw-700 text-red" style={{ fontSize: '18px' }}>{outcomeCounts.declined}</div><div className="fs-10 text-muted uppercase">Declined</div></div>
+                    <div style={{ textAlign: 'center' }}><div className="font-mono fw-700" style={{ fontSize: '18px', color: 'var(--orange)' }}>{outcomeCounts.hotique}</div><div className="fs-10 text-muted uppercase">Hotique</div></div>
                   </div>
                 </div>
 
@@ -2136,7 +2241,18 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Toast Container */}
-      <div className="alert-toast-container">
+      <div className="alert-toast-container" style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 9999 }}>
+        {toasts.map(toast => (
+          <div key={toast.id} className={`alert-toast ${toast.type === 'critical' ? 'critical' : toast.type === 'warning' ? 'warning' : ''}`} style={{ background: 'var(--bg4)', padding: '12px', borderRadius: 'var(--radius)', marginBottom: '8px', display: 'flex', gap: '8px', border: '1px solid var(--border)' }}>
+            <span className="toast-icon">{toast.type === 'critical' ? '🚨' : toast.type === 'warning' ? '⚠️' : '✅'}</span>
+            <div>
+              <div className="toast-title" style={{ fontWeight: 600, fontSize: '12px' }}>{toast.title}</div>
+              <div className="toast-msg" style={{ color: 'var(--text2)', fontSize: '11px' }}>{toast.msg}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* <div className="alert-toast-container">
         {toasts.map(toast => (
           <div key={toast.id} className={`alert-toast ${toast.type === 'critical' ? 'critical' : toast.type === 'warning' ? 'warning' : ''}`}>
             <span className="toast-icon">{toast.type === 'critical' ? '🚨' : toast.type === 'warning' ? '⚠️' : toast.type === 'success' ? '✅' : 'ℹ️'}</span>
@@ -2144,7 +2260,7 @@ const Dashboard: React.FC = () => {
             <button className="toast-dismiss" onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}>✕</button>
           </div>
         ))}
-      </div>
+      </div> */}
     </div>
   );
 };
