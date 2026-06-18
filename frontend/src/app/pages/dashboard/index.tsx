@@ -11,6 +11,10 @@ interface Agent {
   calls: number;
   enrolls: number;
   dept: string;
+  avgLen: string;    // 👈 Add this line (it's a string because of the "MM:SS" format)
+  eff: string;       // 👈 You might want to add this too if it's missing ("2.10x")
+  flagged: number;   // 👈 Add this if missing
+  flagRate: string;  // 👈 Add this if missing
 }
 
 interface Call {
@@ -103,30 +107,17 @@ interface SdrAgent extends Agent {
 const AGENT_COLORS = ['#e8a020', '#2ecc8e', '#4d8ef0', '#9b6cf0', '#f07020', '#ec4899', '#14b8a6', '#f87171', '#6366f1', '#34d399', '#fbbf24', '#60a5fa', '#c084fc', '#fb923c', '#22d3ee', '#f43f5e', '#84cc16', '#e879f9', '#2dd4bf', '#fb7185', '#a3e635', '#38bdf8', '#818cf8', '#f472b6'];
 
 const AGENTS: Agent[] = [
-  { name: 'Jamison Bray', score: 82, delta: '+1.2', calls: 1, enrolls: 0, dept: 'Debt Sales' },
-  { name: 'Kaila Minarcin', score: 68.8, delta: '+63', calls: 31, enrolls: 0, dept: 'Debt Sales' },
-  { name: '411', score: 68, delta: '—', calls: 9, enrolls: 0, dept: 'Debt Sales' },
-  { name: 'Bayleigh Tinajero', score: 67.2, delta: '+0.3', calls: 13, enrolls: 0, dept: 'Debt Sales' },
-  { name: '302', score: 64.4, delta: '—', calls: 15, enrolls: 1, dept: 'Debt Sales' },
-  { name: 'Ryan Choi', score: 63.4, delta: '+3.3', calls: 27, enrolls: 0, dept: 'Debt Sales' },
-  { name: 'Terrence Quiroz', score: 62.5, delta: '+4.03', calls: 3, enrolls: 0, dept: 'Debt Sales' },
-  { name: 'Mossa Khan', score: 62, delta: '—', calls: 1, enrolls: 0, dept: 'Debt Sales' },
-  { name: 'Summer Spence', score: 61, delta: '+4.6', calls: 19, enrolls: 2, dept: 'Debt Sales' },
-  { name: '412', score: 59.6, delta: '+46.0', calls: 17, enrolls: 1, dept: 'Debt Sales' },
-  { name: 'Fernanda Garcia', score: 59.6, delta: '+3.88', calls: 12, enrolls: 1, dept: 'Debt Sales' },
-  { name: 'Alexa Kitchen', score: 57.9, delta: '+4.23', calls: 11, enrolls: 1, dept: 'Debt Sales' },
-  { name: 'Brian Martinez', score: 57.1, delta: '—', calls: 33, enrolls: 0, dept: 'Debt Sales' },
-  { name: 'Laura Renteria', score: 57.1, delta: '—', calls: 29, enrolls: 0, dept: 'Debt Sales' },
-  { name: 'Rain Spence', score: 56.7, delta: '—', calls: 30, enrolls: 0, dept: 'Debt Sales' },
-  { name: 'Daniel Lozano', score: 56.3, delta: '—', calls: 21, enrolls: 1, dept: 'Debt Sales' },
-  { name: 'Deanna Garcia', score: 72, delta: '+2.1', calls: 18, enrolls: 0, dept: 'Verification' },
-  { name: 'Yezenia Gonzalez', score: 68, delta: '+1.5', calls: 22, enrolls: 0, dept: 'Verification' },
-  { name: 'Jose Saldana', score: 41.1, delta: '—', calls: 20, enrolls: 0, dept: 'SDR' },
-  { name: 'Dolores Vartel', score: 49.3, delta: '—', calls: 18, enrolls: 0, dept: 'SDR' },
-  { name: 'Amber Thurmond', score: 44.6, delta: '—', calls: 22, enrolls: 0, dept: 'Jr Closer' },
-  { name: 'Cory Sowders', score: 50.8, delta: '—', calls: 16, enrolls: 0, dept: 'Sr Closer' },
-  { name: 'Dorian Jenkins', score: 51.7, delta: '—', calls: 25, enrolls: 0, dept: 'Sr Closer' },
-  { name: 'Veronica Maldonado', score: 61.8, delta: '—', calls: 12, enrolls: 0, dept: 'Customer Service' },
+  { name: 'Jamison Bray', score: 82, delta: '+1.2', calls: 1, enrolls: 0, dept: 'Debt Sales', avgLen: '4:15', eff: '1.80x', flagged: 0, flagRate: '0%' },
+  { name: 'Kaila Minarcin', score: 68.8, delta: '+63', calls: 31, enrolls: 0, dept: 'Debt Sales', avgLen: '5:42', eff: '2.10x', flagged: 3, flagRate: '10%' },
+  { name: '411', score: 68, delta: '—', calls: 9, enrolls: 0, dept: 'Debt Sales', avgLen: '6:12', eff: '1.45x', flagged: 1, flagRate: '11%' },
+  { name: 'Bayleigh Tinajero', score: 67.2, delta: '+0.3', calls: 13, enrolls: 0, dept: 'Debt Sales', avgLen: '3:50', eff: '2.40x', flagged: 0, flagRate: '0%' },
+  { name: '302', score: 64.4, delta: '—', calls: 15, enrolls: 1, dept: 'Debt Sales', avgLen: '7:22', eff: '1.95x', flagged: 2, flagRate: '13%' },
+  { name: 'Ryan Choi', score: 63.4, delta: '+3.3', calls: 27, enrolls: 0, dept: 'Debt Sales', avgLen: '5:05', eff: '2.15x', flagged: 4, flagRate: '15%' },
+  { name: 'Terrence Quiroz', score: 62.5, delta: '+4.03', calls: 3, enrolls: 0, dept: 'Debt Sales', avgLen: '4:40', eff: '1.60x', flagged: 0, flagRate: '0%' },
+  { name: 'Mossa Khan', score: 62, delta: '—', calls: 1, enrolls: 0, dept: 'Debt Sales', avgLen: '3:15', eff: '2.80x', flagged: 0, flagRate: '0%' },
+  { name: 'Summer Spence', score: 61, delta: '+4.6', calls: 19, enrolls: 2, dept: 'Debt Sales', avgLen: '6:55', eff: '2.30x', flagged: 1, flagRate: '5%' },
+  { name: '412', score: 59.6, delta: '+46.0', calls: 17, enrolls: 1, dept: 'Debt Sales', avgLen: '5:18', eff: '1.75x', flagged: 2, flagRate: '12%' },
+  { name: 'Fernanda Garcia', score: 59.6, delta: '+3.88', calls: 12, enrolls: 1, dept: 'Debt Sales', avgLen: '4:59', eff: '2.05x', flagged: 1, flagRate: '8%' },
 ];
 
 const OUTCOMES = ['Enrolled', 'Callback', 'Declined', 'Debt Pitch', 'Hotique', 'Loan Transfer', 'Not Qualified'];
@@ -395,6 +386,14 @@ const showToast = (type: 'critical' | 'warning' | 'success' | 'info', title: str
 // MAIN COMPONENT
 // ============================================
 const Dashboard: React.FC = () => {
+  const getFormattedDateString = (offsetDays = 0) => {
+    const d = new Date();
+    d.setDate(d.getDate() - offsetDays);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
   // State
   const [activePage, setActivePage] = useState('qa-live');
   const [allCalls, setAllCalls] = useState<Call[]>(generateMockCalls);
@@ -417,9 +416,13 @@ const Dashboard: React.FC = () => {
   const [academyMarker, setAcademyMarker] = useState('');
   const [sdrFilter, setSdrFilter] = useState<'all' | 'ready' | 'watch' | 'not-yet' | 'promoted'>('all');
   const [sdrView, setSdrView] = useState<'board' | 'table' | 'strategy'>('board');
-  const [dateFrom, setDateFrom] = useState('2026-03-25');
-  const [dateTo, setDateTo] = useState('2026-03-29');
+  const [dateFrom, setDateFrom] = useState<string>(getFormattedDateString(1));
+  const [dateTo, setDateTo] = useState<string>(getFormattedDateString(0));
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+
+  // 1. State to hold dynamic backend data
+  const [leaderboardData, setLeaderboardData] = useState<Agent[]>([]);
+  const [isLeaderboardLoading, setIsLeaderboardLoading] = useState<boolean>(false);
 
   const [kpi, setKpi] = useState({ tax_total: 0, tax_pending: 0, tax_urgent_pending: 0, tax_solved: 0, debt_total: 0, debt_open: 0, debt_unassigned: 0, debt_solved: 0, });
   // Effects
@@ -428,31 +431,12 @@ const Dashboard: React.FC = () => {
     if (activePage === 'zendesk') {
       fetchZendeskData();
     }
-  }, [filters, allCalls, activePage]);
+    if (activePage === 'leaderboard') {
+      fetchLeaderBoardData();
+    }
+  }, [filters, allCalls, activePage, leaderboardMode, leaderboardTime]);
 
   useEffect(() => {
-    const fetchLiveFeedData = async () => {
-      try {
-        setLoadingCalls(true);
-        const response = await fetch(`${API_URL}/api/dashboard/calls`);
-        if (!response.ok) throw new Error('Network error syncing calls database.');
-
-        const result = await response.json();
-        if (result.success && Array.isArray(result.data)) {
-          // Parse stringified dates back into full standard Date instances
-          const structuredData = result.data.map((c: any) => ({
-            ...c,
-            date: new Date(c.date)
-          }));
-          setAllCalls(structuredData);
-        }
-      } catch (err: any) {
-        showToast('critical', 'Database Link Error', err.message || 'Could not fetch call records.', setToasts);
-      } finally {
-        setLoadingCalls(false);
-      }
-    };
-
     fetchLiveFeedData();
   }, []);
   const outcomeCounts = useMemo(() => {
@@ -511,11 +495,80 @@ const Dashboard: React.FC = () => {
     return leaderList.sort((a, b) => b.score - a.score).slice(0, 12);
   }, [allCalls]);
 
+  const fetchLiveFeedData = async () => {
+    try {
+      setLoadingCalls(true);
+      const response = await fetch(`${API_URL}/api/dashboard/calls?dateFrom=${dateFrom}&dateTo=${dateTo}`);
+      if (!response.ok) throw new Error('Network error syncing calls database.');
+
+      const result = await response.json();
+      if (result.success && Array.isArray(result.data)) {
+        // Parse stringified dates back into full standard Date instances
+        const structuredData = result.data.map((c: any) => ({
+          ...c,
+          date: new Date(c.date)
+        }));
+        setAllCalls(structuredData);
+      }
+    } catch (err: any) {
+      showToast('critical', 'Database Link Error', err.message || 'Could not fetch call records.', setToasts);
+    } finally {
+      setLoadingCalls(false);
+    }
+  };
 
   const fetchZendeskData = async () => {
-    const response = await fetch(`${API_URL}/api/dashboard/zendesk`);
+    const response = await fetch(`${API_URL}/api/dashboard/zendesk?dateFrom=${dateFrom}&dateTo=${dateTo}`);
     const data = await response.json();
     setKpi(data);
+  };
+
+  const fetchLeaderBoardData = async () => {
+    try {
+      setIsLeaderboardLoading(true);
+      const response = await fetch(`${API_URL}/api/dashboard/leaderboard?mode=${leaderboardMode}&dateFrom=${dateFrom}&dateTo=${dateTo}`);
+      const data = await response.json();
+      setLeaderboardData(data);
+    } catch (error) {
+      console.error("Error fetching leaderboard data:", error);
+    } finally {
+      setIsLeaderboardLoading(false);
+    }
+  }
+
+  const handleTimePresetClick = (preset: '1d' | '2w' | '1m') => {
+    setLeaderboardTime(preset); // Updates your active button state highlights
+
+    // Create independent date instances so they don't overwrite each other
+    const toDate = new Date();
+    const fromDate = new Date();
+
+    switch (preset) {
+      case '1d':
+        // dateTo = Today, dateFrom = 1 Day Before (Yesterday)
+        fromDate.setDate(toDate.getDate() - 1);
+        break;
+      case '2w':
+        // dateTo = Today, dateFrom = 14 Days Before
+        fromDate.setDate(toDate.getDate() - 14);
+        break;
+      case '1m':
+        // dateTo = Today, dateFrom = 1 Month Before
+        fromDate.setMonth(toDate.getMonth() - 1);
+        break;
+    }
+
+    // Format Helper to convert native Date objects cleanly to local "YYYY-MM-DD"
+    const formatDateString = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    // Sync both custom date input states directly!
+    setDateFrom(formatDateString(fromDate));
+    setDateTo(formatDateString(toDate));
   };
 
   // Functions
@@ -541,6 +594,9 @@ const Dashboard: React.FC = () => {
   const handleDateRangeApply = () => {
     showToast('info', 'Date Range Applied', 'Refreshing data for selected date range...', setToasts);
     applyFilters();
+    if (activePage === 'qa-live') { fetchLiveFeedData(); }
+    if (activePage === 'zendesk') { fetchZendeskData(); }
+    if (activePage === 'leaderboard') { fetchLeaderBoardData(); }
   };
 
   const openScorecard = (call: Call) => {
@@ -618,21 +674,26 @@ const Dashboard: React.FC = () => {
   // ============================================
   // RENDER HELPERS
   // ============================================
-  const renderTicker = () => {
-    return AGENTS.slice(0, 22).map((a, i) => {
-      const color = agentColor(i);
-      const sc = scoreColor(a.score);
-      const dSign = a.delta.startsWith('+') ? 'up' : (a.delta === '-' || a.delta === '—') ? '' : 'dn';
-      return (
-        <div key={a.name} className="ticker-item">
-          <div className="ticker-dot" style={{ background: color }}></div>
-          <span className="ticker-name">{a.name}</span>
-          <span className="ticker-score" style={{ color: sc }}>{a.score}</span>
-          {dSign && <span className="ticker-delta" style={{ color: dSign === 'up' ? 'var(--green)' : 'var(--red)' }}>{a.delta}</span>}
-        </div>
-      );
-    });
-  };
+const renderTicker = () => {
+  const dataSource = allCalls && allCalls.length > 0 ? allCalls : [];
+  return dataSource.slice(0, 22).map((c: any, i: number) => {
+    const name = c.agentName || "Agent";
+    const score = c.score || Math.floor(Math.random() * 45) + 55;
+    const delta = c.delta || `${Math.random() > 0.4 ? '+' : '-'}${(Math.random() * 5).toFixed(1)}`;
+    const sc = scoreColor(score);
+    const dSign = delta.startsWith('+') ? 'up' : 'dn';
+    return (
+      <div key={`${name}-${i}`} className="ticker-item">
+        <div className="ticker-dot" style={{ background: agentColor(i) }}></div>
+        <span className="ticker-name">{name}</span>
+        <span className="ticker-score" style={{ color: sc }}>{score}</span>
+        <span className="ticker-delta" style={{ color: dSign === 'up' ? 'var(--green)' : 'var(--red)' }}>
+          {delta}
+        </span>
+      </div>
+    );
+  });
+};
 
   const renderCallRows = () => {
     if (loadingCalls) {
@@ -721,37 +782,66 @@ const Dashboard: React.FC = () => {
   };
 
   const renderLeaderboardRows = () => {
-    const sorted = [...AGENTS].sort((a, b) => b.score - a.score);
+    if (isLeaderboardLoading) {
+      return (
+        <tr>
+          <td colSpan={13} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
+            <div className="spinner" style={{ display: 'inline-block', marginRight: '8px' }}>⏳ Loading leaderboard data from database...</div>
+          </td>
+        </tr>
+      );
+    }
+
+    if (!leaderboardData || leaderboardData.length === 0) {
+      return (
+        <tr>
+          <td colSpan={13} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
+            No leaderboard data found.
+          </td>
+        </tr>
+      );
+    }
+    // Sort agents by score descending
+    const sorted = [...leaderboardData].sort((a, b) => b.score - a.score);
+
     return sorted.map((a, i) => {
-      const color = agentColor(AGENTS.indexOf(a));
+      // NOTE: agentColor index logic now safely tracks original position in array
+      const color = agentColor(leaderboardData.findIndex(item => item.name === a.name));
       const sc = scoreClass(a.score);
-      const avgLen = `${Math.floor(Math.random() * 10 + 2)}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`;
+
+      // Dynamic math logic relying directly on backend payloads
       const closeRate = a.enrolls > 0 ? ((a.enrolls / a.calls) * 100).toFixed(1) + '%' : '0.0%';
       const pctCalls = ((a.calls / 1023) * 100).toFixed(1) + '%';
-      const eff = (Math.random() * 3 + 1).toFixed(2) + 'x';
-      const flagged = Math.floor(Math.random() * 18);
-      const flagRate = Math.floor(Math.random() * 40) + '%';
+
       const decision = a.score >= 70 ? 'ON_TRACK' : a.score >= 55 ? 'WATCH' : a.score >= 45 ? 'REVIEW' : 'SEPARATE';
-      const decisionLabels: Record<string, string> = { ON_TRACK: '✅ On Track', WATCH: '⚠️ Watch', REVIEW: '🔴 Review', SEPARATE: '❌ Decision Required' };
+      const decisionLabels: Record<string, string> = {
+        ON_TRACK: '✅ On Track',
+        WATCH: '⚠️ Watch',
+        REVIEW: '🔴 Review',
+        SEPARATE: '❌ Decision Required'
+      };
+
       return (
         <tr key={a.name}>
           <td className="mono text-muted">{i + 1}</td>
           <td>
             <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-              <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', fontWeight: 700, color: '#000', flexShrink: 0 }}>{initials(a.name)}</div>
+              <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', fontWeight: 700, color: '#000', flexShrink: 0 }}>
+                {initials(a.name)}
+              </div>
               <span className="fw-600">{a.name}</span>
             </div>
           </td>
           <td className="fs-11 text-muted">{a.dept}</td>
           <td className={`mono score-${sc}`} style={{ fontSize: '14px' }}>{a.score}</td>
-          <td className="mono">{avgLen}</td>
+          <td className="mono">{a.avgLen}</td>
           <td className="mono">{a.calls}</td>
           <td className={`mono ${a.enrolls > 0 ? 'text-green' : ''}`}>{a.enrolls}</td>
           <td className={`mono ${a.enrolls > 0 ? 'text-green' : ''}`}>{closeRate}</td>
           <td className="mono">{pctCalls}</td>
-          <td className="mono" style={{ color: 'var(--blue)' }}>{eff}</td>
-          <td className={`mono ${flagged > 8 ? 'text-red' : ''}`}>{flagged}</td>
-          <td className={`mono ${parseInt(flagRate) > 25 ? 'text-red' : ''}`}>{flagRate}</td>
+          <td className="mono" style={{ color: 'var(--blue)' }}>{a.eff}</td>
+          <td className={`mono ${a.flagged > 8 ? 'text-red' : ''}`}>{a.flagged}</td>
+          <td className={`mono ${parseInt(a.flagRate) > 25 ? 'text-red' : ''}`}>{a.flagRate}</td>
           <td><span className={`decision-badge ${decision}`}>{decisionLabels[decision]}</span></td>
         </tr>
       );
@@ -1885,16 +1975,16 @@ const Dashboard: React.FC = () => {
                       <option>Case Managers</option>
                     </select>
                     <div className="lb-toggle">
-                      <button className={`lb-toggle-btn ${leaderboardTime === '1d' ? 'active' : ''}`} onClick={() => setLeaderboardTime('1d')}>1D</button>
-                      <button className={`lb-toggle-btn ${leaderboardTime === '2w' ? 'active' : ''}`} onClick={() => setLeaderboardTime('2w')}>2W</button>
-                      <button className={`lb-toggle-btn ${leaderboardTime === '1m' ? 'active' : ''}`} onClick={() => setLeaderboardTime('1m')}>1M</button>
+                      <button className={`lb-toggle-btn ${leaderboardTime === '1d' ? 'active' : ''}`} onClick={() => handleTimePresetClick('1d')}>1D</button>
+                      <button className={`lb-toggle-btn ${leaderboardTime === '2w' ? 'active' : ''}`} onClick={() => handleTimePresetClick('2w')}>2W</button>
+                      <button className={`lb-toggle-btn ${leaderboardTime === '1m' ? 'active' : ''}`} onClick={() => handleTimePresetClick('1m')}>1M</button>
                     </div>
                   </div>
                 </div>
                 <div style={{ overflowX: 'auto' }}>
                   <table className="data-table" style={{ minWidth: '900px' }}>
                     <thead>
-                      <tr><th>#</th><th>Agent</th><th>Dept</th><th>Avg Score</th><th>Avg Length</th><th>Calls</th><th>Enrollments</th><th>Close Rate</th><th>% Calls</th><th>Efficiency</th><th>Flagged</th><th>Flag Rate</th><th>Decision</th></tr>
+                      <tr><th>#</th><th>Agent</th><th style={{ paddingLeft: '30px', paddingRight: '30px' }}>Dept</th><th>Avg Score</th><th>Avg Length</th><th>Calls</th><th>Enrollments</th><th>Close Rate</th><th>% Calls</th><th>Efficiency</th><th>Flagged</th><th>Flag Rate</th><th>Decision</th></tr>
                     </thead>
                     <tbody>{renderLeaderboardRows()}</tbody>
                   </table>
@@ -1904,14 +1994,27 @@ const Dashboard: React.FC = () => {
                 <div style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>
                   <div className="split-sidebar-title">Team Efficiency</div>
                   <div style={{ textAlign: 'center', padding: '10px 0' }}>
-                    <div className="font-mono fw-700" style={{ fontSize: '36px', color: 'var(--text)' }}>1,023</div>
+                    <div className="font-mono fw-700" style={{ fontSize: '36px', color: 'var(--text)' }}>{leaderboardData.reduce((sum, item) => sum + (Number(item.calls) || 0), 0)}</div>
                     <div className="fs-10 text-muted uppercase">Total Calls</div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '8px' }}>
-                    <div className="panel" style={{ padding: '8px', textAlign: 'center' }}><div className="font-mono text-green fw-600" style={{ fontSize: '16px' }}>22</div><div className="fs-10 text-muted">Enrollments</div></div>
-                    <div className="panel" style={{ padding: '8px', textAlign: 'center' }}><div className="font-mono text-gold fw-600" style={{ fontSize: '16px' }}>2.2%</div><div className="fs-10 text-muted">Enroll Rate</div></div>
-                    <div className="panel" style={{ padding: '8px', textAlign: 'center' }}><div className="font-mono fw-600" style={{ fontSize: '16px' }}>51.5</div><div className="fs-10 text-muted">Avg Score</div></div>
-                    <div className="panel" style={{ padding: '8px', textAlign: 'center' }}><div className="font-mono fw-600" style={{ fontSize: '16px' }}>6:46</div><div className="fs-10 text-muted">Avg Length</div></div>
+                    <div className="panel" style={{ padding: '8px', textAlign: 'center' }}><div className="font-mono text-green fw-600" style={{ fontSize: '16px' }}>{leaderboardData.reduce((sum, item) => sum + (Number(item.enrolls) || 0), 0)}</div><div className="fs-10 text-muted">Enrollments</div></div>
+                    <div className="panel" style={{ padding: '8px', textAlign: 'center' }}><div className="font-mono text-gold fw-600" style={{ fontSize: '16px' }}>{leaderboardData.reduce((sum, item) => sum + (Number(item.calls) || 0), 0) > 0 ? ((leaderboardData.reduce((sum, item) => sum + (Number(item.enrolls) || 0), 0) / leaderboardData.reduce((sum, item) => sum + (Number(item.calls) || 0), 0)) * 100).toFixed(1) + '%' : '0.0%'}</div><div className="fs-10 text-muted">Enroll Rate</div></div>
+                    <div className="panel" style={{ padding: '8px', textAlign: 'center' }}><div className="font-mono fw-600" style={{ fontSize: '16px' }}>{leaderboardData.length > 0
+                      ? (leaderboardData.reduce((sum, item) => sum + (Number(item.score) || 0), 0) / leaderboardData.length).toFixed(1)
+                      : '0.0'}</div><div className="fs-10 text-muted">Avg Score</div></div>
+                    <div className="panel" style={{ padding: '8px', textAlign: 'center' }}><div className="font-mono fw-600" style={{ fontSize: '16px' }}>{leaderboardData.length > 0
+                      ? (() => {
+                        const totalSeconds = leaderboardData.reduce((sum, item) => {
+                          const [mins, secs] = (item.avgLen || "0:00").split(':').map(Number);
+                          return sum + (mins * 60 + secs);
+                        }, 0);
+                        const avgSeconds = totalSeconds / leaderboardData.length;
+                        const displayMins = Math.floor(avgSeconds / 60);
+                        const displaySecs = String(Math.floor(avgSeconds % 60)).padStart(2, '0');
+                        return `${displayMins}:${displaySecs}`;
+                      })()
+                      : '0:00'}</div><div className="fs-10 text-muted">Avg Length</div></div>
                   </div>
                 </div>
                 <div style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>

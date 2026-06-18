@@ -3,7 +3,7 @@ import { Outlet } from "react-router-dom";
 
 const ProtectedLayout: React.FC = () => {
     return (
-        <div className="min-h-screen flex">
+        <div className="min-h-screen">
             {/* <Sidebar /> */}
             <Outlet />
         </div>

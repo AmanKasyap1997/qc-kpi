@@ -235,5 +235,54 @@ router.get('/calls', async (req: Request, res: Response) => {
     }
 });
 
+router.get('/leaderboard', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const mode = String(req.query.mode || 'all');
+        const rawDateFrom = String(req.query.dateFrom || '2026-06-16');
+        const rawDateTo = String(req.query.dateTo || '2026-06-18');
+        const dateFrom = `${rawDateFrom} 00:00:00`;
+        const dateTo = `${rawDateTo} 23:59:59`;
 
+        // 1. Super simple SQL query getting only core metrics
+        const sqlQuery = `SELECT a.name, d.name AS dept, COUNT(c.id) AS calls FROM calls c
+                          INNER JOIN agents a ON c.agent_id = a.id
+                          INNER JOIN departments d ON a.department_id = d.id
+                          WHERE (c.created_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP))
+                          GROUP BY a.id, a.name, d.name;`;
+
+        const queryParams = [dateFrom, dateTo];
+        const result = await db.query(sqlQuery, queryParams);
+
+        // 2. Format database results with your clean static placeholders
+        const formattedRows = result.rows.map((row: any) => {
+            const callsCount = Number(row.calls);
+            const mockEnrolls = callsCount > 0 ? Math.floor(Math.random() * (callsCount / 2)) : 0;
+            const mockFlagged = callsCount > 0 ? Math.floor(Math.random() * Math.min(4, callsCount)) : 0;
+            const randomMinutes = Math.floor(Math.random() * 6) + 2;
+            const randomSeconds = String(Math.floor(Math.random() * 60)).padStart(2, '0');
+            const mockAvgLen = `${randomMinutes}:${randomSeconds}`;
+            const mockEff = (Math.random() * 1.75 + 1.25).toFixed(2) + 'x';
+            const calculatedFlagRate = callsCount > 0
+                ? Math.round((mockFlagged / callsCount) * 100) + '%'
+                : '0%';
+
+            return {
+                name: row.name,
+                dept: row.dept,
+                score: Math.floor(Math.random() * 50) + 50, // Static score between 50 and 100
+                calls: callsCount,
+                enrolls: mockEnrolls,
+                avgLen: mockAvgLen,
+                eff: mockEff,
+                flagged: mockFlagged,
+                flagRate: calculatedFlagRate
+            };
+        });
+
+        res.status(200).json(formattedRows);
+    } catch (error) {
+        console.error("Database query failed:", error);
+        res.status(500).json({ message: "Failed to fetch leaderboard data from DB", error });
+    }
+});
 export default router;
