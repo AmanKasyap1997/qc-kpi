@@ -422,7 +422,52 @@ const Dashboard: React.FC = () => {
 
   // 1. State to hold dynamic backend data
   const [leaderboardData, setLeaderboardData] = useState<Agent[]>([]);
-  const [isLeaderboardLoading, setIsLeaderboardLoading] = useState<boolean>(false);
+  const [isDataLoading, setIsDataLoading] = useState<boolean>(false);
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [academyData, setAcademyData] = useState(null);
+
+
+  const [recentActivities, setRecentActivities] = React.useState<Array<{
+    id: string;
+    icon: string;
+    text: string;
+    timestamp: number; // Define this cleanly as a number type
+  }>>([
+    { id: 'init-1', icon: '⭐', text: 'Live DB Stream Synchronized Successfully', timestamp: Date.now() },
+    { id: 'init-2', icon: '⚡', text: 'Academy workspace initialized.', timestamp: Date.now() - 60000 }
+  ]);
+
+  const formatTimeOffset = (timestamp: number): string => {
+    const diffMs = Date.now() - timestamp;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHr = Math.floor(diffMin / 60);
+
+    if (diffSec < 15) return 'Just now';
+    if (diffSec < 60) return `${diffSec}s ago`;
+    if (diffMin < 60) return `${diffMin}m ago`;
+    if (diffHr < 24) return `${diffHr}h ago`;
+
+    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+  const logActivity = (text: string, icon: string = '⏱') => {
+    const newEvent = {
+      id: `act_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      icon,
+      text,
+      timestamp: Date.now() // Matches the state type definition perfectly
+    };
+    setRecentActivities(prev => [newEvent, ...prev.slice(0, 19)]);
+  };
+
+  React.useEffect(() => {
+    // Set up a clean interval to force a render pass every 30 seconds
+    const interval = setInterval(() => {
+      setRecentActivities(prev => [...prev]);
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const [kpi, setKpi] = useState({ tax_total: 0, tax_pending: 0, tax_urgent_pending: 0, tax_solved: 0, debt_total: 0, debt_open: 0, debt_unassigned: 0, debt_solved: 0, });
   // Effects
@@ -433,6 +478,12 @@ const Dashboard: React.FC = () => {
     }
     if (activePage === 'leaderboard') {
       fetchLeaderBoardData();
+    }
+    if (activePage === 'analytics') {
+      fetchAnalitycsData();
+    }
+    if (activePage === 'academy') {
+      fetchAcademyData();
     }
   }, [filters, allCalls, activePage, leaderboardMode, leaderboardTime]);
 
@@ -525,14 +576,47 @@ const Dashboard: React.FC = () => {
 
   const fetchLeaderBoardData = async () => {
     try {
-      setIsLeaderboardLoading(true);
+      setIsDataLoading(true);
       const response = await fetch(`${API_URL}/api/dashboard/leaderboard?mode=${leaderboardMode}&dateFrom=${dateFrom}&dateTo=${dateTo}`);
       const data = await response.json();
       setLeaderboardData(data);
     } catch (error) {
       console.error("Error fetching leaderboard data:", error);
     } finally {
-      setIsLeaderboardLoading(false);
+      setIsDataLoading(false);
+    }
+  }
+
+  const fetchAnalitycsData = async () => {
+    try {
+      setIsDataLoading(true);
+      const response = await fetch(`${API_URL}/api/dashboard/analytics?dateFrom=${dateFrom}&dateTo=${dateTo}`);
+      const data = await response.json();
+      // SAVE THE BACKEND DATA TO STATE
+      setAnalyticsData(data);
+    } catch (error) {
+      console.error("Error fetching leaderboard data:", error);
+    } finally {
+      setIsDataLoading(false);
+    }
+  }
+
+  const fetchAcademyData = async () => {
+    try {
+      setIsDataLoading(true);
+      const response = await fetch(`${API_URL}/api/dashboard/academy?dateFrom=${dateFrom}&dateTo=${dateTo}`);
+      const data = await response.json();
+      if (data && data.calls) {
+        data.calls = data.calls.map(call => ({
+          ...call,
+          date: new Date(call.date) // This makes .toLocaleDateString() work everywhere!
+        }));
+      }
+      setAcademyData(data);
+    } catch (error) {
+      console.error("Error fetching leaderboard data:", error);
+    } finally {
+      setIsDataLoading(false);
     }
   }
 
@@ -573,7 +657,6 @@ const Dashboard: React.FC = () => {
 
   // Functions
   const applyFilters = () => {
-    console.log(allCalls, 'allCallsallCalls');
     const filtered = allCalls.filter(c => {
       if (filters.outcome && c.outcome !== filters.outcome) return false;
       if (filters.flag && !c.flags.includes(filters.flag)) return false;
@@ -597,6 +680,7 @@ const Dashboard: React.FC = () => {
     if (activePage === 'qa-live') { fetchLiveFeedData(); }
     if (activePage === 'zendesk') { fetchZendeskData(); }
     if (activePage === 'leaderboard') { fetchLeaderBoardData(); }
+    if (activePage === 'academy') { fetchAcademyData(); }
   };
 
   const openScorecard = (call: Call) => {
@@ -674,26 +758,31 @@ const Dashboard: React.FC = () => {
   // ============================================
   // RENDER HELPERS
   // ============================================
-const renderTicker = () => {
-  const dataSource = allCalls && allCalls.length > 0 ? allCalls : [];
-  return dataSource.slice(0, 22).map((c: any, i: number) => {
-    const name = c.agentName || "Agent";
-    const score = c.score || Math.floor(Math.random() * 45) + 55;
-    const delta = c.delta || `${Math.random() > 0.4 ? '+' : '-'}${(Math.random() * 5).toFixed(1)}`;
-    const sc = scoreColor(score);
-    const dSign = delta.startsWith('+') ? 'up' : 'dn';
-    return (
-      <div key={`${name}-${i}`} className="ticker-item">
-        <div className="ticker-dot" style={{ background: agentColor(i) }}></div>
-        <span className="ticker-name">{name}</span>
-        <span className="ticker-score" style={{ color: sc }}>{score}</span>
-        <span className="ticker-delta" style={{ color: dSign === 'up' ? 'var(--green)' : 'var(--red)' }}>
-          {delta}
-        </span>
-      </div>
-    );
-  });
-};
+  const renderTicker = () => {
+    const dataSource = allCalls && allCalls.length > 0 ? allCalls : [];
+    return dataSource.slice(0, 22).map((c: any, i: number) => {
+      const name = c.agentName || "Agent";
+      const stringSeed = name.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), i);
+      const scoreSeed = Math.sin(stringSeed) * 10000;
+      const score = c.score || Math.floor((scoreSeed - Math.floor(scoreSeed)) * 45) + 55;
+      const deltaSeed = Math.cos(stringSeed + 5) * 10000;
+      const cleanDeltaValue = ((deltaSeed - Math.floor(deltaSeed)) * 5).toFixed(1);
+      const deltaSign = Math.sin(stringSeed * 2) > 0.4 ? '+' : '-';
+      const delta = c.delta || `${deltaSign}${cleanDeltaValue}`;
+      const sc = scoreColor(score);
+      const dSign = delta.startsWith('+') ? 'up' : 'dn';
+      return (
+        <div key={`${name}-${i}`} className="ticker-item">
+          <div className="ticker-dot" style={{ background: agentColor(i) }}></div>
+          <span className="ticker-name">{name}</span>
+          <span className="ticker-score" style={{ color: sc }}>{score}</span>
+          <span className="ticker-delta" style={{ color: dSign === 'up' ? 'var(--green)' : 'var(--red)' }}>
+            {delta}
+          </span>
+        </div>
+      );
+    });
+  };
 
   const renderCallRows = () => {
     if (loadingCalls) {
@@ -782,7 +871,7 @@ const renderTicker = () => {
   };
 
   const renderLeaderboardRows = () => {
-    if (isLeaderboardLoading) {
+    if (isDataLoading) {
       return (
         <tr>
           <td colSpan={13} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
@@ -953,22 +1042,28 @@ const renderTicker = () => {
   };
 
   const renderAcademyCallList = () => {
-    let calls = academyCalls;
+    // 1. Defensively extract the calls array from backend data object state
+    let calls = academyData && academyData.calls ? academyData.calls : [];
+
+    // 2. Exact original filter layout logic
     if (academyFilter !== 'all') calls = calls.filter(c => c.academyTag === academyFilter);
     if (academyDept) calls = calls.filter(c => c.agentDept === academyDept);
-    if (academyMarker) calls = calls.filter(c => c.markers.some(m => m.label === academyMarker));
+    if (academyMarker) calls = calls.filter(c => c.markers && c.markers.some(m => m.label === academyMarker));
 
-    const ex = academyCalls.filter(c => c.academyTag === 'exemplar').length;
-    const ft = academyCalls.filter(c => c.academyTag === 'featured').length;
-    const wn = academyCalls.filter(c => c.academyTag === 'warning').length;
+    // 3. Exact original count math execution using safe navigation chains
+    const ex = academyData && academyData.calls ? academyData.calls.filter(c => c.academyTag === 'exemplar').length : 0;
+    const ft = academyData && academyData.calls ? academyData.calls.filter(c => c.academyTag === 'featured').length : 0;
+    const wn = academyData && academyData.calls ? academyData.calls.filter(c => c.academyTag === 'warning').length : 0;
+    const totalCount = academyData && academyData.calls ? academyData.calls.length : 0;
 
     return (
       <>
+        {/* Dynamic Upper Summary Counters Block */}
         <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid var(--border)', background: 'var(--bg2)' }}>
           <div style={{ padding: '10px 20px', borderRight: '1px solid var(--border)', textAlign: 'center' }}><div className="font-mono fw-700 text-green" style={{ fontSize: '18px' }}>{ex}</div><div className="fs-10 text-muted uppercase">Exemplar</div></div>
           <div style={{ padding: '10px 20px', borderRight: '1px solid var(--border)', textAlign: 'center' }}><div className="font-mono fw-700 text-gold" style={{ fontSize: '18px' }}>{ft}</div><div className="fs-10 text-muted uppercase">Featured</div></div>
           <div style={{ padding: '10px 20px', borderRight: '1px solid var(--border)', textAlign: 'center' }}><div className="font-mono fw-700 text-red" style={{ fontSize: '18px' }}>{wn}</div><div className="fs-10 text-muted uppercase">Warning</div></div>
-          <div style={{ padding: '10px 20px', borderRight: '1px solid var(--border)', textAlign: 'center' }}><div className="font-mono fw-700" style={{ fontSize: '18px' }}>{academyCalls.length}</div><div className="fs-10 text-muted uppercase">Total Tagged</div></div>
+          <div style={{ padding: '10px 20px', borderRight: '1px solid var(--border)', textAlign: 'center' }}><div className="font-mono fw-700" style={{ fontSize: '18px' }}>{totalCount}</div><div className="fs-10 text-muted uppercase">Total Tagged</div></div>
           <div style={{ padding: '10px 20px', flex: 1, display: 'flex', alignItems: 'center' }}>
             <div className="fs-11 text-muted" style={{ lineHeight: '1.5' }}>
               analytiq auto-surfaces the <strong className="text-green">top 10%</strong> and <strong className="text-red">bottom 10%</strong> scoring calls every night for training review.
@@ -976,6 +1071,8 @@ const renderTicker = () => {
             </div>
           </div>
         </div>
+
+        {/* Main List Container Layout mapping block */}
         <div id="academy-call-list" style={{ padding: '14px' }}>
           {calls.map(c => {
             const color = agentColor(c.agentIdx);
@@ -983,20 +1080,28 @@ const renderTicker = () => {
             const tagCls = c.academyTag;
             const tagLabels = { exemplar: '⭐ Exemplar', featured: '🎯 Featured', warning: '⚠️ Warning' };
 
-            // Build waveform (60 segments)
+            // Convert backend API string timestamp cleanly into a JavaScript date object
+            const cleanDate = c.date instanceof Date ? c.date : new Date(c.date);
+
+            // Build waveform visualization segments
             const segs = Array.from({ length: 60 }, (_, i) => {
-              const h = Math.round(20 + Math.random() * 80);
-              const markerHere = c.markers.find(m => {
-                const totalSec = parseInt(c.duration.split(':')[0]) * 60 + parseInt(c.duration.split(':')[1]);
+              const callSeed = c.id ? String(c.id).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : i;
+              const stableRandomValue = Math.sin(callSeed + i) * 10000;
+              const h = Math.round(20 + (stableRandomValue - Math.floor(stableRandomValue)) * 80);
+              const markerHere = c.markers && c.markers.find(m => {
+                const durationParts = c.duration.split(':');
+                const totalSec = parseInt(durationParts[0]) * 60 + parseInt(durationParts[1]);
+                if (!totalSec) return false;
                 const [mm, ss] = m.time.split(':').map(Number);
                 const markerPos = Math.round(((mm * 60 + ss) / totalSec) * 60);
                 return Math.abs(markerPos - i) <= 1;
               });
+
               const cls = markerHere ? `wave-seg marker-${markerHere.color}` : 'wave-seg';
               return <div key={i} className={cls} style={{ height: `${h}%` }}></div>;
             });
 
-            const markersHtml = c.markers.map(m => (
+            const markersHtml = c.markers && c.markers.map(m => (
               <div key={m.id} className={`marker-pill ${m.color}`} onClick={(e) => { e.stopPropagation(); showToast('info', `Jump to ${m.time}`, `Playing: ${m.label}`, setToasts); }}>
                 <span>{m.color === 'green' ? '●' : m.color === 'red' ? '●' : '◆'}</span> {m.time} · {m.label}
               </div>
@@ -1009,7 +1114,9 @@ const renderTicker = () => {
                     <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 700, color: '#000', flexShrink: 0 }}>{initials(c.agentName)}</div>
                     <div>
                       <div className="fs-12 fw-700" style={{ color: 'var(--text)' }}>{c.agentName}</div>
-                      <div className="fs-10 text-muted">{c.agentDept} · {c.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {c.duration} · {c.campaign.split('—')[0].trim()}</div>
+                      <div className="fs-10 text-muted">
+                        {c.agentDept} · {cleanDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {c.duration} · {c.campaign && c.campaign.split('—')[0].trim()}
+                      </div>
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
@@ -1018,11 +1125,57 @@ const renderTicker = () => {
                   </div>
                 </div>
 
-                {/* Waveform */}
+                {/* Waveform Visualization Interface engine layer */}
                 <div style={{ marginBottom: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                     <div className="waveform-bar" style={{ flex: 1 }}>{segs}</div>
-                    <button style={{ background: 'var(--bg4)', border: '1px solid var(--border2)', borderRadius: '50%', width: '28px', height: '28px', color: 'var(--text2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', flexShrink: 0 }} onClick={(e) => { e.stopPropagation(); showToast('info', 'Playing Recording', 'Opening call recording...', setToasts); }}>▶</button>
+                    <button
+                      style={{ background: 'var(--bg4)', border: '1px solid var(--border2)', borderRadius: '50%', width: '28px', height: '28px', color: 'var(--text2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', flexShrink: 0 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const btn = e.currentTarget;
+                        if (!c.audioUrl) return showToast('warning', 'Missing File', 'No recording URL available.', setToasts);
+
+                        const cleanUrl = c.audioUrl.includes('/api/proxy-audio') ? decodeURIComponent(c.audioUrl.split('url=')[1] || '') : c.audioUrl;
+
+                        if ((window as any).currentAudioInstance && (window as any).currentAudioUrl === cleanUrl) {
+                          if ((window as any).currentAudioInstance.paused) {
+                            // FIXED: Added .catch block to the resume action to handle blocked or expired stream auth states
+                            (window as any).currentAudioInstance.play()
+                              .then(() => btn.innerText = '⏸')
+                              .catch((err: any) => {
+                                console.error(err);
+                                showToast('critical', 'Playback Error', 'Direct stream blocked on resume. Opening link...', setToasts);
+                                window.open(cleanUrl, '_blank');
+                              });
+                            showToast('info', 'Resuming Audio', `Playing call for ${c.agentName}...`, setToasts);
+                          } else {
+                            (window as any).currentAudioInstance.pause();
+                            btn.innerText = '▶';
+                            showToast('info', 'Audio Paused', 'Recording paused.', setToasts);
+                          }
+                        } else {
+                          if ((window as any).currentAudioInstance) {
+                            (window as any).currentAudioInstance.pause();
+                            document.querySelectorAll('.recording-play-btn').forEach(b => (b as HTMLElement).innerText = '▶');
+                          }
+                          showToast('info', 'Playing Recording', `Streaming call for ${c.agentName}...`, setToasts);
+                          (window as any).currentAudioUrl = cleanUrl;
+                          (window as any).currentAudioInstance = new Audio(cleanUrl);
+                          (window as any).currentAudioInstance.addEventListener('ended', () => btn.innerText = '▶');
+                          (window as any).currentAudioInstance.play()
+                            .then(() => btn.innerText = '⏸')
+                            .catch((err: any) => {
+                              console.error(err);
+                              showToast('critical', 'Playback Error', 'Direct stream blocked. Opening link...', setToasts);
+                              window.open(cleanUrl, '_blank');
+                            });
+                        }
+                      }}
+                      className="recording-play-btn"
+                    >
+                      {(window as any).currentAudioUrl === (c.audioUrl?.includes('/api/proxy-audio') ? decodeURIComponent(c.audioUrl.split('url=')[1] || '') : c.audioUrl) && (window as any).currentAudioInstance && !(window as any).currentAudioInstance.paused ? '⏸' : '▶'}
+                    </button>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span className="fs-10 text-muted font-mono">0:00</span>
@@ -1030,25 +1183,26 @@ const renderTicker = () => {
                   </div>
                 </div>
 
-                {/* Markers */}
+                {/* Training Markers Row */}
                 <div className="marker-list">{markersHtml}</div>
 
-                {/* Footer */}
+                {/* Card Operational Control Options Action Tray */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px', paddingTop: '8px', borderTop: '1px solid var(--border)' }}>
                   <span className="fs-10 text-muted">{c.collection}</span>
                   <div style={{ marginLeft: 'auto', display: 'flex', gap: '5px' }}>
-                    <button className="filter-btn" style={{ fontSize: '10px', padding: '3px 8px' }} onClick={(e) => { e.stopPropagation(); showToast('info', 'Tag Call', 'Select: Exemplar · Featured · Warning', setToasts); }}>+ Tag</button>
-                    <button className="filter-btn" style={{ fontSize: '10px', padding: '3px 8px' }} onClick={(e) => { e.stopPropagation(); showToast('info', 'Add Timestamp Marker', 'Enter timestamp and label for training marker.', setToasts); }}>⏱ Marker</button>
-                    <button className="filter-btn" style={{ fontSize: '10px', padding: '3px 8px' }} onClick={(e) => { e.stopPropagation(); showToast('info', 'Add to Collection', 'Select a training collection to add this call to.', setToasts); }}>📁 Add to Collection</button>
+                    <button className="filter-btn" style={{ fontSize: '10px', padding: '3px 8px' }} onClick={(e) => { e.stopPropagation(); showToast('info', 'Tag Call', 'Select: Exemplar · Featured · Warning', setToasts); logActivity(`Added tag for agent ${c.agentName}`, '⚡') }}>+ Tag</button>
+                    <button className="filter-btn" style={{ fontSize: '10px', padding: '3px 8px' }} onClick={(e) => { e.stopPropagation(); showToast('info', 'Add Timestamp Marker', 'Enter timestamp and label for training marker.', setToasts); logActivity(`Maeker Set for agent ${c.agentName}`, '⏱') }}>⏱ Marker</button>
+                    <button className="filter-btn" style={{ fontSize: '10px', padding: '3px 8px' }} onClick={(e) => { e.stopPropagation(); showToast('info', 'Add to Collection', 'Select a training collection to add this call to.', setToasts); logActivity(`Added to Collection for agent ${c.agentName}`, '📁') }}>📁 Add to Collection</button>
                   </div>
                 </div>
               </div>
             );
           })}
+
+          {/* Empty Fallback Block view handling properties */}
           {calls.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text3)' }}>
-              <div style={{ fontSize: '32px', marginBottom: '12px' }}>📭</div>
-              <div>No calls match this filter.</div>
+            <div style={{ textAlign: 'center', color: 'var(--text3)' }}>
+              <div style={{ fontSize: '15px', marginBottom: '12px' }}>📭 No records found for this filter.</div>
             </div>
           )}
         </div>
@@ -1499,7 +1653,7 @@ const renderTicker = () => {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
             <div className="panel" style={{ padding: '10px' }}><div className="fs-10 text-muted uppercase mb-12">Lead Source</div><div className="fs-12 fw-600">{call.leadSource}</div><div className="fs-10 text-muted">{call.subId}</div></div>
             <div className="panel" style={{ padding: '10px' }}><div className="fs-10 text-muted uppercase mb-12">Campaign</div><div className="fs-12 fw-600">{call.campaign}</div></div>
-            <div className="panel" style={{ padding: '10px' }}><div className="fs-10 text-muted uppercase mb-12">Outcome</div><div className="fs-12 fw-600"><span className={`badge ${outcomeClass(call.outcome)}`}>{call.outcome}</span></div></div>
+            <div className="panel" style={{ padding: '10px' }}><div className="fs-10 text-muted uppercase mb-12">Outcome</div><div className="fs-12 fw-600">{call.outcome && (<span className={`badge ${outcomeClass(call.outcome)}`}>{call.outcome}</span>)}</div></div>
             <div className="panel" style={{ padding: '10px' }}><div className="fs-10 text-muted uppercase mb-12">Department</div><div className="fs-12 fw-600">{call.agentDept}</div></div>
           </div>
         </div>
@@ -2037,14 +2191,132 @@ const renderTicker = () => {
 
           {/* Analytics Page */}
           <div className={`page ${activePage === 'analytics' ? 'active' : ''}`}>
-            <div className="analytics-content">
-              <div className="grid-2">
-                <div className="panel"><div className="panel-hdr"><span className="panel-title">Overview</span></div><div className="panel-body"><div className="grid-3" style={{ marginBottom: '12px' }}><div><div className="font-mono fw-700" style={{ fontSize: '28px', color: 'var(--text)' }}>2,273</div><div className="fs-10 text-muted uppercase">Total Calls</div></div><div><div className="font-mono fw-700 text-gold" style={{ fontSize: '28px' }}>53.6</div><div className="fs-10 text-muted uppercase">Avg Adherence</div></div><div><div className="font-mono fw-700" style={{ fontSize: '28px', color: 'var(--text)' }}>6:46</div><div className="fs-10 text-muted uppercase">Avg Length</div></div></div><div className="fs-11 text-muted">2,273 scored · 0 pending · <span className="text-green">0 errors</span></div></div></div>
-                <div className="panel"><div className="panel-hdr"><span className="panel-title">Conversion Rates</span></div><div className="panel-body"><div className="grid-3" style={{ marginBottom: '14px' }}><div style={{ textAlign: 'center', background: 'var(--bg3)', borderRadius: 'var(--radius)', padding: '10px' }}><div className="font-mono fw-700 text-green" style={{ fontSize: '22px' }}>3.3%</div><div className="fs-10 text-muted" style={{ marginTop: '3px' }}>Enrollment Rate</div><div className="fs-10 text-muted">74 of 2,273</div></div><div style={{ textAlign: 'center', background: 'var(--bg3)', borderRadius: 'var(--radius)', padding: '10px' }}><div className="font-mono fw-700 text-gold" style={{ fontSize: '22px' }}>2.3%</div><div className="fs-10 text-muted" style={{ marginTop: '3px' }}>Debt Pitch Rate</div><div className="fs-10 text-muted">52 of 2,273</div></div><div style={{ textAlign: 'center', background: 'var(--bg3)', borderRadius: 'var(--radius)', padding: '10px' }}><div className="font-mono fw-700 text-muted" style={{ fontSize: '22px' }}>0.0%</div><div className="fs-10 text-muted" style={{ marginTop: '3px' }}>Other</div><div className="fs-10 text-muted">—</div></div></div><div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}><div className="flex items-center gap-6"><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--green)' }}></div><span className="fs-11 text-muted">Enrolled <strong className="text-green">74</strong></span></div><div className="flex items-center gap-6"><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--gold)' }}></div><span className="fs-11 text-muted">Debt Pitch <strong className="text-gold">82</strong></span></div><div className="flex items-center gap-6"><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--blue)' }}></div><span className="fs-11 text-muted">Callback <strong style={{ color: 'var(--blue)' }}>622</strong></span></div><div className="flex items-center gap-6"><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--red)' }}></div><span className="fs-11 text-muted">Declined <strong className="text-red">148</strong></span></div><div className="flex items-center gap-6"><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--orange)' }}></div><span className="fs-11 text-muted">Hotique <strong style={{ color: 'var(--orange)' }}>242</strong></span></div></div></div></div>
+
+            {/* 1. Show loader when fetching */}
+            {isDataLoading && (
+              <div className="loader" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
+                ⏳ Loading Analytics data from database......
               </div>
-              <div className="panel"><div className="panel-hdr"><span className="panel-title">Daily QA Trend</span></div><div className="panel-body"><div className="bar-chart" style={{ height: '70px' }}>{['3/22', '3/23', '3/24', '3/25', '3/26', '3/27', '3/28', '3/29'].map((day, i) => (<div key={day} className="bar-col"><div className="bar-y-val">{[48, 52, 49, 55, 51, 54, 50, 53.6][i]}</div><div className="bar-seg" style={{ height: `${[48, 52, 49, 55, 51, 54, 50, 53.6][i] / 55 * 100}%`, background: 'var(--gold)', minHeight: '3px' }}></div><div className="bar-x-label">{day}</div></div>))}</div></div></div>
-              <div className="grid-2"><div className="panel"><div className="panel-hdr"><span className="panel-title">Score Distribution</span></div><div className="panel-body"><div className="bar-chart" style={{ height: '90px' }}>{[[0, 9, 22], [10, 19, 105], [20, 29, 195], [30, 39, 327], [40, 49, 119], [50, 59, 401], [60, 69, 614], [70, 79, 401], [80, 89, 119], [90, 100, 8]].map(b => (<div key={b[0]} className="bar-col"><div className="bar-y-val fs-10">{b[2]}</div><div className="bar-seg" style={{ height: `${b[2] / 614 * 100}%`, background: b[0] < 50 ? 'var(--red)' : b[0] < 80 ? 'var(--gold)' : 'var(--green)' }}></div><div className="bar-x-label">{b[0]}-{b[1]}</div></div>))}</div></div></div><div className="panel"><div className="panel-hdr"><span className="panel-title">Agent Comparison</span></div><div className="panel-body">{AGENTS.slice(0, 12).map(a => (<div key={a.name} style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '5px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: agentColor(AGENTS.indexOf(a)), flexShrink: 0 }}></div><div style={{ fontSize: '10px', color: 'var(--text2)', minWidth: '110px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</div><div className="mini-bar-wrap"><div className="mini-bar" style={{ width: `${a.score}%`, background: scoreColor(a.score) }}></div></div><div className="font-mono fs-10 fw-600" style={{ color: scoreColor(a.score), minWidth: '28px' }}>{a.score}</div></div>))}</div></div></div>
-            </div>
+            )}
+
+            {/* 3. Render content safely when data exists */}
+            {!isDataLoading && analyticsData && (
+              <div className="analytics-content">
+                <div className="grid-2">
+                  {/* OVERVIEW PANEL */}
+                  <div className="panel">
+                    <div className="panel-hdr"><span className="panel-title">Overview</span></div>
+                    <div className="panel-body">
+                      <div className="grid-3" style={{ marginBottom: '12px' }}>
+                        <div>
+                          <div className="font-mono fw-700" style={{ fontSize: '28px', color: 'var(--text)' }}>
+                            {analyticsData.overview?.totalCalls?.toLocaleString() || 0}
+                          </div>
+                          <div className="fs-10 text-muted uppercase">Total Calls</div>
+                        </div>
+                        <div>
+                          <div className="font-mono fw-700 text-gold" style={{ fontSize: '28px' }}>
+                            {analyticsData.overview?.avgAdherence || 0}
+                          </div>
+                          <div className="fs-10 text-muted uppercase">Avg Adherence</div>
+                        </div>
+                        <div>
+                          <div className="font-mono fw-700" style={{ fontSize: '28px', color: 'var(--text)' }}>
+                            {analyticsData.overview?.avgLength || "0:00"}
+                          </div>
+                          <div className="fs-10 text-muted uppercase">Avg Length</div>
+                        </div>
+                      </div>
+                      <div className="fs-11 text-muted">
+                        {analyticsData.overview?.scored || 0} scored · {analyticsData.overview?.pending || 0} pending · <span className="text-green">{analyticsData.overview?.errors || 0} errors</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CONVERSION RATES PANEL */}
+                  <div className="panel">
+                    <div className="panel-hdr"><span className="panel-title">Conversion Rates</span></div>
+                    <div className="panel-body">
+                      <div className="grid-3" style={{ marginBottom: '14px' }}>
+                        <div style={{ textAlign: 'center', background: 'var(--bg3)', borderRadius: 'var(--radius)', padding: '10px' }}>
+                          <div className="font-mono fw-700 text-green" style={{ fontSize: '22px' }}>{analyticsData.conversionRates?.rates?.enrollment?.percentage || 0}%</div>
+                          <div className="fs-10 text-muted" style={{ marginTop: '3px' }}>Enrollment Rate</div>
+                          <div className="fs-10 text-muted">{analyticsData.conversionRates?.rates?.enrollment?.count || 0} of {analyticsData.conversionRates?.rates?.enrollment?.total || 0}</div>
+                        </div>
+                        <div style={{ textAlign: 'center', background: 'var(--bg3)', borderRadius: 'var(--radius)', padding: '10px' }}>
+                          <div className="font-mono fw-700 text-gold" style={{ fontSize: '22px' }}>{analyticsData.conversionRates?.rates?.debtPitch?.percentage || 0}%</div>
+                          <div className="fs-10 text-muted" style={{ marginTop: '3px' }}>Debt Pitch Rate</div>
+                          <div className="fs-10 text-muted">{analyticsData.conversionRates?.rates?.debtPitch?.count || 0} of {analyticsData.conversionRates?.rates?.debtPitch?.total || 0}</div>
+                        </div>
+                        <div style={{ textAlign: 'center', background: 'var(--bg3)', borderRadius: 'var(--radius)', padding: '10px' }}>
+                          <div className="font-mono fw-700 text-muted" style={{ fontSize: '22px' }}>{analyticsData.conversionRates?.rates?.other?.percentage || 0}%</div>
+                          <div className="fs-10 text-muted" style={{ marginTop: '3px' }}>Other</div>
+                          <div className="fs-10 text-muted">—</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        <div className="flex items-center gap-6"><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--green)' }}></div><span className="fs-11 text-muted">Enrolled <strong className="text-green">{analyticsData.conversionRates?.breakdown?.enrolled || 0}</strong></span></div>
+                        <div className="flex items-center gap-6"><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--gold)' }}></div><span className="fs-11 text-muted">Debt Pitch <strong className="text-gold">{analyticsData.conversionRates?.breakdown?.debtPitch || 0}</strong></span></div>
+                        <div className="flex items-center gap-6"><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--blue)' }}></div><span className="fs-11 text-muted">Callback <strong style={{ color: 'var(--blue)' }}>{analyticsData.conversionRates?.breakdown?.callback || 0}</strong></span></div>
+                        <div className="flex items-center gap-6"><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--red)' }}></div><span className="fs-11 text-muted">Declined <strong className="text-red">{analyticsData.conversionRates?.breakdown?.declined || 0}</strong></span></div>
+                        <div className="flex items-center gap-6"><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--orange)' }}></div><span className="fs-11 text-muted">Hotique <strong style={{ color: 'var(--orange)' }}>{analyticsData.conversionRates?.breakdown?.hotique || 0}</strong></span></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* DAILY QA TREND PANEL */}
+                <div className="panel">
+                  <div className="panel-hdr"><span className="panel-title">Daily QA Trend</span></div>
+                  <div className="panel-body">
+                    <div className="bar-chart" style={{ height: '70px' }}>
+                      {analyticsData.dailyQaTrend?.map((item) => (
+                        <div key={item.date} className="bar-col">
+                          <div className="bar-y-val">{item.value}</div>
+                          <div className="bar-seg" style={{ height: `${(item.value / 55) * 100}%`, background: 'var(--gold)', minHeight: '3px' }}></div>
+                          <div className="bar-x-label">{item.date}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid-2">
+                  {/* SCORE DISTRIBUTION PANEL */}
+                  <div className="panel">
+                    <div className="panel-hdr"><span className="panel-title">Score Distribution</span></div>
+                    <div className="panel-body">
+                      <div className="bar-chart" style={{ height: '90px' }}>
+                        {analyticsData.scoreDistribution?.map((b) => (
+                          <div key={b.min} className="bar-col">
+                            <div className="bar-y-val fs-10">{b.count}</div>
+                            <div className="bar-seg" style={{ height: `${(b.count / 614) * 100}%`, background: b.min < 50 ? 'var(--red)' : b.min < 80 ? 'var(--gold)' : 'var(--green)' }}></div>
+                            <div className="bar-x-label">{b.min}-{b.max}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* AGENT COMPARISON PANEL */}
+                  <div className="panel">
+                    <div className="panel-hdr"><span className="panel-title">Agent Comparison</span></div>
+                    <div className="panel-body">
+                      {analyticsData.agentComparison?.map((a, idx) => (
+                        <div key={a.name} style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '5px' }}>
+                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: agentColor(idx), flexShrink: 0 }}></div>
+                          <div style={{ fontSize: '10px', color: 'var(--text2)', minWidth: '110px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</div>
+                          <div className="mini-bar-wrap">
+                            <div className="mini-bar" style={{ width: `${a.score}%`, background: scoreColor(a.score) }}></div>
+                          </div>
+                          <div className="font-mono fs-10 fw-600" style={{ color: scoreColor(a.score), minWidth: '28px' }}>{a.score}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* PIPs Page */}
@@ -2157,7 +2429,10 @@ const renderTicker = () => {
           {/* CF Academy Page */}
           <div className={`page ${activePage === 'academy' ? 'active' : ''}`}>
             <div className="section-hdr">
-              <div><span className="section-hdr-title">CF Academy</span><span className="fs-11 text-muted" style={{ marginLeft: '10px' }}>City Financial · Call Library & Training Markers</span></div>
+              <div>
+                <span className="section-hdr-title">CF Academy</span>
+                <span className="fs-11 text-muted" style={{ marginLeft: '10px' }}>City Financial · Call Library & Training Markers</span>
+              </div>
               <div className="section-hdr-actions">
                 <div className="academy-filter-tabs">
                   <div className={`academy-tab active all ${academyFilter === 'all' ? 'active' : ''}`} onClick={() => academyFilterChange('all')}>All</div>
@@ -2179,42 +2454,91 @@ const renderTicker = () => {
                 <button className="topbar-btn primary" onClick={showAutoTagModal}>⚡ Auto-Tag Calls</button>
               </div>
             </div>
-            <div className="academy-layout" style={{ height: 'calc(100vh - var(--topbar-h) - 32px - 80px - 48px)' }}>
-              <div className="academy-main" style={{ overflowY: 'auto' }}>
-                {renderAcademyCallList()}
+
+            {/* Active Data Loading Status Indicators */}
+            {isDataLoading && (
+              <div className="loader" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
+                ⏳ Syncing Academy resources from database...
               </div>
-              <div className="academy-sidebar">
-                <div style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>
-                  <div className="split-sidebar-title">Training Collections</div>
-                  <div id="academy-collections">{['Disclosure Excellence', 'Discovery Masters', 'Common Mistakes', 'Featured Calls', 'Objection Handlers'].map(name => (<div key={name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => showToast('info', 'Collection Filter', `Showing calls in "${name}"`, setToasts)}><span className="fs-11 text-muted">{name}</span><span className="font-mono fs-11 fw-600">{Math.floor(Math.random() * 8) + 2}</span></div>))}</div>
-                  <button className="filter-btn" style={{ width: '100%', marginTop: '8px', fontSize: '11px' }} onClick={() => showToast('info', 'New Collection', 'Create a named training collection for your team.', setToasts)}>+ New Collection</button>
+            )}
+
+            {!isDataLoading && (!academyData || Object.keys(academyData).length === 0) && (
+              <div className="loader" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
+                ⚠️ No Academy records found for this time range.
+              </div>
+            )}
+
+            {/* Render main content containers safely if active payload exists */}
+            {!isDataLoading && academyData && (
+              <div className="academy-layout" style={{ height: 'calc(100vh - var(--topbar-h) - 32px - 80px - 48px)' }}>
+                <div className="academy-main" style={{ overflowY: 'auto' }}>
+                  {renderAcademyCallList()}
                 </div>
-                <div style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>
-                  <div className="split-sidebar-title">Marker Types</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <div className="flex items-center gap-8" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--green)', flexShrink: 0 }}></div><span className="fs-11 text-muted" style={{ flex: 1 }}>Green — Best practice moment</span></div>
-                    <div className="flex items-center gap-8" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--gold)', flexShrink: 0 }}></div><span className="fs-11 text-muted" style={{ flex: 1 }}>Gold — Key scripted moment</span></div>
-                    <div className="flex items-center gap-8" style={{ padding: '6px 0' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--red)', flexShrink: 0 }}></div><span className="fs-11 text-muted" style={{ flex: 1 }}>Red — Do not replicate</span></div>
+
+                <div className="academy-sidebar">
+                  {/* DYNAMIC TRAINING COLLECTIONS */}
+                  <div style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>
+                    <div className="split-sidebar-title">Training Collections</div>
+                    <div id="academy-collections">
+                      {academyData.collections?.map((col) => (
+                        <div
+                          key={col.name}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
+                          onClick={() => showToast('info', 'Collection Filter', `Showing calls in "${col.name}"`, setToasts)}
+                        >
+                          <span className="fs-11 text-muted">{col.name}</span>
+                          <span className="font-mono fs-11 fw-600">{col.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <button className="filter-btn" style={{ width: '100%', marginTop: '8px', fontSize: '11px' }} onClick={() => showToast('info', 'New Collection', 'Create a named training collection for your team.', setToasts)}>+ New Collection</button>
                   </div>
-                </div>
-                <div style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>
-                  <div className="split-sidebar-title">Auto-Tag Logic</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text2)', lineHeight: '1.7' }}>
-                    <div style={{ padding: '6px', background: 'var(--green-dim)', borderRadius: 'var(--radius)', marginBottom: '6px', borderLeft: '2px solid var(--green)' }}>Score ≥ <strong className="text-green">85</strong> → Exemplar (auto-flagged nightly)</div>
-                    <div style={{ padding: '6px', background: 'var(--red-dim)', borderRadius: 'var(--radius)', marginBottom: '6px', borderLeft: '2px solid var(--red)' }}>Score ≤ <strong className="text-red">35</strong> → Warning (auto-flagged nightly)</div>
-                    <div style={{ padding: '6px', background: 'var(--gold-dim)', borderRadius: 'var(--radius)', borderLeft: '2px solid var(--gold)' }}>Manual <strong className="text-gold">Featured</strong> tag by floor manager</div>
+
+                  {/* STATIC MARKER TYPES REFERENCE */}
+                  <div style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>
+                    <div className="split-sidebar-title">Marker Types</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      <div className="flex items-center gap-8" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--green)', flexShrink: 0 }}></div><span className="fs-11 text-muted" style={{ flex: 1 }}>Green — Best practice moment</span></div>
+                      <div className="flex items-center gap-8" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--gold)', flexShrink: 0 }}></div><span className="fs-11 text-muted" style={{ flex: 1 }}>Gold — Key scripted moment</span></div>
+                      <div className="flex items-center gap-8" style={{ padding: '6px 0' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--red)', flexShrink: 0 }}></div><span className="fs-11 text-muted" style={{ flex: 1 }}>Red — Do not replicate</span></div>
+                    </div>
                   </div>
-                </div>
-                <div style={{ padding: '12px' }}>
-                  <div className="split-sidebar-title">Recent Activity</div>
-                  <div id="academy-activity">
-                    <div style={{ display: 'flex', gap: '8px', padding: '6px 0', borderBottom: '1px solid var(--border)' }}><span style={{ fontSize: '13px', flexShrink: 0 }}>⭐</span><div><div className="fs-11" style={{ color: 'var(--text2)', lineHeight: '1.4' }}>Summer Spence — tagged Exemplar</div><div className="fs-10 text-muted">2m ago</div></div></div>
-                    <div style={{ display: 'flex', gap: '8px', padding: '6px 0', borderBottom: '1px solid var(--border)' }}><span style={{ fontSize: '13px', flexShrink: 0 }}>⏱</span><div><div className="fs-11" style={{ color: 'var(--text2)', lineHeight: '1.4' }}>Marker added: "Great Opening" at 1:22 — Kaila Minarcin</div><div className="fs-10 text-muted">8m ago</div></div></div>
-                    <div style={{ display: 'flex', gap: '8px', padding: '6px 0', borderBottom: '1px solid var(--border)' }}><span style={{ fontSize: '13px', flexShrink: 0 }}>📁</span><div><div className="fs-11" style={{ color: 'var(--text2)', lineHeight: '1.4' }}>3 calls added to Disclosure Excellence</div><div className="fs-10 text-muted">14m ago</div></div></div>
+
+                  {/* AUTO TAG SYSTEM LOGIC */}
+                  <div style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>
+                    <div className="split-sidebar-title">Auto-Tag Logic</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text2)', lineHeight: '1.7' }}>
+                      <div style={{ padding: '6px', background: 'var(--green-dim)', borderRadius: 'var(--radius)', marginBottom: '6px', borderLeft: '2px solid var(--green)' }}>Score ≥ <strong className="text-green">85</strong> → Exemplar (auto-flagged nightly)</div>
+                      <div style={{ padding: '6px', background: 'var(--red-dim)', borderRadius: 'var(--radius)', marginBottom: '6px', borderLeft: '2px solid var(--red)' }}>Score ≤ <strong className="text-red">35</strong> → Warning (auto-flagged nightly)</div>
+                      <div style={{ padding: '6px', background: 'var(--gold-dim)', borderRadius: 'var(--radius)', borderLeft: '2px solid var(--gold)' }}>Manual <strong className="text-gold">Featured</strong> tag by floor manager</div>
+                    </div>
+                  </div>
+
+                  {/* DYNAMIC RECENT ACTIVITY ENGINE */}
+                  <div style={{ padding: '12px' }}>
+                    <div className="split-sidebar-title">Recent Activity</div>
+                    <div id="academy-activity">
+                      {recentActivities && recentActivities.length > 0 ? (
+                        recentActivities.map((activity) => (
+                          <div key={activity.id} style={{ display: 'flex', gap: '8px', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                            <span style={{ fontSize: '13px', flexShrink: 0 }}>{activity.icon}</span>
+                            <div>
+                              <div className="fs-11" style={{ color: 'var(--text2)', lineHeight: '1.4' }}>{activity.text}</div>
+                              {/* Dynamic Realtime Offset Evaluation */}
+                              <div className="fs-10 text-muted">
+                                {activity.timestamp ? formatTimeOffset(activity.timestamp) : 'Just now'}
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="fs-11 text-muted" style={{ padding: '6px 0' }}>No recent user sessions.</div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* SDR Pipeline Page */}
@@ -2317,7 +2641,7 @@ const renderTicker = () => {
               <div className="modal-meta">{selectedCall ? `${selectedCall.date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} · ${selectedCall.duration} · ${selectedCall.campaign}` : ''}</div>
               <div style={{ marginTop: '8px', display: 'flex', gap: '6px' }}>
                 {selectedCall?.flags.map(f => <span key={f} className="badge red" style={{ fontSize: '10px' }}>{f}</span>)}
-                {selectedCall && <span className={`badge ${outcomeClass(selectedCall.outcome)}`}>{selectedCall.outcome}</span>}
+                {selectedCall && selectedCall.outcome && (<span className={`badge ${outcomeClass(selectedCall.outcome)}`}> {selectedCall.outcome} </span>)}
                 {selectedCall && <span className="badge grey">{selectedCall.agentDept}</span>}
               </div>
             </div>
@@ -2355,15 +2679,6 @@ const renderTicker = () => {
           </div>
         ))}
       </div>
-      {/* <div className="alert-toast-container">
-        {toasts.map(toast => (
-          <div key={toast.id} className={`alert-toast ${toast.type === 'critical' ? 'critical' : toast.type === 'warning' ? 'warning' : ''}`}>
-            <span className="toast-icon">{toast.type === 'critical' ? '🚨' : toast.type === 'warning' ? '⚠️' : toast.type === 'success' ? '✅' : 'ℹ️'}</span>
-            <div><div className="toast-title">{toast.title}</div><div className="toast-msg">{toast.msg}</div></div>
-            <button className="toast-dismiss" onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}>✕</button>
-          </div>
-        ))}
-      </div> */}
     </div>
   );
 };

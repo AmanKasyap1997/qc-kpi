@@ -236,32 +236,65 @@ CREATE TABLE "leads" (
 CREATE TABLE "calls" (
     "id" SERIAL NOT NULL,
     "external_call_id" TEXT,
-    "lead_attribution_id" INTEGER,
     "lead_id" INTEGER,
     "agent_id" INTEGER,
     "department_id" INTEGER,
+    "lead_attribution_id" INTEGER,
     "client_phone" TEXT NOT NULL,
     "client_name" TEXT NOT NULL,
     "direction" TEXT NOT NULL,
+    "connected" TEXT,
+    "location" TEXT,
+    "campaign" TEXT,
     "started_at" TIMESTAMP(3) NOT NULL,
     "ended_at" TIMESTAMP(3),
     "duration_seconds" INTEGER,
     "recording_url" TEXT,
     "transcript_url" TEXT,
-    "talkRatioAgent" DECIMAL(5,2),
-    "talkRatioClient" DECIMAL(5,2),
-    "words_per_minute" INTEGER,
-    "wpm_classification" TEXT,
-    "interruption_count" INTEGER NOT NULL DEFAULT 0,
-    "sentiment_opening" TEXT,
-    "sentiment_overall" TEXT,
+    "transcript_details" TEXT,
     "outcome" TEXT,
-    "campaign" TEXT,
+    "next_action" TEXT,
+    "revenue" DECIMAL(10,2),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "deleted_at" TIMESTAMP(3),
 
     CONSTRAINT "calls_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "call_analytics" (
+    "id" SERIAL NOT NULL,
+    "call_id" INTEGER NOT NULL,
+    "overall_call_score" DOUBLE PRECISION,
+    "call_quality" DOUBLE PRECISION,
+    "disclosures_percentage" DOUBLE PRECISION,
+    "compliance_percentage" DOUBLE PRECISION,
+    "sentiment_overall" TEXT,
+    "lead_quality" TEXT,
+    "call_summary" TEXT,
+    "agent_strengths" JSONB,
+    "agent_improvements" JSONB,
+    "ai_insights" JSONB,
+    "coaching_actions" JSONB,
+    "checkpoint_results" JSONB,
+    "good_trackers_hit" JSONB,
+    "bad_trackers_triggered" JSONB,
+    "bad_tracker_count" INTEGER DEFAULT 0,
+    "deviation_flags" JSONB,
+    "flags" JSONB,
+    "compliance_flags" JSONB,
+    "risk_flags" JSONB,
+    "academy_tag" TEXT,
+    "academy_collection" TEXT,
+    "disclosure_adherence" DOUBLE PRECISION,
+    "talk_ratio_percent" DOUBLE PRECISION,
+    "objection_handled_count" INTEGER,
+    "processed_at" TIMESTAMP(3),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "call_analytics_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -401,10 +434,28 @@ CREATE INDEX "calls_lead_id_idx" ON "calls"("lead_id");
 CREATE INDEX "calls_agent_id_idx" ON "calls"("agent_id");
 
 -- CreateIndex
+CREATE INDEX "calls_department_id_idx" ON "calls"("department_id");
+
+-- CreateIndex
 CREATE INDEX "calls_started_at_idx" ON "calls"("started_at");
 
 -- CreateIndex
 CREATE INDEX "calls_outcome_idx" ON "calls"("outcome");
+
+-- CreateIndex
+CREATE INDEX "calls_deleted_at_idx" ON "calls"("deleted_at");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "call_analytics_call_id_key" ON "call_analytics"("call_id");
+
+-- CreateIndex
+CREATE INDEX "call_analytics_overall_call_score_idx" ON "call_analytics"("overall_call_score");
+
+-- CreateIndex
+CREATE INDEX "call_analytics_academy_tag_idx" ON "call_analytics"("academy_tag");
+
+-- CreateIndex
+CREATE INDEX "call_analytics_bad_tracker_count_idx" ON "call_analytics"("bad_tracker_count");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "zendesk_tickets_ticket_id_key" ON "zendesk_tickets"("ticket_id");
@@ -465,3 +516,6 @@ ALTER TABLE "calls" ADD CONSTRAINT "calls_department_id_fkey" FOREIGN KEY ("depa
 
 -- AddForeignKey
 ALTER TABLE "calls" ADD CONSTRAINT "calls_lead_attribution_id_fkey" FOREIGN KEY ("lead_attribution_id") REFERENCES "lead_attributions"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "call_analytics" ADD CONSTRAINT "call_analytics_call_id_fkey" FOREIGN KEY ("call_id") REFERENCES "calls"("id") ON DELETE CASCADE ON UPDATE CASCADE;

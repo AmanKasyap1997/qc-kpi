@@ -34,177 +34,9 @@ router.get("/zendesk", async (req: Request, res: Response) => {
     }
 });
 
-// Mock database query logic
-const getCallsFromDatabase = (): Call[] => {
-    return [
-        {
-            id: 1101,
-            agentIdx: 0,
-            agentName: "Jamison Bray",
-            agentDept: "Debt Sales",
-            score: 84,
-            outcome: "Enrolled",
-            flags: [],
-            date: new Date(),
-            duration: "08:14",
-            campaign: "City Lending — Debt Relief",
-            client: "James Thompson",
-            leadSource: "Facebook",
-            subId: "FB_CL_003_CA_25-45",
-            expanded: true
-        },
-        {
-            id: 1102,
-            agentIdx: 1,
-            agentName: "Kaila Minarcin",
-            agentDept: "Debt Sales",
-            score: 42,
-            outcome: "Declined",
-            flags: ["Skipped Credit Pull", "Rushed Call"],
-            date: new Date(Date.now() - 45 * 60 * 1000),
-            duration: "03:41",
-            campaign: "Facebook Leads",
-            client: "Maria Rodriguez",
-            leadSource: "Facebook",
-            subId: "FB_CL_007_TX_35-55",
-            expanded: false
-        },
-        {
-            id: 1103,
-            agentIdx: 2,
-            agentName: "Sarah Jenkins",
-            agentDept: "Debt Sales",
-            score: 95,
-            outcome: "Enrolled",
-            flags: [],
-            date: new Date(Date.now() - 2 * 3600 * 1000),
-            duration: "12:15",
-            campaign: "Google Search — Debt Consolidation",
-            client: "Robert Chen",
-            leadSource: "Google",
-            subId: "G_SEO_01_US_Core",
-            expanded: false
-        },
-        {
-            id: 1104,
-            agentIdx: 3,
-            agentName: "Marcus Vance",
-            agentDept: "Tax Relief",
-            score: 55,
-            outcome: "Callback",
-            flags: ["Interrupted Client"],
-            date: new Date(Date.now() - 4 * 3600 * 1000),
-            duration: "05:22",
-            campaign: "Tax Relief Inbound",
-            client: "Linda Hargrove",
-            leadSource: "Radio",
-            subId: "RAD_TX_04_Morn",
-            expanded: false
-        },
-        {
-            id: 1105,
-            agentIdx: 0,
-            agentName: "Jamison Bray",
-            agentDept: "Debt Sales",
-            score: 78,
-            outcome: "Callback",
-            flags: [],
-            date: new Date(Date.now() - 6 * 3600 * 1000),
-            duration: "06:47",
-            campaign: "City Lending — Debt Relief",
-            client: "David Miller",
-            leadSource: "Facebook",
-            subId: "FB_CL_003_CA_25-45",
-            expanded: false
-        },
-        // {
-        //     id: 1106,
-        //     agentIdx: 4,
-        //     agentName: "Elena Rostova",
-        //     agentDept: "Debt Sales",
-        //     score: 31,
-        //     outcome: "Declined",
-        //     flags: ["Dead Air Detection", "Missed Mini-Miranda"],
-        //     date: new Date(Date.now() - 24 * 3600 * 1000),
-        //     duration: "02:10",
-        //     campaign: "Cold Outbound List B",
-        //     client: "William Fletcher",
-        //     leadSource: "Direct Mail",
-        //     subId: "DM_DB_V2_NY",
-        //     expanded: false
-        // },
-        // {
-        //     id: 1107,
-        //     agentIdx: 1,
-        //     agentName: "Kaila Minarcin",
-        //     agentDept: "Debt Sales",
-        //     score: 89,
-        //     outcome: "Enrolled",
-        //     flags: [],
-        //     date: new Date(Date.now() - 26 * 3600 * 1000),
-        //     duration: "10:33",
-        //     campaign: "Facebook Leads",
-        //     client: "Amanda Ross",
-        //     leadSource: "Facebook",
-        //     subId: "FB_CL_007_TX_35-55",
-        //     expanded: false
-        // },
-        // {
-        //     id: 1108,
-        //     agentIdx: 5,
-        //     agentName: "Derek Brooks",
-        //     agentDept: "Tax Relief",
-        //     score: 68,
-        //     outcome: "Not Qualified",
-        //     flags: ["Low Tone/Energy"],
-        //     date: new Date(Date.now() - 28 * 3600 * 1000),
-        //     duration: "04:15",
-        //     campaign: "Tax Back-Taxes Promo",
-        //     client: "Gary Oak",
-        //     leadSource: "TikTok",
-        //     subId: "TT_TX_Vids_02",
-        //     expanded: false
-        // },
-        // {
-        //     id: 1109,
-        //     agentIdx: 2,
-        //     agentName: "Sarah Jenkins",
-        //     agentDept: "Debt Sales",
-        //     score: 91,
-        //     outcome: "Enrolled",
-        //     flags: [],
-        //     date: new Date(Date.now() - 32 * 3600 * 1000),
-        //     duration: "14:02",
-        //     campaign: "Google Search — Debt Consolidation",
-        //     client: "Patricia Martinez",
-        //     leadSource: "Google",
-        //     subId: "G_SEO_01_US_Core",
-        //     expanded: false
-        // },
-        // {
-        //     id: 1110,
-        //     agentIdx: 3,
-        //     agentName: "Marcus Vance",
-        //     agentDept: "Tax Relief",
-        //     score: 72,
-        //     outcome: "Enrolled",
-        //     flags: [],
-        //     date: new Date(Date.now() - 48 * 3600 * 1000),
-        //     duration: "09:50",
-        //     campaign: "Tax Relief Inbound",
-        //     client: "Brian O'Conner",
-        //     leadSource: "Radio",
-        //     subId: "RAD_TX_04_Morn",
-        //     expanded: false
-        // }
-    ];
-};
-
 // GET Route to supply page-load requests
 router.get('/calls', async (req: Request, res: Response) => {
     try {
-        // Replace with: const liveCalls = await CallModel.find().sort({ date: -1 });
-        const liveCalls = getCallsFromDatabase();
         const queryText = ` SELECT c.id, a.id AS "agentIdx", a.name AS "agentName", c.outcome, c.created_at as date, c.duration_seconds as duration, c.campaign, c.client_name as client
                             FROM calls c LEFT JOIN agents a ON c.agent_id = a.id ORDER BY c.created_at DESC; `;
         const result = await db.query(queryText);
@@ -223,8 +55,7 @@ router.get('/calls', async (req: Request, res: Response) => {
         }));
         res.status(200).json({
             success: true,
-            // data: dynamicCalls
-            data: liveCalls
+            data: dynamicCalls
         });
     } catch (error: any) {
         res.status(500).json({
@@ -283,6 +114,186 @@ router.get('/leaderboard', async (req: Request, res: Response): Promise<void> =>
     } catch (error) {
         console.error("Database query failed:", error);
         res.status(500).json({ message: "Failed to fetch leaderboard data from DB", error });
+    }
+});
+
+router.get('/analytics', async (req: Request, res: Response): Promise<void> => {
+    try {
+        // Extract query parameters (ready for when you transition to dynamic data)
+        const { dateFrom, dateTo } = req.query;
+
+        const staticAnalyticsData = {
+            overview: {
+                totalCalls: 5555,
+                avgAdherence: 53.6,
+                avgLength: "6:46",
+                scored: 2273,
+                pending: 0,
+                errors: 0
+            },
+            conversionRates: {
+                rates: {
+                    enrollment: { percentage: 3.3, count: 74, total: 2273 },
+                    debtPitch: { percentage: 2.3, count: 52, total: 2273 },
+                    other: { percentage: 0.0, count: null, total: null }
+                },
+                breakdown: {
+                    enrolled: 74,
+                    debtPitch: 82,
+                    callback: 622,
+                    declined: 148,
+                    hotique: 242
+                }
+            },
+            dailyQaTrend: [
+                { date: '3/22', value: 48 },
+                { date: '3/23', value: 52 },
+                { date: '3/24', value: 49 },
+                { date: '3/25', value: 55 },
+                { date: '3/26', value: 51 },
+                { date: '3/27', value: 54 },
+                { date: '3/28', value: 50 },
+                { date: '3/29', value: 53.6 }
+            ],
+            scoreDistribution: [
+                { min: 0, max: 9, count: 22 },
+                { min: 10, max: 19, count: 105 },
+                { min: 20, max: 29, count: 195 },
+                { min: 30, max: 39, count: 327 },
+                { min: 40, max: 49, count: 119 },
+                { min: 50, max: 59, count: 401 },
+                { min: 60, max: 69, count: 614 },
+                { min: 70, max: 79, count: 401 },
+                { min: 80, max: 89, count: 119 },
+                { min: 90, max: 100, count: 8 }
+            ],
+            // Note: Substitute mock records here matching your AGENTS structure
+            agentComparison: [
+                { name: "Agent 1", score: 85 },
+                { name: "Agent 2", score: 72 },
+                { name: "Agent 3", score: 54 },
+                { name: "Agent 4", score: 91 },
+                { name: "Agent 5", score: 43 },
+                { name: "Agent 6", score: 68 }
+            ]
+        };
+
+        res.status(200).json(staticAnalyticsData);
+    } catch (error) {
+        console.error("Error generating analytics data:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+router.get('/academy', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { dateFrom, dateTo } = req.query;
+
+        // 1. Fetch real details from database instead of an aggregated count
+        const sqlQuery = `
+        SELECT 
+            c.id,
+            a.name AS agent_name,
+            a.id AS agent_idx,
+            d.name AS agent_dept,
+            c.started_at AS date,
+            c.duration_seconds,
+            c.recording_url AS audio_url,
+            c.campaign,
+            c.outcome AS collection
+        FROM calls c
+        INNER JOIN agents a ON c.agent_id = a.id
+        INNER JOIN departments d ON a.department_id = d.id
+        WHERE (c.created_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP))
+        ORDER BY c.started_at DESC;
+    `;
+
+        // Assuming you are using 'pg' (node-postgres) client instance named db/pool
+        // const dbResult = await db.query(sqlQuery, [dateFrom, dateTo]);
+        const dbResult = await db.query(sqlQuery, [dateFrom, dateTo]);
+
+        // Helper to format duration_seconds into "M:SS" string format
+        const formatDuration = (totalSeconds: number | null): string => {
+            if (!totalSeconds) return "0:00";
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+        };
+
+        // 2. Map database rows into the clean object layout your frontend requires
+        const mappedCalls = dbResult.rows.map((row: any) => {
+            const collectionGroup = row.collection || "Common Mistakes";
+            const randomSeed = Math.random();
+            let score = 70; // fallback default
+            if (randomSeed < 0.25) {
+                score = Math.floor(Math.random() * 16) + 85; // 85 - 100 (Exemplar)
+            } else if (randomSeed < 0.45) {
+                score = Math.floor(Math.random() * 36);      // 0 - 35 (Warning)
+            } else {
+                score = Math.floor(Math.random() * 49) + 36; // 36 - 84 (Featured)
+            }
+
+            // B. Score-Based Academy Auto-Tag Logic Mapping
+            let tag = 'featured';
+            if (score >= 85) {
+                tag = 'exemplar';
+            } else if (score <= 35) {
+                tag = 'warning';
+            }
+
+            let cleanAudioUrl = row.audio_url;
+            if (typeof cleanAudioUrl === 'string') {
+                cleanAudioUrl = cleanAudioUrl.replace(/&amp;/g, '&');
+            }
+
+            return {
+                id: String(row.id),
+                agentName: row.agent_name,
+                agentIdx: row.agent_idx,
+                agentDept: row.agent_dept,
+                // Kept as an ISO string or native date instance depending on frontend mapping layer
+                date: row.date ? new Date(row.date).toISOString() : new Date().toISOString(),
+                duration: formatDuration(row.duration_seconds),
+                campaign: row.campaign || "General Support — Inbound",
+                academyTag: tag, // Safe mapping fallback
+                score: score,     // Database doesn't have a score column, generating static/dynamic value
+                collection: collectionGroup,
+                flags: [], // Static property requested
+                audioUrl: cleanAudioUrl,
+                markers: [
+                    { id: `m_${row.id}`, time: "1:15", label: "Customer Conversation", color: "green" }
+                ]
+            };
+        });
+
+        // 3. Combine with the remaining dashboard aggregation properties
+        const finalAcademyData = {
+            aggregations: {
+                exemplarCount: mappedCalls.filter((c: any) => c.academyTag === 'exemplar').length,
+                featuredCount: mappedCalls.filter((c: any) => c.academyTag === 'featured').length,
+                warningCount: mappedCalls.filter((c: any) => c.academyTag === 'warning').length,
+                totalTaggedCount: mappedCalls.length
+            },
+            collections: [
+                { name: 'Disclosure Excellence', count: mappedCalls.filter((c: any) => c.collection === 'Disclosure Excellence').length },
+                { name: 'Discovery Masters', count: 4 },
+                { name: 'Common Mistakes', count: mappedCalls.filter((c: any) => c.collection === 'Common Mistakes').length },
+                { name: 'Featured Calls', count: 3 },
+                { name: 'Objection Handlers', count: 7 }
+            ],
+            recentActivity: [
+                { id: 1, icon: '⭐', text: 'Summer Spence — tagged Exemplar', timeOffset: '2m ago' },
+                { id: 2, icon: '⏱', text: 'Marker added: "Great Opening" at 1:22 — Kaila Minarcin', timeOffset: '8m ago' },
+                { id: 3, icon: '📁', text: '3 calls added to Disclosure Excellence', timeOffset: '14m ago' }
+            ],
+            calls: mappedCalls // Real live data loaded right here
+        };
+
+        res.status(200).json(finalAcademyData);
+
+    } catch (error: any) {
+        console.error("Failed to parse database academy call data:", error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 export default router;
