@@ -565,6 +565,26 @@ const Dashboard: React.FC = () => {
     return leaderList.sort((a, b) => b.score - a.score).slice(0, 12);
   }, [allCalls]);
 
+  // 1. Dynamically compute occurrences and max value for the progress bar widths
+  const deviationsData = useMemo(() => {
+    const counts: Record<string, number> = FLAGS.reduce((acc, flag) => {
+      acc[flag] = 0;
+      return acc;
+    }, {} as Record<string, number>);
+    allCalls.forEach((call) => {
+      if (Array.isArray(call.flags)) {
+        call.flags.forEach((flagName: string) => {
+          if (flagName in counts) {
+            counts[flagName] += 1;
+          }
+        });
+      }
+    });
+    const maxCount = Math.max(...Object.values(counts), 1);
+
+    return { counts, maxCount };
+  }, [allCalls]);
+
   const fetchLiveFeedData = async () => {
     try {
       setLoadingCalls(true);
@@ -2148,13 +2168,43 @@ const Dashboard: React.FC = () => {
               </div>
 
               <div className="split-sidebar">
+                {/* Dynamic Deviations Sidebar Section */}
                 <div className="split-sidebar-section">
                   <div className="split-sidebar-title">Deviations</div>
-                  <div className="progress-row"><div className="progress-label" style={{ fontSize: '10px' }}>Early Decline</div><div className="mini-bar-wrap"><div className="mini-bar" style={{ width: '71%', background: 'var(--red)' }}></div></div><div className="progress-val text-red">71</div></div>
-                  <div className="progress-row"><div className="progress-label" style={{ fontSize: '10px' }}>Early Debt Pitch</div><div className="mini-bar-wrap"><div className="mini-bar" style={{ width: '40%', background: 'var(--gold)' }}></div></div><div className="progress-val text-gold">40</div></div>
-                  <div className="progress-row"><div className="progress-label" style={{ fontSize: '10px' }}>Skipped Qualifying</div><div className="mini-bar-wrap"><div className="mini-bar" style={{ width: '18%', background: 'var(--gold)' }}></div></div><div className="progress-val text-gold">18</div></div>
-                  <div className="progress-row"><div className="progress-label" style={{ fontSize: '10px' }}>Skipped Credit Pull</div><div className="mini-bar-wrap"><div className="mini-bar" style={{ width: '9%', background: 'var(--text3)' }}></div></div><div className="progress-val text-muted">9</div></div>
-                  <div className="progress-row"><div className="progress-label" style={{ fontSize: '10px' }}>Rushed Call</div><div className="mini-bar-wrap"><div className="mini-bar" style={{ width: '8%', background: 'var(--text3)' }}></div></div><div className="progress-val text-muted">8</div></div>
+                  {FLAGS.map((flag) => {
+                    const count = deviationsData.counts[flag] || 0;
+
+                    // Dynamically calculate progress percentage based on max element or total calls
+                    const percentage = deviationsData.maxCount > 0 ? Math.round((count / deviationsData.maxCount) * 100) : 0;
+
+                    // Match your specific color classes & variables based on the type of deviation
+                    let colorClass = 'text-muted';
+                    let bgColor = 'var(--text3)';
+
+                    if (flag === 'Early Decline') {
+                      colorClass = 'text-red'; bgColor = 'var(--red)';
+                    } else if (flag === 'Early Debt Pitch' || flag === 'Skipped Qualifying') { colorClass = 'text-gold'; bgColor = 'var(--gold)'; }
+
+                    return (
+                      <div className="progress-row" key={flag}>
+                        <div className="progress-label" style={{ fontSize: '10px' }}>
+                          {flag}
+                        </div>
+                        <div className="mini-bar-wrap">
+                          <div
+                            className="mini-bar"
+                            style={{
+                              width: `${percentage}%`,
+                              background: bgColor
+                            }}
+                          ></div>
+                        </div>
+                        <div className={`progress-val ${colorClass}`}>
+                          {count}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 <div className="split-sidebar-section">
