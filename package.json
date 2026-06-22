@@ -20,7 +20,11 @@
     "concurrently": "^10.0.3"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "axios": "^1.18.0",
+    "dotenv": "^17.4.2",
     "node-cron": "^4.2.1",
+    "openai": "^6.44.0",
     "winston": "^3.19.0"
   }
 }

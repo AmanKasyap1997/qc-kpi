@@ -7,6 +7,7 @@ import authRoutes from "./modules/auth/authRoute";
 import webhookRoutes from "./webhook/routes";
 import dashBoardData from "./dashboard/index";
 import { startAgentSyncJob } from "./jobs/syncAgents";
+import { processCallRecordingRecords } from "./jobs/generateCallSummary";
 
 dotenv.config();
 
@@ -38,6 +39,7 @@ app.get("/health", (_req, res) => {
 });
 
 // startAgentSyncJob();
+processCallRecordingRecords();
 
 app.use(errorHandler);
 

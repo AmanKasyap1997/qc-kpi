@@ -34,37 +34,77 @@ router.get("/zendesk", async (req: Request, res: Response) => {
     }
 });
 
-// GET Route to supply page-load requests
-router.get('/calls', async (req: Request, res: Response) => {
-    try {
-        const queryText = ` SELECT c.id, a.id AS "agentIdx", a.name AS "agentName", c.outcome, c.created_at as date, c.duration_seconds as duration, c.campaign, c.client_name as client
-                            FROM calls c LEFT JOIN agents a ON c.agent_id = a.id ORDER BY c.created_at DESC; `;
-        const result = await db.query(queryText);
 
-        // Inject the 'expanded: false' field required by UI component mapping
-        const dynamicCalls: Call[] = result.rows.map((row: any) => ({
-            ...row,
-            expanded: false,
-            // Fallback for agent index/ID if the join result returns null values
-            agentIdx: row.agentIdx ?? 0,
-            agentName: row.agentName || "Unknown Agent",
-            agentDept: row.agentDept || "Sales",
-            score: row.score || Math.floor(Math.random() * 101),
-            flags: row.flags || [],
-            leadSource: row.leadSource || "CallerReady"
-        }));
-        res.status(200).json({
+router.get("/calls", async (req: Request, res: Response) => {
+    const client = await db.connect();
+
+    try {
+        const result = await client.query(`
+            SELECT
+                a.id AS "agentIdx",
+                a.name AS "agentName",
+
+                COALESCE(ca.ai_generated_department, '') AS "agentDept",
+                COALESCE(ca.overall_call_score, 0) AS "score",
+
+                c.id AS "id",
+                COALESCE(c.client_name, '') AS "client",
+                COALESCE(c.client_phone, '') AS "clientPhone",
+                COALESCE(c.outcome, 'Unknown') AS "outcome",
+                COALESCE(c.duration_seconds, 0) AS "duration",
+                COALESCE(c.campaign, '') AS "campaign",
+
+                COALESCE(ca.flags, '[]'::jsonb) AS "flags",
+
+                COALESCE(ca.call_quality, 0) AS "callQuality",
+                COALESCE(ca.disclosures_percentage, 0) AS "disclosuresPercentage",
+                COALESCE(ca.compliance_percentage, 0) AS "compliancePercentage",
+
+                COALESCE(ca.call_summary, '') AS "callSummary",
+
+                COALESCE(ca.agent_strengths, '[]'::jsonb) AS "agentStrengths",
+                COALESCE(ca.agent_improvements, '[]'::jsonb) AS "agentImprovements",
+                COALESCE(ca.coaching_actions, '[]'::jsonb) AS "coachingActions",
+
+                COALESCE(ca.academy_tag, '') AS "academyTag",
+                COALESCE(ca.academy_collection, '') AS "academyCollection",
+
+                COALESCE(ca.ai_insights, '{}'::jsonb) AS "insights",
+                COALESCE(ca.checkpoint_results, '[]'::jsonb) AS "checkpointResults",
+                COALESCE(ca.risk_flags, '[]'::jsonb) AS "riskFlags",
+                COALESCE(ca.good_trackers_hit, '[]'::jsonb) AS "goodTrackersHit",
+                COALESCE(ca.bad_trackers_triggered, '[]'::jsonb) AS "badTrackersTriggered",
+
+                c.started_at AS "startedAt",
+                c.started_at AS "date",
+                c.ended_at AS "endedAt"
+            FROM calls c
+            LEFT JOIN agents a
+                ON a.id = c.agent_id
+            LEFT JOIN call_analytics ca
+                ON ca.call_id = c.id
+            WHERE c.deleted_at IS NULL
+            ORDER BY c.started_at DESC
+        `);
+
+        return res.status(200).json({
             success: true,
-            data: dynamicCalls
+            count: result.rows.length,
+            data: result.rows
         });
     } catch (error: any) {
-        res.status(500).json({
+        console.error("GET /calls error:", error);
+
+        return res.status(500).json({
             success: false,
-            message: "Failed to read data logs from database",
+            message: "Failed to read call data",
             error: error.message
         });
+    } finally {
+        client.release();
     }
 });
+
 
 router.get('/leaderboard', async (req: Request, res: Response): Promise<void> => {
     try {
