@@ -271,35 +271,6 @@ const outcomeClass = (o: string) => {
   return map[o] || 'grey';
 };
 const formatDuration = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
-// Generate mock calls
-const generateMockCalls = (): Call[] => {
-  const calls: Call[] = [];
-  for (let i = 0; i < 1173; i++) {
-    const agentIdx = Math.floor(Math.random() * AGENTS.length);
-    const agent = AGENTS[agentIdx];
-    const score = Math.max(0, Math.min(100, Math.round(agent.score + (Math.random() - 0.5) * 22)));
-    const outcome = OUTCOMES[Math.floor(Math.random() * OUTCOMES.length)];
-    const flags: string[] = [];
-    if (Math.random() > 0.65) flags.push(FLAGS[Math.floor(Math.random() * FLAGS.length)]);
-    if (Math.random() > 0.85) flags.push(FLAGS[Math.floor(Math.random() * FLAGS.length)]);
-    const now = new Date('2026-03-29T20:00:00');
-    const date = new Date(now.getTime() - Math.random() * 5 * 24 * 60 * 60 * 1000);
-    const durMin = Math.floor(Math.random() * 14) + 2;
-    const durSec = Math.floor(Math.random() * 60);
-    const leadIdx = Math.floor(Math.random() * LEAD_SOURCES.length);
-    calls.push({
-      id: i, agentIdx, agentName: agent.name, agentDept: agent.dept,
-      score, outcome, flags, date,
-      duration: `${durMin}:${String(durSec).padStart(2, '0')}`,
-      campaign: CAMPAIGNS[Math.floor(Math.random() * CAMPAIGNS.length)],
-      client: Math.random() > 0.4 ? CLIENTS[Math.floor(Math.random() * CLIENTS.length)] : '',
-      leadSource: LEAD_SOURCES[leadIdx].source,
-      subId: LEAD_SOURCES[leadIdx].subId,
-      expanded: false,
-    });
-  }
-  return calls.sort((a, b) => b.date.getTime() - a.date.getTime());
-};
 
 // Build Academy call library
 const buildAcademyCalls = (allCalls: Call[]): AcademyCall[] => {
@@ -444,6 +415,11 @@ const Dashboard: React.FC = () => {
   const [isDataLoading, setIsDataLoading] = useState<boolean>(false);
   const [analyticsData, setAnalyticsData] = useState(null);
   const [academyData, setAcademyData] = useState(null);
+  const [pipData, setPipData] = useState<any[]>([]);
+  const [ztStats, setZtStats] = useState({ strike1s: 0, strike2s: 0, clean: 0 });
+  const [escalationSteps, setEscalationSteps] = useState([]);
+  const [playingCallId, setPlayingCallId] = useState(null);
+  const [currentPlaybackTime, setCurrentPlaybackTime] = useState("0:00");
 
 
   const [recentActivities, setRecentActivities] = React.useState<Array<{
@@ -456,6 +432,12 @@ const Dashboard: React.FC = () => {
     { id: 'init-2', icon: '⚡', text: 'Academy workspace initialized.', timestamp: Date.now() - 60000 }
   ]);
 
+  const formatPlaybackTime = (seconds: any) => {
+    if (!seconds || isNaN(seconds)) return "0:00";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
   const formatTimeOffset = (timestamp: number): string => {
     const diffMs = Date.now() - timestamp;
     const diffSec = Math.floor(diffMs / 1000);
@@ -503,6 +485,9 @@ const Dashboard: React.FC = () => {
     }
     if (activePage === 'academy') {
       fetchAcademyData();
+    }
+    if (activePage === 'pips') {
+      fetchPipData();
     }
   }, [filters, allCalls, activePage, leaderboardMode, leaderboardTime]);
 
@@ -617,8 +602,20 @@ const Dashboard: React.FC = () => {
     try {
       setIsDataLoading(true);
       const response = await fetch(`${API_URL}/api/dashboard/leaderboard?mode=${leaderboardMode}&dateFrom=${dateFrom}&dateTo=${dateTo}`);
-      const data = await response.json();
-      setLeaderboardData(data);
+      const result = await response.json();
+
+      // 1. Unify shape: extract the array whether the backend sent [...] or { data: [...] }
+      const actualRows = Array.isArray(result)
+        ? result
+        : (result && Array.isArray(result.data) ? result.data : []);
+
+      // 2. Explicitly validate length to reset or render
+      if (actualRows.length > 0) {
+        setLeaderboardData(actualRows);
+      } else {
+        // Direct cache clearing: Empty dataset from backend clears the grid table layout
+        setLeaderboardData([]);
+      }
     } catch (error) {
       console.error("Error fetching leaderboard data:", error);
     } finally {
@@ -654,6 +651,32 @@ const Dashboard: React.FC = () => {
       setAcademyData(data);
     } catch (error) {
       console.error("Error fetching leaderboard data:", error);
+    } finally {
+      setIsDataLoading(false);
+    }
+  }
+
+  const fetchPipData = async () => {
+    try {
+      setIsDataLoading(true);
+      const response = await fetch(`${API_URL}/api/dashboard/pips?dateFrom=${dateFrom}&dateTo=${dateTo}`);
+      const result = await response.json();
+      if (result && result.success) {
+        setPipData(result.pips || []);
+
+        // Set the Verification Zero-Tolerance counter metrics from DB
+        if (result.zeroToleranceStats) {
+          setZtStats(result.zeroToleranceStats);
+        }
+
+        // Set the dynamic Escalation Hierarchy stages from DB
+        if (result.escalationHierarchy) {
+          setEscalationSteps(result.escalationHierarchy);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching leaderboard data:", error);
+      setPipData([]);
     } finally {
       setIsDataLoading(false);
     }
@@ -720,6 +743,7 @@ const Dashboard: React.FC = () => {
     if (activePage === 'zendesk') { fetchZendeskData(); }
     if (activePage === 'leaderboard') { fetchLeaderBoardData(); }
     if (activePage === 'academy') { fetchAcademyData(); }
+    if (activePage === 'pips') { fetchPipData(); }
   };
 
   const openScorecard = (call: Call) => {
@@ -802,14 +826,13 @@ const Dashboard: React.FC = () => {
     return dataSource.slice(0, 22).map((c: any, i: number) => {
       const name = c.agentName || "Agent";
       const stringSeed = name.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), i);
-      const scoreSeed = Math.sin(stringSeed) * 10000;
-      const score = c.score || Math.floor((scoreSeed - Math.floor(scoreSeed)) * 45) + 55;
+      const score = c.score || 0;
       const deltaSeed = Math.cos(stringSeed + 5) * 10000;
       const cleanDeltaValue = ((deltaSeed - Math.floor(deltaSeed)) * 5).toFixed(1);
       const deltaSign = Math.sin(stringSeed * 2) > 0.4 ? '+' : '-';
-      const delta = c.delta || `${deltaSign}${cleanDeltaValue}`;
+      const delta = score === 0 ? "0" : (c.delta || `${deltaSign}${cleanDeltaValue}`);
       const sc = scoreColor(score);
-      const dSign = delta.startsWith('+') ? 'up' : 'dn';
+      const dSign = delta === "0" ? "" : (delta.startsWith('+') ? 'up' : 'dn');
       return (
         <div key={`${name}-${i}`} className="ticker-item">
           <div className="ticker-dot" style={{ background: agentColor(i) }}></div>
@@ -856,11 +879,11 @@ const Dashboard: React.FC = () => {
           <div><span className={`badge ${outcomeClass(c.outcome)}`} style={{ fontSize: '10px' }}>{c.outcome}</span></div>
           <div className="fs-11 text-muted" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.agentDept}</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-            <span className = 'fs-10 text-muted'>
+            <span className='fs-10 text-muted'>
               {c.campaign}
             </span>
             {flagsHtml.length > 0 ? flagsHtml : <span style={{ color: 'var(--text4)', fontSize: '10px' }}>—</span>}
-            </div>
+          </div>
         </div>
       );
     });
@@ -1049,14 +1072,14 @@ const Dashboard: React.FC = () => {
   };
 
   const renderPIPCards = () => {
-    const pips = [
-      { agent: 'Jose Saldana', dept: 'SDR', reason: 'QA avg 41.1% over 3 consecutive days (threshold: 45%)', day: 11, target: 'QA ≥ 55% by Day 14', manager: 'Floor Manager', color: 'var(--orange)' },
-      { agent: 'Amber Thurmond', dept: 'Jr Closer', reason: 'CD02 disclosure failure + bad tracker triggered on same day', day: 6, target: 'Zero disclosure failures + QA ≥ 50%', manager: 'Floor Manager', color: 'var(--red)' },
-    ];
-    return pips.map((p, i) => {
+    if (isDataLoading) return <div className="text-muted fs-11 p-12 text-center">⏳ Loading PIPs data from database...</div>;
+    if (!Array.isArray(pipData) || pipData.length === 0) return <div className="text-muted fs-11 p-12 text-center">No PIP cases found matching filter.</div>;
+
+    return pipData.map((p, i) => {
       const pct = (p.day / 14) * 100;
       const barColor = p.day >= 12 ? 'var(--red)' : p.day >= 7 ? 'var(--orange)' : 'var(--gold)';
       const decision = p.day >= 14 ? 'SEPARATE' : p.day >= 7 ? 'REVIEW' : 'WATCH';
+
       return (
         <div key={i} className={`pip-card level-${p.day >= 12 ? 'exec' : p.day >= 7 ? 'final' : 'pip'}`}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
@@ -1087,18 +1110,18 @@ const Dashboard: React.FC = () => {
 
   const renderAcademyCallList = () => {
     // 1. Defensively extract the calls array from backend data object state
-    let calls = academyData && academyData.calls ? academyData.calls : [];
+    let calls = academyData && (academyData as any).calls ? (academyData as any).calls : [];
 
     // 2. Exact original filter layout logic
-    if (academyFilter !== 'all') calls = calls.filter(c => c.academyTag === academyFilter);
-    if (academyDept) calls = calls.filter(c => c.agentDept === academyDept);
-    if (academyMarker) calls = calls.filter(c => c.markers && c.markers.some(m => m.label === academyMarker));
+    if (academyFilter !== 'all') calls = calls.filter((c: any) => c.academyTag === academyFilter);
+    if (academyDept) calls = calls.filter((c: any) => c.agentDept === academyDept);
+    if (academyMarker) calls = calls.filter((c: any) => c.markers && c.markers.some((m: any) => m.label === academyMarker));
 
     // 3. Exact original count math execution using safe navigation chains
-    const ex = academyData && academyData.calls ? academyData.calls.filter(c => c.academyTag === 'exemplar').length : 0;
-    const ft = academyData && academyData.calls ? academyData.calls.filter(c => c.academyTag === 'featured').length : 0;
-    const wn = academyData && academyData.calls ? academyData.calls.filter(c => c.academyTag === 'warning').length : 0;
-    const totalCount = academyData && academyData.calls ? academyData.calls.length : 0;
+    const ex = academyData && (academyData as any).calls ? (academyData as any).calls.filter((c: any) => c.academyTag === 'exemplar').length : 0;
+    const ft = academyData && (academyData as any).calls ? (academyData as any).calls.filter((c: any) => c.academyTag === 'featured').length : 0;
+    const wn = academyData && (academyData as any).calls ? (academyData as any).calls.filter((c: any) => c.academyTag === 'warning').length : 0;
+    const totalCount = academyData && (academyData as any).calls ? (academyData as any).calls.length : 0;
 
     return (
       <>
@@ -1118,7 +1141,7 @@ const Dashboard: React.FC = () => {
 
         {/* Main List Container Layout mapping block */}
         <div id="academy-call-list" style={{ padding: '14px' }}>
-          {calls.map(c => {
+          {calls.map((c: any) => {
             const color = agentColor(c.agentIdx);
             const scCol = scoreColor(c.score);
             const tagCls = c.academyTag;
@@ -1132,7 +1155,7 @@ const Dashboard: React.FC = () => {
               const callSeed = c.id ? String(c.id).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : i;
               const stableRandomValue = Math.sin(callSeed + i) * 10000;
               const h = Math.round(20 + (stableRandomValue - Math.floor(stableRandomValue)) * 80);
-              const markerHere = c.markers && c.markers.find(m => {
+              const markerHere = c.markers && c.markers.find((m: any) => {
                 const durationParts = c.duration.split(':');
                 const totalSec = parseInt(durationParts[0]) * 60 + parseInt(durationParts[1]);
                 if (!totalSec) return false;
@@ -1144,12 +1167,82 @@ const Dashboard: React.FC = () => {
               const cls = markerHere ? `wave-seg marker-${markerHere.color}` : 'wave-seg';
               return <div key={i} className={cls} style={{ height: `${h}%` }}></div>;
             });
+            const markersHtml = c.markers && c.markers.map((m: any) => {
+              const displayTime = c.audioUrl ? (m.time || "0:00") : "0:00";
 
-            const markersHtml = c.markers && c.markers.map(m => (
-              <div key={m.id} className={`marker-pill ${m.color}`} onClick={(e) => { e.stopPropagation(); showToast('info', `Jump to ${m.time}`, `Playing: ${m.label}`, setToasts); }}>
-                <span>{m.color === 'green' ? '●' : m.color === 'red' ? '●' : '◆'}</span> {m.time} · {m.label}
-              </div>
-            ));
+              return (
+                <div
+                  key={m.id}
+                  className={`marker-pill ${m.color}`}
+                  style={{
+                    cursor: c.audioUrl ? 'pointer' : 'not-allowed',
+                    opacity: c.audioUrl ? 1 : 0.6
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+
+                    if (!c.audioUrl) return showToast('warning', 'Missing File', 'No recording URL available.', setToasts);
+
+                    // Strip proxy indicators and any old appended fragment hashes to prevent conflicts
+                    let cleanUrl = c.audioUrl.includes('/api/proxy-audio')
+                      ? decodeURIComponent(c.audioUrl.split('url=')[1] || '')
+                      : c.audioUrl;
+                    cleanUrl = cleanUrl.split('#')[0];
+
+                    showToast('info', `Jumping to ${displayTime}`, `Playing: ${m.label}`, setToasts);
+
+                    let audioInstance = (window as any).currentAudioInstance;
+                    const globalAudio = (window as any);
+
+                    // If audio isn't initialized yet or is playing a different call card, load this track instead
+                    if (!audioInstance || globalAudio.currentAudioUrl !== cleanUrl) {
+                      if (audioInstance) {
+                        audioInstance.pause();
+                        document.querySelectorAll('.recording-play-btn').forEach(b => (b as HTMLElement).innerText = '▶');
+                      }
+
+                      globalAudio.currentAudioUrl = cleanUrl;
+                      audioInstance = new Audio(cleanUrl);
+                      globalAudio.currentAudioInstance = audioInstance;
+
+                      // --- REAL-TIME TIME UPDATE LISTENERS ADDED HERE ---
+                      setPlayingCallId(c.id);
+                      audioInstance.addEventListener('timeupdate', () => {
+                        setCurrentPlaybackTime(formatPlaybackTime(audioInstance.currentTime));
+                      });
+                      audioInstance.addEventListener('ended', () => {
+                        const matchingBtn = document.getElementById(`play-btn-${c.id}`);
+                        if (matchingBtn) matchingBtn.innerText = '▶';
+                        setCurrentPlaybackTime("0:00");
+                        setPlayingCallId(null);
+                      });
+                    }
+
+                    // 1. Force state synchronization so the running clock matches this card row instantly
+                    setPlayingCallId(c.id);
+                    setCurrentPlaybackTime(formatPlaybackTime(m.rawSeconds || 0));
+
+                    // 2. Update timeline track pointer position safely using your backend rawSeconds value
+                    audioInstance.currentTime = m.rawSeconds || 0;
+
+                    // 3. Trigger playback tracking controls
+                    audioInstance.play()
+                      .then(() => {
+                        document.querySelectorAll('.recording-play-btn').forEach(b => (b as HTMLElement).innerText = '▶');
+                        const matchingBtn = document.getElementById(`play-btn-${c.id}`);
+                        if (matchingBtn) matchingBtn.innerText = '⏸';
+                      })
+                      .catch((err: any) => {
+                        console.error(err);
+                        showToast('critical', 'Playback Error', 'Stream blocked. Opening link...', setToasts);
+                        window.open(cleanUrl, '_blank');
+                      });
+                  }}
+                >
+                  <span>{m.color === 'green' ? '●' : m.color === 'red' ? '●' : '◆'}</span> {displayTime} · {m.label}
+                </div>
+              );
+            });
 
             return (
               <div key={c.id} className={`call-card-academy ${tagCls}`} onClick={() => openScorecard(c)}>
@@ -1174,55 +1267,77 @@ const Dashboard: React.FC = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                     <div className="waveform-bar" style={{ flex: 1 }}>{segs}</div>
                     <button
+                      id={`play-btn-${c.id}`}
                       style={{ background: 'var(--bg4)', border: '1px solid var(--border2)', borderRadius: '50%', width: '28px', height: '28px', color: 'var(--text2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', flexShrink: 0 }}
                       onClick={(e) => {
                         e.stopPropagation();
                         const btn = e.currentTarget;
                         if (!c.audioUrl) return showToast('warning', 'Missing File', 'No recording URL available.', setToasts);
 
-                        const cleanUrl = c.audioUrl.includes('/api/proxy-audio') ? decodeURIComponent(c.audioUrl.split('url=')[1] || '') : c.audioUrl;
+                        // Clean proxy URL and explicitly STRIP the `#t=` fragment so main play starts from 0:00
+                        let cleanUrl = c.audioUrl.includes('/api/proxy-audio') ? decodeURIComponent(c.audioUrl.split('url=')[1] || '') : c.audioUrl;
+                        cleanUrl = cleanUrl.split('#')[0];
 
-                        if ((window as any).currentAudioInstance && (window as any).currentAudioUrl === cleanUrl) {
-                          if ((window as any).currentAudioInstance.paused) {
-                            // FIXED: Added .catch block to the resume action to handle blocked or expired stream auth states
-                            (window as any).currentAudioInstance.play()
-                              .then(() => btn.innerText = '⏸')
+                        const globalAudio = (window as any);
+
+                        if (globalAudio.currentAudioInstance && globalAudio.currentAudioUrl === cleanUrl) {
+                          if (globalAudio.currentAudioInstance.paused) {
+                            globalAudio.currentAudioInstance.play()
+                              .then(() => {
+                                btn.innerText = '⏸';
+                                setPlayingCallId(c.id);
+                              })
                               .catch((err: any) => {
                                 console.error(err);
-                                showToast('critical', 'Playback Error', 'Direct stream blocked on resume. Opening link...', setToasts);
+                                showToast('critical', 'Playback Error', 'Stream blocked on resume.', setToasts);
                                 window.open(cleanUrl, '_blank');
                               });
                             showToast('info', 'Resuming Audio', `Playing call for ${c.agentName}...`, setToasts);
                           } else {
-                            (window as any).currentAudioInstance.pause();
+                            globalAudio.currentAudioInstance.pause();
                             btn.innerText = '▶';
                             showToast('info', 'Audio Paused', 'Recording paused.', setToasts);
                           }
                         } else {
-                          if ((window as any).currentAudioInstance) {
-                            (window as any).currentAudioInstance.pause();
+                          if (globalAudio.currentAudioInstance) {
+                            globalAudio.currentAudioInstance.pause();
                             document.querySelectorAll('.recording-play-btn').forEach(b => (b as HTMLElement).innerText = '▶');
                           }
+
                           showToast('info', 'Playing Recording', `Streaming call for ${c.agentName}...`, setToasts);
-                          (window as any).currentAudioUrl = cleanUrl;
-                          (window as any).currentAudioInstance = new Audio(cleanUrl);
-                          (window as any).currentAudioInstance.addEventListener('ended', () => btn.innerText = '▶');
-                          (window as any).currentAudioInstance.play()
+                          globalAudio.currentAudioUrl = cleanUrl;
+
+                          const newAudio = new Audio(cleanUrl);
+                          globalAudio.currentAudioInstance = newAudio;
+
+                          setPlayingCallId(c.id);
+                          newAudio.addEventListener('timeupdate', () => {
+                            setCurrentPlaybackTime(formatPlaybackTime(newAudio.currentTime));
+                          });
+                          newAudio.addEventListener('ended', () => {
+                            btn.innerText = '▶';
+                            setCurrentPlaybackTime("0:00");
+                            setPlayingCallId(null);
+                          });
+
+                          newAudio.play()
                             .then(() => btn.innerText = '⏸')
                             .catch((err: any) => {
                               console.error(err);
-                              showToast('critical', 'Playback Error', 'Direct stream blocked. Opening link...', setToasts);
+                              showToast('critical', 'Playback Error', 'Direct stream blocked.', setToasts);
                               window.open(cleanUrl, '_blank');
                             });
                         }
                       }}
                       className="recording-play-btn"
                     >
-                      {(window as any).currentAudioUrl === (c.audioUrl?.includes('/api/proxy-audio') ? decodeURIComponent(c.audioUrl.split('url=')[1] || '') : c.audioUrl) && (window as any).currentAudioInstance && !(window as any).currentAudioInstance.paused ? '⏸' : '▶'}
+                      {(window as any).currentAudioUrl === (c.audioUrl?.split('#')[0]) && (window as any).currentAudioInstance && !(window as any).currentAudioInstance.paused ? '⏸' : '▶'}
                     </button>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span className="fs-10 text-muted font-mono">0:00</span>
+                    <span className="fs-10 text-muted font-mono">
+                      {playingCallId === c.id ? currentPlaybackTime : "0:00"}
+                    </span>
                     <span className="fs-10 text-muted font-mono">{c.duration}</span>
                   </div>
                 </div>
@@ -1723,9 +1838,16 @@ const Dashboard: React.FC = () => {
       return (
         <>
           <div className="fs-11 text-muted mb-16" style={{ padding: '10px', background: 'var(--bg3)', borderRadius: 'var(--radius)', lineHeight: '1.5' }}>AI-generated coaching based on checkpoint performance, talk ratio, and deviation patterns detected on this call.</div>
-          {insights.map((i, idx) => (
-            <div key={idx} className="ai-insight"><span className="ai-insight-icon">{i.icon}</span><div className="ai-insight-text" dangerouslySetInnerHTML={{ __html: i.text }} /></div>
-          ))}
+          {Array.isArray(insights) && insights.length > 0 && (
+            <div className="ai-insights-container">
+              {insights.map((i, idx) => (
+                <div key={idx} className="ai-insight">
+                  <span className="ai-insight-icon">{i.icon}</span>
+                  <div className="ai-insight-text" dangerouslySetInnerHTML={{ __html: i.text }} />
+                </div>
+              ))}
+            </div>
+          )}
           <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
             <div className="fs-12 fw-600 mb-12">Coaching Priority Actions</div>
             {actions.map((a, idx) => <div key={idx} style={{ padding: '8px 12px', background: 'var(--bg3)', borderRadius: 'var(--radius)', marginBottom: '6px', fontSize: '12px', color: 'var(--text2)', lineHeight: '1.5' }}>{a}</div>)}
@@ -2027,7 +2149,7 @@ const Dashboard: React.FC = () => {
             <div className={`nav-item ${activePage === 'pips' ? 'active' : ''}`} onClick={() => setActivePage('pips')}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
               PIPs
-              <span className="nav-badge">2</span>
+              <span className="nav-badge">{pipData ? (pipData as any).length : 0}</span>
             </div>
           </div>
 
@@ -2454,7 +2576,108 @@ const Dashboard: React.FC = () => {
             </div>
             <div style={{ padding: '14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', alignItems: 'start' }}>
               <div><div className="fs-10 uppercase text-muted fw-600" style={{ marginBottom: '10px', letterSpacing: '0.08em' }}>Active PIPs (14-Day Review)</div><div id="pip-cards">{renderPIPCards()}</div></div>
-              <div><div className="fs-10 uppercase fw-600" style={{ marginBottom: '10px', letterSpacing: '0.08em', color: 'var(--red)' }}>Verification Zero-Tolerance (DR Team)</div><div style={{ background: 'var(--red-dim)', border: '1px solid rgba(224,59,59,0.2)', borderRadius: 'var(--radius2)', padding: '14px', marginBottom: '10px' }}><div className="flex items-center gap-8 mb-12"><span style={{ fontSize: '20px' }}>⚠️</span><div><div className="fw-600" style={{ fontSize: '13px', color: 'var(--text)' }}>Zero-Tolerance Policy Active</div><div className="fs-11 text-muted">DR Verification Team — 2 Strikes = Immediate Separation</div></div></div><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}><div className="panel" style={{ padding: '10px', textAlign: 'center' }}><div className="font-mono fw-700" style={{ fontSize: '18px', color: 'var(--text)' }}>0</div><div className="fs-10 text-muted">Strike 1s</div></div><div className="panel" style={{ padding: '10px', textAlign: 'center' }}><div className="font-mono fw-700 text-red" style={{ fontSize: '18px' }}>0</div><div className="fs-10 text-muted">Strike 2s</div></div><div className="panel" style={{ padding: '10px', textAlign: 'center' }}><div className="font-mono fw-700 text-green" style={{ fontSize: '18px' }}>✓</div><div className="fs-10 text-muted">Clean</div></div></div></div><div className="panel"><div className="panel-hdr"><span className="panel-title">Escalation Hierarchy</span></div><div className="panel-body" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}><div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', borderBottom: '1px solid var(--border)' }}><div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: 'var(--text3)', flexShrink: 0 }}>1</div><div><div className="fs-12 fw-600">Agent</div><div className="fs-10 text-muted">System auto-flags instantly</div></div><div className="badge grey" style={{ marginLeft: 'auto' }}>Real-time</div></div><div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', borderBottom: '1px solid var(--border)' }}><div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: 'var(--text3)', flexShrink: 0 }}>2</div><div><div className="fs-12 fw-600">Floor Manager</div><div className="fs-10 text-muted">Daily coaching, documents everything</div></div><div className="badge gold" style={{ marginLeft: 'auto' }}>Day 1-7</div></div><div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', borderBottom: '1px solid var(--border)' }}><div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: 'var(--text3)', flexShrink: 0 }}>3</div><div><div className="fs-12 fw-600">Operations Director</div><div className="fs-10 text-muted">Midpoint review at Day 7</div></div><div className="badge orange" style={{ marginLeft: 'auto' }}>Day 7</div></div><div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0' }}><div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--gold-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: 'var(--gold)', flexShrink: 0 }}>4</div><div><div className="fs-12 fw-600 text-gold">Nick — Executive Decision</div><div className="fs-10 text-muted">Friday report → Monday decision</div></div><div className="badge gold" style={{ marginLeft: 'auto' }}>Day 14</div></div></div></div></div>
+              <div>
+                {/* SECTION 1: VERIFICATION ZERO-TOLERANCE (DR TEAM) */}
+                <div className="fs-10 uppercase fw-600" style={{ marginBottom: '10px', letterSpacing: '0.08em', color: 'var(--red)' }}>
+                  Verification Zero-Tolerance (DR Team)
+                </div>
+
+                <div style={{ background: 'var(--red-dim)', border: '1px solid rgba(224,59,59,0.2)', borderRadius: 'var(--radius2)', padding: '14px', marginBottom: '10px' }}>
+                  <div className="flex items-center gap-8 mb-12">
+                    <span style={{ fontSize: '20px' }}>⚠️</span>
+                    <div>
+                      <div className="fw-600" style={{ fontSize: '13px', color: 'var(--text)' }}>Zero-Tolerance Policy Active</div>
+                      <div className="fs-11 text-muted">DR Verification Team — 2 Strikes = Immediate Separation</div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                    <div className="panel" style={{ padding: '10px', textAlign: 'center' }}>
+                      <div className="font-mono fw-700" style={{ fontSize: '18px', color: 'var(--text)' }}>
+                        {ztStats.strike1s}
+                      </div>
+                      <div className="fs-10 text-muted">Strike 1s</div>
+                    </div>
+
+                    <div className="panel" style={{ padding: '10px', textAlign: 'center' }}>
+                      <div className="font-mono fw-700 text-red" style={{ fontSize: '18px' }}>
+                        {ztStats.strike2s}
+                      </div>
+                      <div className="fs-10 text-muted">Strike 2s</div>
+                    </div>
+
+                    <div className="panel" style={{ padding: '10px', textAlign: 'center' }}>
+                      <div className="font-mono fw-700 text-green" style={{ fontSize: '18px' }}>
+                        {ztStats.clean > 0 ? ztStats.clean : '✓'}
+                      </div>
+                      <div className="fs-10 text-muted">Clean</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* SECTION 2: DYNAMIC ESCALATION HIERARCHY */}
+                <div className="panel">
+                  <div className="panel-hdr">
+                    <span className="panel-title">Escalation Hierarchy</span>
+                  </div>
+                  <div className="panel-body" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                    {escalationSteps.length === 0 ? (
+                      <div className="fs-11 text-muted" style={{ padding: '10px', textAlign: 'center' }}>
+                        Loading hierarchy data...
+                      </div>
+                    ) : (
+                      escalationSteps.map((step, index) => {
+                        const isLast = index === escalationSteps.length - 1;
+
+                        return (
+                          <div
+                            key={step.level}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px',
+                              padding: '8px 0',
+                              borderBottom: isLast ? 'none' : '1px solid var(--border)'
+                            }}
+                          >
+                            {/* Circular Step Badge Indicator */}
+                            <div style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '50%',
+                              background: step.isExecutive ? 'var(--gold-dim)' : 'var(--bg4)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              color: step.isExecutive ? 'var(--gold)' : 'var(--text3)',
+                              flexShrink: 0
+                            }}>
+                              {step.level}
+                            </div>
+
+                            {/* Core Content Descriptors */}
+                            <div>
+                              <div className={`fs-12 fw-600 ${step.isExecutive ? 'text-gold' : ''}`}>
+                                {step.role}
+                              </div>
+                              <div className="fs-10 text-muted">
+                                {step.description}
+                              </div>
+                            </div>
+
+                            {/* Milestone Day Badges */}
+                            <div className={`badge ${step.badgeColor || 'grey'}`} style={{ marginLeft: 'auto' }}>
+                              {step.badgeText}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 

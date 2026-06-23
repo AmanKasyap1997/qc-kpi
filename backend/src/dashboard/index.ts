@@ -1,6 +1,7 @@
 import express from "express";
 import { Request, Response } from "express";
 import db from "../db/pool";
+import { any } from "joi";
 const router = express.Router();
 
 // Your interface/type definition for safety
@@ -36,9 +37,16 @@ router.get("/zendesk", async (req: Request, res: Response) => {
 
 
 router.get("/calls", async (req: Request, res: Response) => {
+    const mode = String(req.query.mode || 'all');
+    const rawDateFrom = String(req.query.dateFrom || '2026-06-16');
+    const rawDateTo = String(req.query.dateTo || '2026-06-18');
+    const dateFrom = `${rawDateFrom} 00:00:00`;
+    const dateTo = `${rawDateTo} 23:59:59`;
+
     const client = await db.connect();
 
     try {
+        const queryParams = [dateFrom, dateTo];
         const result = await client.query(`
             SELECT
                 a.id AS "agentIdx",
@@ -83,9 +91,9 @@ router.get("/calls", async (req: Request, res: Response) => {
                 ON a.id = c.agent_id
             LEFT JOIN call_analytics ca
                 ON ca.call_id = c.id
-            WHERE c.deleted_at IS NULL
+            WHERE c.deleted_at IS NULL AND (c.started_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP))
             ORDER BY c.started_at DESC
-        `);
+        `, queryParams);
 
         return res.status(200).json({
             success: true,
@@ -115,37 +123,53 @@ router.get('/leaderboard', async (req: Request, res: Response): Promise<void> =>
         const dateTo = `${rawDateTo} 23:59:59`;
 
         // 1. Super simple SQL query getting only core metrics
-        const sqlQuery = `SELECT a.name, d.name AS dept, COUNT(c.id) AS calls FROM calls c
-                          INNER JOIN agents a ON c.agent_id = a.id
-                          INNER JOIN departments d ON a.department_id = d.id
-                          WHERE (c.created_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP))
-                          GROUP BY a.id, a.name, d.name;`;
+        const sqlQuery = `
+            SELECT 
+                a.name AS "name",
+                COALESCE(ca.ai_generated_department, 'Sales') AS "dept",
+                COUNT(c.id) AS "calls",
+                AVG(COALESCE(ca.overall_call_score, 0))::INT AS "avgScore",
+                AVG(COALESCE(c.duration_seconds, 0))::INT AS "avgDurationSeconds",
+                SUM(CASE WHEN c.outcome = 'Converted' THEN 1 ELSE 0 END) AS "enrolls",
+                SUM(CASE WHEN jsonb_array_length(COALESCE(ca.flags, '[]'::jsonb)) > 0 THEN 1 ELSE 0 END) AS "flagged"
+            FROM calls c
+            LEFT JOIN agents a ON c.agent_id = a.id
+            LEFT JOIN call_analytics ca ON ca.call_id = c.id
+            WHERE c.deleted_at IS NULL
+              AND (c.started_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP))
+            GROUP BY a.id, a.name, ca.ai_generated_department;
+        `;
 
         const queryParams = [dateFrom, dateTo];
         const result = await db.query(sqlQuery, queryParams);
 
-        // 2. Format database results with your clean static placeholders
+        // 2. Format DB results, falling back to static generation only where missing
         const formattedRows = result.rows.map((row: any) => {
-            const callsCount = Number(row.calls);
-            const mockEnrolls = callsCount > 0 ? Math.floor(Math.random() * (callsCount / 2)) : 0;
-            const mockFlagged = callsCount > 0 ? Math.floor(Math.random() * Math.min(4, callsCount)) : 0;
-            const randomMinutes = Math.floor(Math.random() * 6) + 2;
-            const randomSeconds = String(Math.floor(Math.random() * 60)).padStart(2, '0');
-            const mockAvgLen = `${randomMinutes}:${randomSeconds}`;
-            const mockEff = (Math.random() * 1.75 + 1.25).toFixed(2) + 'x';
+            const callsCount = Number(row.calls || 0);
+            const enrollsCount = Number(row.enrolls || 0);
+            const flaggedCount = Number(row.flagged || 0);
+
+            // Calculate exact Average Length from db (MM:SS)
+            const avgSecondsTotal = Number(row.avgDurationSeconds || 0);
+            const minutes = Math.floor(avgSecondsTotal / 60);
+            const seconds = String(avgSecondsTotal % 60).padStart(2, '0');
+            const calculatedAvgLen = `${minutes}:${seconds}`;
+
+            // Calculate exact Flag Rate from live data flags
             const calculatedFlagRate = callsCount > 0
-                ? Math.round((mockFlagged / callsCount) * 100) + '%'
+                ? Math.round((flaggedCount / callsCount) * 100) + '%'
                 : '0%';
+            const mockEff = (Math.random() * 1.75 + 1.25).toFixed(2) + 'x';
 
             return {
-                name: row.name,
+                name: row.name || "Unknown Agent",
                 dept: row.dept,
-                score: Math.floor(Math.random() * 50) + 50, // Static score between 50 and 100
+                score: row.avgScore || 0, // Uses real call quality score average, falls back safely
                 calls: callsCount,
-                enrolls: mockEnrolls,
-                avgLen: mockAvgLen,
+                enrolls: enrollsCount,
+                avgLen: calculatedAvgLen,
                 eff: mockEff,
-                flagged: mockFlagged,
+                flagged: flaggedCount,
                 flagRate: calculatedFlagRate
             };
         });
@@ -228,31 +252,42 @@ router.get('/analytics', async (req: Request, res: Response): Promise<void> => {
 router.get('/academy', async (req: Request, res: Response): Promise<void> => {
     try {
         const { dateFrom, dateTo } = req.query;
-
-        // 1. Fetch real details from database instead of an aggregated count
         const sqlQuery = `
-        SELECT 
-            c.id,
-            a.name AS agent_name,
-            a.id AS agent_idx,
-            d.name AS agent_dept,
-            c.started_at AS date,
-            c.duration_seconds,
-            c.recording_url AS audio_url,
-            c.campaign,
-            c.outcome AS collection
-        FROM calls c
-        INNER JOIN agents a ON c.agent_id = a.id
-        INNER JOIN departments d ON a.department_id = d.id
-        WHERE (c.created_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP))
-        ORDER BY c.started_at DESC;
-    `;
+                        SELECT 
+                            c.id,
+                            a.name AS agent_name,
+                            a.id AS agent_idx,
+                            d.name AS agent_dept,
+                            c.started_at AS date,
+                            c.duration_seconds,
+                            c.recording_url AS audio_url,
+                            c.campaign,
+                            COALESCE(c.outcome, 'Unknown') AS "outcome",
+                            COALESCE(ca.overall_call_score, 0) AS "score",
+                            COALESCE(ca.call_quality, 0) AS "callQuality",
+                            COALESCE(ca.disclosures_percentage, 0) AS "disclosuresPercentage",
+                            COALESCE(ca.compliance_percentage, 0) AS "compliancePercentage",
 
-        // Assuming you are using 'pg' (node-postgres) client instance named db/pool
-        // const dbResult = await db.query(sqlQuery, [dateFrom, dateTo]);
+                            COALESCE(ca.call_summary, '') AS "callSummary",
+                            COALESCE(ca.agent_strengths, '[]'::jsonb) AS "agentStrengths",
+                            COALESCE(ca.agent_improvements, '[]'::jsonb) AS "agentImprovements",
+                            COALESCE(ca.coaching_actions, '[]'::jsonb) AS "coachingActions",
+                            COALESCE(ca.academy_tag, '') AS "academyTag",
+                            COALESCE(ca.academy_collection, '') AS "academyCollection",
+                            COALESCE(ca.ai_insights, '{}'::jsonb) AS "insights",
+                            COALESCE(ca.checkpoint_results, '[]'::jsonb) AS "checkpointResults",
+                            COALESCE(ca.risk_flags, '[]'::jsonb) AS "riskFlags",
+                            COALESCE(ca.good_trackers_hit, '[]'::jsonb) AS "goodTrackersHit",
+                            COALESCE(ca.bad_trackers_triggered, '[]'::jsonb) AS "badTrackersTriggered"
+                        FROM calls c
+                        INNER JOIN agents a ON c.agent_id = a.id
+                        INNER JOIN departments d ON a.department_id = d.id
+                        LEFT JOIN call_analytics ca ON ca.call_id = c.id
+                        WHERE (c.created_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP))
+                        ORDER BY c.started_at DESC;
+                    `;
+
         const dbResult = await db.query(sqlQuery, [dateFrom, dateTo]);
-
-        // Helper to format duration_seconds into "M:SS" string format
         const formatDuration = (totalSeconds: number | null): string => {
             if (!totalSeconds) return "0:00";
             const minutes = Math.floor(totalSeconds / 60);
@@ -263,46 +298,55 @@ router.get('/academy', async (req: Request, res: Response): Promise<void> => {
         // 2. Map database rows into the clean object layout your frontend requires
         const mappedCalls = dbResult.rows.map((row: any) => {
             const collectionGroup = row.collection || "Common Mistakes";
-            const randomSeed = Math.random();
-            let score = 70; // fallback default
-            if (randomSeed < 0.25) {
-                score = Math.floor(Math.random() * 16) + 85; // 85 - 100 (Exemplar)
-            } else if (randomSeed < 0.45) {
-                score = Math.floor(Math.random() * 36);      // 0 - 35 (Warning)
-            } else {
-                score = Math.floor(Math.random() * 49) + 36; // 36 - 84 (Featured)
-            }
-
-            // B. Score-Based Academy Auto-Tag Logic Mapping
+            const score = row.score !== undefined && row.score !== null ? Number(row.score) : 0;
             let tag = 'featured';
             if (score >= 85) {
                 tag = 'exemplar';
             } else if (score <= 35) {
                 tag = 'warning';
             }
-
             let cleanAudioUrl = row.audio_url;
             if (typeof cleanAudioUrl === 'string') {
                 cleanAudioUrl = cleanAudioUrl.replace(/&amp;/g, '&');
             }
+            // --- DYNAMIC AUDIO TIMESTAMP JUMP CALCULATION ---
+            const durationSec = row.duration_seconds ? Number(row.duration_seconds) : 0;
+            const jumpSeconds = durationSec > 0 ? Math.floor(durationSec * 0.20) : 75;
+            const readableMarkerTime = formatDuration(jumpSeconds);
+
+            // Append standard media fragment hash (#t=seconds) so browsers jump instantly on load
+            const audioUrlWithJump = cleanAudioUrl ? `${cleanAudioUrl}#t=${jumpSeconds}` : "";
 
             return {
                 id: String(row.id),
                 agentName: row.agent_name,
                 agentIdx: row.agent_idx,
                 agentDept: row.agent_dept,
-                // Kept as an ISO string or native date instance depending on frontend mapping layer
+                outcome: row.outcome,
                 date: row.date ? new Date(row.date).toISOString() : new Date().toISOString(),
                 duration: formatDuration(row.duration_seconds),
                 campaign: row.campaign || "General Support — Inbound",
-                academyTag: tag, // Safe mapping fallback
                 score: score,     // Database doesn't have a score column, generating static/dynamic value
                 collection: collectionGroup,
                 flags: [], // Static property requested
-                audioUrl: cleanAudioUrl,
+                audioUrl: audioUrlWithJump,
                 markers: [
-                    { id: `m_${row.id}`, time: "1:15", label: "Customer Conversation", color: "green" }
-                ]
+                    { id: `m_${row.id}`, time: readableMarkerTime, label: "Customer Conversation", color: "green", rawSeconds: jumpSeconds }
+                ],
+                callQuality: row.callQuality,
+                disclosuresPercentage: row.disclosuresPercentage,
+                compliancePercentage: row.compliancePercentage,
+                callSummary: row.callSummary,
+                agentStrengths: row.agentStrengths,
+                agentImprovements: row.agentImprovements,
+                coachingActions: row.coachingActions,
+                academyTag: row.academyTag,
+                academyCollection: row.academyCollection,
+                insights: row.insights,
+                checkpointResults: row.checkpointResults,
+                riskFlags: row.riskFlags,
+                goodTrackersHit: row.goodTrackersHit,
+                badTrackersTriggered: row.badTrackersTriggered,
             };
         });
 
@@ -336,4 +380,160 @@ router.get('/academy', async (req: Request, res: Response): Promise<void> => {
         res.status(500).json({ success: false, error: error.message });
     }
 });
+
+router.get("/pips", async (req: Request, res: Response) => {
+    try {
+        const rawDateFrom = String(req.query.dateFrom || '2026-06-16');
+        const rawDateTo = String(req.query.dateTo || '2026-06-18');
+        const dateFrom = `${rawDateFrom} 00:00:00`;
+        const dateTo = `${rawDateTo} 23:59:59`;
+        const queryParams = [dateFrom, dateTo];
+
+        // --- QUERY 1: Active PIP Cards ---
+        const pipSqlQuery = `
+            SELECT 
+                a.name AS "agent",
+                d.name AS "dept",
+                d.pip_duration_days AS "maxDays",
+                d.qa_threshold_warning AS "threshold",
+                COALESCE(d.max_strikes, 2) AS "maxStrikes",
+                AVG(COALESCE(ca.overall_call_score, 0))::INT AS "avgScore",
+                COUNT(CASE WHEN jsonb_array_length(COALESCE(ca.flags, '[]'::jsonb)) > 0 THEN 1 END) AS "strikeCount",
+                MIN(c.started_at) AS "firstFailureDate"
+            FROM calls c
+            INNER JOIN agents a ON c.agent_id = a.id
+            INNER JOIN departments d ON a.department_id = d.id
+            LEFT JOIN call_analytics ca ON ca.call_id = c.id
+            WHERE c.deleted_at IS NULL
+              AND (c.started_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP))
+            GROUP BY a.id, a.name, d.id, d.name, d.pip_duration_days, d.qa_threshold_warning, d.max_strikes
+            HAVING AVG(COALESCE(ca.overall_call_score, 0)) < d.qa_threshold_warning;
+        `;
+        const pipResult = await db.query(pipSqlQuery, queryParams);
+
+        // Track how many agents fall into each milestone tier dynamically
+        let stage1Count = 0; // System auto-flags / Real-time
+        let stage2Count = 0; // Floor Manager (Day 1-7)
+        let stage3Count = 0; // Operations Director (Day 7)
+        let stage4Count = 0; // Executive Decision (Day 14)
+
+        const formattedPips = pipResult.rows.map((row: any) => {
+            let dayValue = 1;
+            const maxDaysAllowed = row.maxDays || 14;
+
+            if (row.firstFailureDate) {
+                const start = new Date(row.firstFailureDate).getTime();
+                const currentOrEndWindow = new Date(dateTo).getTime();
+                const diffTime = Math.abs(currentOrEndWindow - start);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                dayValue = Math.max(1, diffDays);
+            }
+
+            if (row.strikeCount >= row.maxStrikes) {
+                dayValue = Math.max(dayValue, Math.floor(maxDaysAllowed * 0.85));
+            } else if (row.strikeCount > 0) {
+                const strikeProgression = Math.floor((row.strikeCount / row.maxStrikes) * maxDaysAllowed);
+                dayValue = Math.max(dayValue, strikeProgression);
+            }
+            dayValue = Math.min(maxDaysAllowed, dayValue);
+
+            // Dynamically allocate agent count into escalation stages based on their computed dayValue
+            const midPoint = Math.floor(maxDaysAllowed / 2);
+            if (dayValue >= maxDaysAllowed) {
+                stage4Count++;
+            } else if (dayValue === midPoint) {
+                stage3Count++;
+            } else if (dayValue > 1 && dayValue < midPoint) {
+                stage2Count++;
+            } else {
+                stage1Count++;
+            }
+
+            return {
+                agent: row.agent,
+                dept: row.dept,
+                reason: `QA avg ${row.avgScore}% over active logging window (threshold: ${row.threshold}%) with ${row.strikeCount}/${row.maxStrikes} policy strikes`,
+                day: dayValue,
+                target: `QA ≥ ${Number(row.threshold) + 10}% by Day ${maxDaysAllowed}`,
+                // manager: 'Floor Manager',
+                color: dayValue >= (maxDaysAllowed - 2) ? 'var(--red)' : dayValue >= Math.floor(maxDaysAllowed / 2) ? 'var(--orange)' : 'var(--gold)'
+            };
+        });
+
+        // --- QUERY 2: Zero-Tolerance Real-Time Statistics Panel ---
+        const ztSqlQuery = `
+            SELECT 
+                COUNT(CASE WHEN jsonb_array_length(COALESCE(ca.flags, '[]'::jsonb)) > 0 THEN 1 END) AS "agentStrikes"
+            FROM agents a
+            INNER JOIN departments d ON a.department_id = d.id
+            LEFT JOIN calls c ON c.agent_id = a.id AND c.deleted_at IS NULL AND (c.started_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP))
+            LEFT JOIN call_analytics ca ON ca.call_id = c.id
+            WHERE d.zero_tolerance = true AND a.deleted_at IS NULL
+            GROUP BY a.id;
+        `;
+        const ztResult = await db.query(ztSqlQuery, queryParams);
+
+        let strike1s = 0;
+        let strike2s = 0;
+        let clean = 0;
+
+        ztResult.rows.forEach((row: any) => {
+            const strikes = parseInt(row.agentStrikes || 0);
+            if (strikes === 1) strike1s++;
+            else if (strikes >= 2) strike2s++;
+            else clean++;
+        });
+
+        // Pull general rules setup from the database configuration
+        const deptConfigQuery = `SELECT COALESCE(MAX(pip_duration_days), 14) AS "maxDays" FROM departments WHERE deleted_at IS NULL;`;
+        const configResult = await db.query(deptConfigQuery);
+        const generalMaxDays = configResult.rows[0]?.maxDays || 14;
+        const dynamicMidPoint = Math.floor(generalMaxDays / 2);
+
+        // --- COMPILING COMPLETELY DYNAMIC CODES ---
+        const escalationHierarchy = [
+            {
+                level: 1,
+                role: "Agent",
+                description: `System auto-flags instantly (${stage1Count} active)`,
+                badgeText: "Real-time",
+                badgeColor: "grey"
+            },
+            {
+                level: 2,
+                role: "Floor Manager",
+                description: `Daily coaching, documents everything (${stage2Count} active)`,
+                badgeText: `Day 1-${dynamicMidPoint}`,
+                badgeColor: "gold"
+            },
+            {
+                level: 3,
+                role: "Operations Director",
+                description: `Midpoint review (${stage3Count} active)`,
+                badgeText: `Day ${dynamicMidPoint}`,
+                badgeColor: "orange"
+            },
+            {
+                level: 4,
+                role: "Nick — Executive Decision",
+                description: `Final assessment panel (${stage4Count} active)`,
+                badgeText: `Day ${generalMaxDays}`,
+                badgeColor: "gold",
+                isExecutive: true
+            }
+        ];
+
+        return res.status(200).json({
+            success: true,
+            pips: formattedPips,
+            zeroToleranceStats: { strike1s, strike2s, clean },
+            escalationHierarchy
+        });
+
+    } catch (error: any) {
+        console.error("GET /pips calculation failure:", error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 export default router;
