@@ -46,6 +46,33 @@ interface Call {
   checkpointResults?: CheckpointResults;
 }
 
+interface QaLiveFeedCallWidget {
+  data: {
+    totalCalls:number;
+    avgScore:number;
+    totalEnrolled: number;
+    totalPitch: number;
+    totalCallback: number;
+    totalDeclined: number;
+    totalHotique: number;
+    earlyDebtPitch: number;
+    skippedQualifying: number;
+    rushedCall: number;
+    skippedCreditPull: number;
+    earlyDecline: number;
+  };
+  agentData: {
+    id: number;
+    agentName: string;
+    totalCalls: number;
+    avgScore: number;
+    scores: number[];
+  }[];
+  flagsData: {
+    id: number;
+    flags: string[];
+  }[];
+}
 interface LeadSource {
   source: string;
   subId: string;
@@ -387,6 +414,7 @@ const Dashboard: React.FC = () => {
   // State
   const [activePage, setActivePage] = useState('qa-live');
   const [allCalls, setAllCalls] = useState<Call[]>([]);
+  const [qaLiveFeedCallWidget, setQaLiveFeedCallWidget] = useState<QaLiveFeedCallWidget | null>(null);
   const [loadingCalls, setLoadingCalls] = useState<boolean>(true);
   const [academyCalls] = useState<AcademyCall[]>(buildAcademyCalls(allCalls));
   const [sdrAgents] = useState<SdrAgent[]>(buildSdrAgents);
@@ -407,7 +435,7 @@ const Dashboard: React.FC = () => {
   const [sdrFilter, setSdrFilter] = useState<'all' | 'ready' | 'watch' | 'not-yet' | 'promoted'>('all');
   const [sdrView, setSdrView] = useState<'board' | 'table' | 'strategy'>('board');
   const [dateFrom, setDateFrom] = useState<string>(getFormattedDateString(1));
-  const [dateTo, setDateTo] = useState<string>(getFormattedDateString(0));
+  const [dateTo, setDateTo] = useState<string>(getFormattedDateString(-1));
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
 
   // 1. State to hold dynamic backend data
@@ -493,6 +521,7 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     fetchLiveFeedData();
+    fetchLiveFeedwidgetData();
   }, []);
   const outcomeCounts = useMemo(() => {
     // 1. Initialize your dynamic counter object with 0s
@@ -511,52 +540,13 @@ const Dashboard: React.FC = () => {
     return counts;
   }, [allCalls]);
 
-  const avgQaScore = useMemo(() => {
-    if (allCalls.length === 0) return 0;
-    const totalScore = allCalls.reduce((sum, call) => sum + call.score, 0);
-    const avg = totalScore / allCalls.length;
-    // Rounds to 1 decimal place (e.g., 54.1)
-    return Math.round(avg * 10) / 10;
-  }, [allCalls]);
-
-
-  // Place this line below your other useMemo / state declarations inside the Dashboard component
-  const dynamicLeaderboard = useMemo(() => {
-    const agentMap: Record<string, { name: string; totalScore: number; calls: number; dept: string }> = {};
-
-    allCalls.forEach(call => {
-      if (!agentMap[call.agentName]) {
-        agentMap[call.agentName] = {
-          name: call.agentName,
-          totalScore: 0,
-          calls: 0,
-          dept: call.agentDept
-        };
-      }
-      agentMap[call.agentName].totalScore += call.score;
-      agentMap[call.agentName].calls += 1;
-    });
-
-    const leaderList = Object.values(agentMap).map(agent => {
-      const rawAvg = agent.totalScore / agent.calls;
-      return {
-        name: agent.name,
-        score: Math.round(rawAvg * 10) / 10,
-        calls: agent.calls,
-        dept: agent.dept
-      };
-    });
-
-    return leaderList.sort((a, b) => b.score - a.score).slice(0, 12);
-  }, [allCalls]);
-
   // 1. Dynamically compute occurrences and max value for the progress bar widths
   const deviationsData = useMemo(() => {
     const counts: Record<string, number> = FLAGS.reduce((acc, flag) => {
       acc[flag] = 0;
       return acc;
     }, {} as Record<string, number>);
-    allCalls.forEach((call) => {
+    qaLiveFeedCallWidget?.flagsData.forEach((call) => {
       if (Array.isArray(call.flags)) {
         call.flags.forEach((flagName: string) => {
           if (flagName in counts) {
@@ -568,22 +558,35 @@ const Dashboard: React.FC = () => {
     const maxCount = Math.max(...Object.values(counts), 1);
 
     return { counts, maxCount };
-  }, [allCalls]);
+  }, [qaLiveFeedCallWidget?.flagsData]);
 
-  const fetchLiveFeedData = async () => {
+  // Replace the existing currentPage state and ROWS_PER_PAGE constant with:
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCallCount, setTotalCallCount] = useState(0);
+  const ROWS_PER_PAGE = 50;
+
+  // Replace fetchLiveFeedData:
+  const fetchLiveFeedData = async (page = 1) => {
     try {
       setLoadingCalls(true);
-      const response = await fetch(`${API_URL}/api/dashboard/calls?dateFrom=${dateFrom}&dateTo=${dateTo}`);
+      const response = await fetch(
+        `${API_URL}/api/dashboard/calls?dateFrom=${dateFrom}&dateTo=${dateTo}&page=${page}&pageSize=${ROWS_PER_PAGE}`
+      );
       if (!response.ok) throw new Error('Network error syncing calls database.');
 
       const result = await response.json();
       if (result.success && Array.isArray(result.data)) {
-        // Parse stringified dates back into full standard Date instances
         const structuredData = result.data.map((c: any) => ({
           ...c,
           date: new Date(c.date)
         }));
         setAllCalls(structuredData);
+        setFilteredCalls(structuredData);
+        setCallFilterCount(result.pagination.total);
+        setTotalPages(result.pagination.totalPages);
+        setTotalCallCount(result.pagination.total);
+        setCurrentPage(result.pagination.page);
       }
     } catch (err: any) {
       showToast('critical', 'Database Link Error', err.message || 'Could not fetch call records.', setToasts);
@@ -591,7 +594,31 @@ const Dashboard: React.FC = () => {
       setLoadingCalls(false);
     }
   };
+  const fetchLiveFeedwidgetData = async () => {
+    try {
+            setLoadingCalls(true);
 
+      const response = await fetch(
+        `${API_URL}/api/dashboard/live-feed-widget-data?dateFrom=${dateFrom}&dateTo=${dateTo}`
+      );
+      if (!response.ok) throw new Error('Network error syncing calls database.');
+
+      const result = await response.json();
+      console.log(result, 'resultresult')
+      if (result.success) {
+        setQaLiveFeedCallWidget({
+          data: result.data,
+          agentData: result.agentData,
+          flagsData: result.flagsData,
+        });
+      }
+    } catch (err: any) {
+      showToast('critical', 'Database Link Error', err.message || 'Could not fetch call records.', setToasts);
+    } finally {
+            setLoadingCalls(false);
+
+    }
+  };
   const fetchZendeskData = async () => {
     const response = await fetch(`${API_URL}/api/dashboard/zendesk?dateFrom=${dateFrom}&dateTo=${dateTo}`);
     const data = await response.json();
@@ -717,6 +744,7 @@ const Dashboard: React.FC = () => {
     setDateTo(formatDateString(toDate));
   };
 
+
   // Functions
   const applyFilters = () => {
     const filtered = allCalls.filter(c => {
@@ -728,8 +756,9 @@ const Dashboard: React.FC = () => {
       if (filters.dept && c.agentDept !== filters.dept) return false;
       return true;
     });
-    setFilteredCalls(filtered.slice(0, 250));
+    setFilteredCalls(filtered);       // no slice cap
     setCallFilterCount(filtered.length);
+    // setCurrentPage(1);                // reset to page 1 on filter change
   };
 
   const handleFilterChange = (key: string, value: string) => {
@@ -738,8 +767,8 @@ const Dashboard: React.FC = () => {
 
   const handleDateRangeApply = () => {
     showToast('info', 'Date Range Applied', 'Refreshing data for selected date range...', setToasts);
-    applyFilters();
-    if (activePage === 'qa-live') { fetchLiveFeedData(); }
+    setCurrentPage(1);
+    if (activePage === 'qa-live') { fetchLiveFeedData(1); fetchLiveFeedwidgetData(); }
     if (activePage === 'zendesk') { fetchZendeskData(); }
     if (activePage === 'leaderboard') { fetchLeaderBoardData(); }
     if (activePage === 'academy') { fetchAcademyData(); }
@@ -850,10 +879,12 @@ const Dashboard: React.FC = () => {
     if (loadingCalls) {
       return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px', textTransform: 'uppercase', color: 'var(--text2)', fontSize: '11px' }}>🔄 Syncing Live Calls Feed Database...</div>;
     }
-    if (filteredCalls.length === 0) {
-      return <div style={{ display: 'flex', justifyContent: 'center', padding: '20px', color: 'var(--text3)', fontSize: '11px' }}>Currentely no data available for this selection.</div>;
+    if (allCalls.length === 0) {
+      return <div style={{ display: 'flex', justifyContent: 'center', padding: '20px', color: 'var(--text3)', fontSize: '11px' }}>Currently no data available for this selection.</div>;
     }
-    return filteredCalls.map(c => {
+
+    // allCalls is already the current page's slice from the backend
+    const rows = allCalls.map(c => {
       const color = agentColor(c.agentIdx);
       const init = initials(c.agentName);
       const dateStr = c.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + c.date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -875,23 +906,80 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
           <div className="font-mono fw-700" style={{ fontSize: '18px', color: scoreColor(c.score) }}>{c.score}</div>
-          <div className="font-mono fs-11 text-muted" style={{ marginLeft: '0px' }}>{formatDuration(Number(c.duration))}</div>
+          <div className="font-mono fs-11 text-muted">{formatDuration(Number(c.duration))}</div>
           <div><span className={`badge ${outcomeClass(c.outcome)}`} style={{ fontSize: '10px' }}>{c.outcome}</span></div>
           <div className="fs-11 text-muted" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.agentDept}</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-            <span className='fs-10 text-muted'>
-              {c.campaign}
-            </span>
+            <span className = 'fs-10 text-muted'>{c.campaign}</span>
             {flagsHtml.length > 0 ? flagsHtml : <span style={{ color: 'var(--text4)', fontSize: '10px' }}>—</span>}
           </div>
         </div>
       );
     });
+
+    const pgBtnStyle = (active: boolean): React.CSSProperties => ({
+      padding: '3px 8px',
+      borderRadius: 'var(--radius)',
+      border: `1px solid ${active ? 'var(--gold)' : 'var(--border2)'}`,
+      background: active ? 'var(--gold-dim)' : 'var(--bg3)',
+      color: active ? 'var(--gold)' : 'var(--text2)',
+      fontFamily: 'var(--mono)',
+      fontSize: '11px',
+      cursor: active ? 'default' : 'pointer',
+      minWidth: '28px',
+    });
+
+    const pageButtons = () => {
+      const buttons = [];
+      const delta = 3;
+      const left = Math.max(1, currentPage - delta);
+      const right = Math.min(totalPages, currentPage + delta);
+      if (left > 1) {
+        buttons.push(<button key={1} onClick={() => fetchLiveFeedData(1)} style={pgBtnStyle(currentPage == 1)}>1</button>);
+        if (left > 2) buttons.push(<span key="l-ellipsis" style={{ color: 'var(--text3)', padding: '0 4px', fontSize: '11px' }}>…</span>);
+      }
+      for (let i = left; i <= right; i++) {
+        buttons.push(<button key={i} onClick={() => fetchLiveFeedData(i)} style={pgBtnStyle(i == currentPage)}>{i}</button>);
+      }
+      if (right < totalPages) {
+        if (right < totalPages - 1) buttons.push(<span key="r-ellipsis" style={{ color: 'var(--text3)', padding: '0 4px', fontSize: '11px' }}>…</span>);
+        buttons.push(<button key={totalPages} onClick={() => fetchLiveFeedData(totalPages)} style={pgBtnStyle(currentPage === totalPages)}>{totalPages}</button>);
+      }
+      return buttons;
+    };
+
+    const startIdx = (currentPage - 1) * ROWS_PER_PAGE + 1;
+    const endIdx = Math.min(currentPage * ROWS_PER_PAGE, totalCallCount);
+
+    return (
+      <>
+        {rows}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 12px', borderTop: '1px solid var(--border)', background: 'var(--bg2)', position: 'fixed', bottom: 0,width: '100%' }}>
+          <button
+            onClick={() => fetchLiveFeedData(currentPage - 1)}
+            disabled={currentPage === 1}
+            style={{ ...pgBtnStyle(false), opacity: currentPage === 1 ? 0.4 : 1 }}
+          >← Prev</button>
+
+          {pageButtons()}
+
+          <button
+            onClick={() => fetchLiveFeedData(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            style={{ ...pgBtnStyle(false), opacity: currentPage === totalPages ? 0.4 : 1 }}
+          >Next →</button>
+
+          <span style={{ marginLeft: 'auto', fontSize: '10px', color: 'var(--text3)', fontFamily: 'var(--mono)' }}>
+            {startIdx}–{endIdx} of {totalCallCount.toLocaleString()}
+          </span>
+        </div>
+      </>
+    );
   };
 
   const renderSidebarLB = () => {
     // Check if live records are still syncing or empty
-    if (dynamicLeaderboard.length === 0) {
+    if (qaLiveFeedCallWidget?.agentData.length === 0) {
       return (
         <div style={{ padding: '10px 0', fontSize: '11px', color: 'var(--text3)' }}>
           No agent data logs synced yet.
@@ -899,25 +987,25 @@ const Dashboard: React.FC = () => {
       );
     }
 
-    return dynamicLeaderboard.map((a, i) => {
-      const colorIndex = a.name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return qaLiveFeedCallWidget?.agentData.map((a, i) => {
+      const colorIndex = a.agentName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
       const color = agentColor(colorIndex);
-      const sc = scoreColor(a.score);
+      const sc = scoreColor(a.avgScore);
       return (
-        <div key={a.name} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 0', borderBottom: '1px solid var(--border)' }}>
+        <div key={a.agentName} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 0', borderBottom: '1px solid var(--border)' }}>
           <span className="fs-10 text-muted font-mono" style={{ minWidth: '14px' }}>{i + 1}</span>
           <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '7px', fontWeight: 700, color: '#000', flexShrink: 0 }}>
-            {initials(a.name)}
+            {initials(a.agentName)}
           </div>
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <span className="fs-11" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)' }}>
-              {a.name}
+              {a.agentName}
             </span>
             {/* <span className="fs-9 text-muted" style={{ fontSize: '9px', marginTop: '-2px' }}>
               {a.calls} {a.calls === 1 ? 'call' : 'calls'}
             </span> */}
           </div>
-          <span className="font-mono fs-11 fw-600" style={{ color: sc }}>{a.score}</span>
+          <span className="font-mono fs-11 fw-600" style={{ color: sc }}>{a.avgScore}</span>
         </div>
       );
     });
@@ -2115,7 +2203,7 @@ const Dashboard: React.FC = () => {
   return (
     <div className="app">
       <style>{`
-        body,html{height:100%}.app,.sidebar,body{overflow:hidden}.nav-item,.topbar-btn{transition:.12s;cursor:pointer}.progress-label,.user-name{text-overflow:ellipsis;white-space:nowrap}.bar-x-label,.data-table th,.progress-label,.ticker-item,.topbar-btn,.user-name{white-space:nowrap}:root{--bg0:#080b12;--bg1:#0d1017;--bg2:#111520;--bg3:#161b28;--bg4:#1c2235;--bg5:#232a3e;--border:#1e2538;--border2:#2a3348;--border3:#364058;--text:#e8eaf2;--text2:#9ba3bc;--text3:#5c657e;--text4:#363d52;--gold:#e8a020;--gold2:#f5bc50;--gold3:#ffd880;--gold-dim:rgba(232,160,32,0.12);--gold-dim2:rgba(232,160,32,0.06);--red:#e03b3b;--red2:#ff6b6b;--red-dim:rgba(224,59,59,0.12);--green:#2ecc8e;--green2:#4eeaaa;--green-dim:rgba(46,204,142,0.10);--blue:#4d8ef0;--blue-dim:rgba(77,142,240,0.12);--orange:#f07020;--orange-dim:rgba(240,112,32,0.12);--purple:#9b6cf0;--purple-dim:rgba(155,108,240,0.12);--font:'DM Sans',sans-serif;--mono:'JetBrains Mono',monospace;--display:'Syne',sans-serif;--sidebar-w:220px;--topbar-h:48px;--radius:8px;--radius2:12px}*,::after,::before{box-sizing:border-box;margin:0;padding:0}body{font-family:var(--font);background:var(--bg0);color:var(--text);font-size:13px;-webkit-font-smoothing:antialiased}::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:0 0}::-webkit-scrollbar-thumb{background:var(--border3);border-radius:2px}.app{display:flex;height:100vh}.sidebar{width:var(--sidebar-w);flex-shrink:0;background:var(--bg1);border-right:1px solid var(--border);display:flex;flex-direction:column}.sidebar-logo{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}.sidebar-logo-mark{width:32px;height:32px;border-radius:7px;background:linear-gradient(135deg,var(--gold) 0,#b07010 100%);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:14px;font-weight:800;color:#000;flex-shrink:0}.sidebar-logo-text{font-family:var(--display);font-size:13px;font-weight:700;color:var(--text);letter-spacing:-.02em;line-height:1.2}.sidebar-logo-sub{font-size:9px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase}.sidebar-nav{flex:1;overflow-y:auto;padding:8px 0}.nav-item,.sidebar-bottom{align-items:center;display:flex}.nav-section{margin-bottom:4px}.nav-section-label{font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text4);padding:10px 16px 4px}.live-pill,.stat-card-label,.topbar-stat-label{letter-spacing:.06em;text-transform:uppercase}.nav-item{gap:9px;padding:7px 16px;color:var(--text3);font-size:12px;font-weight:500;border-radius:0;position:relative;user-select:none;border-left:2px solid transparent}.nav-item:hover{background:var(--bg3);color:var(--text2)}.nav-item.active{background:var(--gold-dim2);color:var(--gold);border-left-color:var(--gold)}.nav-item svg{flex-shrink:0;opacity:.7}.nav-item.active svg{opacity:1}.nav-badge{margin-left:auto;font-family:var(--mono);font-size:9px;font-weight:600;background:var(--red-dim);color:var(--red);padding:1px 5px;border-radius:10px;border:1px solid rgba(224,59,59,.2)}.decision-badge.WATCH,.nav-badge.gold{background:var(--gold-dim);color:var(--gold);border-color:rgba(232,160,32,.2)}.sidebar-bottom{border-top:1px solid var(--border);padding:10px 16px;gap:8px}.user-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#b07010);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#000;flex-shrink:0}.user-info{flex:1;min-width:0}.user-name{font-size:12px;font-weight:600;color:var(--text);overflow:hidden}.date-range-sep,.gauge-label,.user-role{font-size:10px;color:var(--text3)}.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}.topbar{height:var(--topbar-h);flex-shrink:0;background:var(--bg1);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0;padding:0 16px}.topbar-title{font-family:var(--display);font-size:15px;font-weight:700;color:var(--text);flex:1}.live-pill,.topbar-stats{align-items:center;display:flex}.topbar-meta{font-size:11px;color:var(--text3);margin-left:8px}.topbar-stats{gap:2px;margin-left:16px}.topbar-stat{padding:4px 12px;border-radius:var(--radius);text-align:center;min-width:64px}.topbar-stat-val{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--text)}.kpi-card-val.gold,.stat-val.gold,.text-gold,.topbar-stat-val.gold{color:var(--gold)}.kpi-card-val.green,.stat-val.green,.text-green,.topbar-stat-val.green{color:var(--green)}.kpi-card-val.red,.stat-val.red,.text-red,.topbar-stat-val.red{color:var(--red)}.topbar-stat-label{font-size:9px;color:var(--text3)}.topbar-divider{width:1px;height:24px;background:var(--border);margin:0 8px}.live-pill{gap:5px;background:var(--green-dim);border:1px solid rgba(46,204,142,.2);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:600;color:var(--green)}.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:2s infinite pulse}.date-range input,.topbar-btn{background:var(--bg3);font-size:11px;color:var(--text2)}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}.date-range{display:flex;align-items:center;gap:6px;margin-left:12px}.date-range input{border:1px solid var(--border2);border-radius:var(--radius);font-family:var(--mono);padding:4px 8px}.filter-select,.topbar-btn{border-radius:var(--radius)}.date-range input:focus,.filter-select:focus{outline:0;border-color:var(--gold);color:var(--text)}.topbar-btn{padding:5px 12px;border:1px solid var(--border2);font-family:var(--font);margin-left:6px}.filter-row,.section-hdr,.stat-card,.ticker-bar{background:var(--bg2)}.data-table .mono,.stat-val,.ticker-score{font-family:var(--mono)}.topbar-btn:hover{background:var(--bg4);color:var(--text)}.topbar-btn.primary{background:var(--gold);color:#000;border-color:var(--gold);font-weight:600}.topbar-btn.primary:hover,.wave-seg.marker-gold{background:var(--gold2)}.data-table tr:hover td,.filter-select,.ticker-item:hover{background:var(--bg3)}.ticker-bar{height:32px;flex-shrink:0;border-bottom:1px solid var(--border);display:flex;align-items:center;overflow-x:auto;scrollbar-width:none}.ticker-bar::-webkit-scrollbar{display:none}.ticker-item{display:flex;align-items:center;gap:5px;padding:0 10px;border-right:1px solid var(--border);height:100%;cursor:pointer;transition:background .1s;flex-shrink:0}.ticker-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}.ticker-name{font-size:10px;color:var(--text2)}.ticker-score{font-size:10px;font-weight:600}.ticker-delta{font-size:9px}.stat-card-label,.stat-card-sub{font-size:10px;color:var(--text3)}.academy-main,.content,.lb-main,.sdr-main{flex:1;overflow-y:auto}.modal-tab-content,.page{display:none}.modal-tab-content.active,.page.active{display:block}.stat-card{border:1px solid var(--border);border-radius:var(--radius2);padding:16px;transition:border-color .15s}.pip-card:hover,.report-card:hover,.sdr-card:hover,.stage-pillar:hover,.stat-card:hover{border-color:var(--border2)}.data-table td,.data-table th,.filter-row,.section-hdr{border-bottom:1px solid var(--border)}.stat-card-label{margin-bottom:6px}.stat-card-sub{margin-top:2px}.stat-val{font-size:26px;font-weight:600;color:var(--text);line-height:1}.stat-val.blue{color:var(--blue)}.stat-val.lg{font-size:32px}.stat-val.sm{font-size:18px}.section-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;position:sticky;top:0;z-index:20}.section-hdr-title{font-family:var(--display);font-size:13px;font-weight:700;color:var(--text)}.section-hdr-actions{display:flex;gap:6px;align-items:center}.grid-2,.grid-3,.grid-4,.grid-5,.grid-6{display:grid}.gap-12,.grid-2,.grid-3,.grid-4,.grid-5,.grid-6{gap:12px}.grid-2{grid-template-columns:1fr 1fr}.grid-3{grid-template-columns:repeat(3,1fr)}.grid-4{grid-template-columns:repeat(4,1fr)}.grid-5{grid-template-columns:repeat(5,1fr)}.grid-6{grid-template-columns:repeat(6,1fr)}.p-12{padding:12px}.p-16{padding:16px}.mb-12{margin-bottom:12px}.mb-16{margin-bottom:16px}.data-table{width:100%;border-collapse:collapse}.data-table th{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);padding:7px 12px;text-align:left}.data-table td{padding:8px 12px;font-size:12px;color:var(--text2)}.data-table .mono{font-size:11px}.data-table .score-great{color:var(--green);font-weight:600}.data-table .score-ok{color:var(--gold);font-weight:600}.data-table .score-bad{color:var(--red);font-weight:600}.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600}.filter-btn,.filter-select{color:var(--text2);font-size:11px;font-family:var(--font);cursor:pointer}.badge.green,.scale-kill-badge.SCALE{background:var(--green-dim);color:var(--green);border:1px solid rgba(46,204,142,.2)}.badge.red,.scale-kill-badge.KILL{background:var(--red-dim);color:var(--red);border:1px solid rgba(224,59,59,.2)}.badge.gold,.scale-kill-badge.WATCH{background:var(--gold-dim);color:var(--gold);border:1px solid rgba(232,160,32,.2)}.badge.blue{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(77,142,240,.2)}.badge.orange{background:var(--orange-dim);color:var(--orange);border:1px solid rgba(240,112,32,.2)}.badge.purple{background:var(--purple-dim);color:var(--purple);border:1px solid rgba(155,108,240,.2)}.academy-tag.untagged,.badge.grey,.promo-badge.NOT_YET{background:var(--bg4);color:var(--text3);border:1px solid var(--border2)}.filter-row{display:flex;align-items:center;gap:6px;padding:8px 12px;flex-wrap:wrap;position:sticky;top:0px;z-index: 10;}.filter-select{padding:4px 20px 4px 8px;border:1px solid var(--border2);appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%235c657e'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center}.filter-btn{padding:4px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);transition:.12s}.donut-center-val,.filter-count,.gauge-val,.progress-val{font-family:var(--mono)}.academy-tab.active.all,.filter-btn.active,.filter-btn:hover{background:var(--bg5);color:var(--text);border-color:var(--border3)}.call-row-expanded,.panel-hdr{border-bottom:1px solid var(--border)}.filter-count{margin-left:auto;font-size:10px;color:var(--text3)}.gauge-wrap{text-align:center;position:relative}.gauge-val{font-weight:700;color:var(--text)}.mini-bar-wrap{flex:1;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden}.mini-bar{height:100%;border-radius:2px}.progress-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}.progress-label{font-size:11px;color:var(--text2);min-width:120px;overflow:hidden}.progress-val{font-size:10px;min-width:36px;text-align:right}.donut-wrap,.readiness-ring{position:relative;display:inline-flex;align-items:center;justify-content:center}.donut-center,.readiness-val{position:absolute;text-align:center}.donut-center-val{font-size:20px;font-weight:700;color:var(--text);line-height:1}.donut-center-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}.panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);overflow:hidden}.panel-hdr{padding:10px 14px;display:flex;align-items:center;justify-content:space-between}.panel-title{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em}.kpi-page-content,.panel-body{padding:14px}.call-table-wrap{overflow-x:auto}.call-row-expanded{background:var(--bg3);padding:14px 14px 14px 48px}.checkpoint-grid{display:flex;flex-wrap:wrap;gap:6px}.checkpoint-pill{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:var(--radius);font-size:10px;border:1px solid var(--border)}.checkpoint-pill.pass{background:var(--green-dim);border-color:rgba(46,204,142,.2);color:var(--green)}.checkpoint-pill.fail{background:var(--red-dim);border-color:rgba(224,59,59,.2);color:var(--red)}.checkpoint-pill.na,.tracker-item.na{background:var(--bg4);color:var(--text3)}.academy-layout,.lb-layout,.sdr-layout,.split-layout{display:flex;height:100%;overflow:hidden}.split-main{flex:1;overflow-y:auto;min-width:0}.split-sidebar{width:240px;flex-shrink:0;border-left:1px solid var(--border);background:var(--bg2);overflow-y:auto}.split-sidebar-section{border-bottom:1px solid var(--border);padding:12px}.split-sidebar-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:10px}.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}.ai-insight,.flex,.modal,.modal-actions,.modal-hdr,.modal-overlay.open,.modal-tabs,.tracker-group-hdr,.tracker-item{display:flex}.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius2);width:640px;max-width:95vw;max-height:90vh;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,.6);animation:.2s modalIn}.modal-close,.modal-tab{background:0 0;cursor:pointer}@keyframes modalIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}.modal-hdr{padding:16px 20px;border-bottom:1px solid var(--border);align-items:flex-start;justify-content:space-between}.modal-close{border:none;color:var(--text3);font-size:18px;line-height:1;padding:2px}.ai-insight-text strong,.modal-agent-name,.modal-close:hover{color:var(--text)}.modal-agent-name{font-family:var(--display);font-size:16px;font-weight:700}.modal-meta{font-size:11px;color:var(--text3);margin-top:3px}.modal-score-badge{font-family:var(--mono);font-size:28px;font-weight:700;width:64px;height:64px;border-radius:var(--radius2);display:flex;align-items:center;justify-content:center;flex-shrink:0}.modal-score-badge.great{background:var(--green-dim);color:var(--green);border:1px solid rgba(46,204,142,.3)}.modal-score-badge.ok{background:var(--gold-dim);color:var(--gold);border:1px solid rgba(232,160,32,.3)}.modal-score-badge.bad{background:var(--red-dim);color:var(--red);border:1px solid rgba(224,59,59,.3)}.modal-tabs{border-bottom:1px solid var(--border)}.modal-tab{padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);border-bottom:2px solid transparent;border-top:none;border-left:none;border-right:none;transition:.12s}.ai-insight-text,.modal-tab:hover{color:var(--text2)}.modal-tab.active{color:var(--gold);border-bottom-color:var(--gold)}.modal-body{flex:1;overflow-y:auto;padding:20px}.ai-insight{gap:12px;margin-bottom:16px;align-items:flex-start}.ai-insight-icon{font-size:20px;flex-shrink:0;margin-top:1px}.bar-x-label,.wpm-x{margin-top:3px;font-size:8px}.ai-insight-text{font-size:13px;line-height:1.6}.tracker-group-hdr{align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;background:var(--bg3);font-size:12px;font-weight:600;color:var(--text)}.tracker-group-hdr:hover{background:var(--bg4)}.tracker-group-count{font-size:10px;color:var(--text3);font-weight:400}.tracker-group-body{padding:8px}.tracker-item{align-items:center;gap:8px;padding:7px 10px;border-radius:var(--radius);margin-bottom:4px;font-size:11px}.tracker-item.good,.tracker-item.pass{background:var(--green-dim);color:var(--green)}.tracker-item.bad,.tracker-item.fail{background:var(--red-dim);color:var(--red)}.tracker-icon{font-size:12px;flex-shrink:0}.modal-actions{gap:8px;padding:12px 20px;border-top:1px solid var(--border)}.modal-btn{padding:7px 16px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:2px solid transparent;display:inline-flex;align-items:center;gap:6px}.modal-btn.primary{background:var(--gold);color:#000;border-color:var(--gold)}.modal-btn.outline{background:var(--bg3);color:var(--gold);border-color:var(--gold)}.lb-sidebar{width:260px;flex-shrink:0;border-left:1px solid var(--border);background:var(--bg2);overflow-y:auto}.lb-toggle{display:flex;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border2);overflow:hidden}.lb-toggle-btn{padding:4px 14px;font-size:11px;font-family:var(--font);border:none;background:0 0;color:var(--text2);cursor:pointer;transition:.12s}.bar-x-label,.bar-y-val,.dim-val,.font-mono,.kpi-card-val,.lead-score-badge,.marker-pill,.readiness-num,.stage-num,.wpm-x{font-family:var(--mono)}.lb-toggle-btn.active{background:var(--bg5);color:var(--gold)}.analytics-content{padding:14px;display:flex;flex-direction:column;gap:14px}.bar-chart{display:flex;align-items:flex-end;gap:3px;height:80px}.bar-col,.wpm-bar-col{display:flex;flex-direction:column;align-items:center;flex:1}.bar-seg{width:100%;border-radius:2px 2px 0 0;transition:opacity .15s}.pip-card,.report-card{transition:border-color .15s}.bar-seg:hover{opacity:.8}.bar-x-label{color:var(--text3)}.bar-y-val{font-size:8px;color:var(--text2);margin-bottom:2px}.qb-bar-wrap{display:flex;align-items:center;gap:6px;width:160px}.qb-bar{height:6px;border-radius:3px}.wpm-chart{display:flex;align-items:flex-end;gap:4px;height:100px}.lead-score-badge,.scale-kill-badge{display:inline-flex;align-items:center;font-weight:700}.wpm-bar{width:100%;border-radius:2px 2px 0 0}.wpm-x{color:var(--text3)}.lead-score-badge{justify-content:center;width:44px;height:24px;border-radius:var(--radius);font-size:11px}.academy-tag.exemplar,.flag-scale,.promo-badge.READY{background:var(--green-dim);color:var(--green);border:1px solid rgba(46,204,142,.25)}.academy-tag.featured,.flag-watch,.promo-badge.WATCH{background:var(--gold-dim);color:var(--gold);border:1px solid rgba(232,160,32,.25)}.academy-tag.warning,.flag-kill{background:var(--red-dim);color:var(--red);border:1px solid rgba(224,59,59,.25)}.scale-kill-badge{gap:4px;padding:2px 8px;border-radius:20px;font-size:10px;text-transform:uppercase;letter-spacing:.04em}.kpi-card,.pip-card{border:1px solid var(--border)}.academy-tag,.readiness-label{letter-spacing:.05em;text-transform:uppercase}.pip-card{background:var(--bg2);border-radius:var(--radius2);padding:16px;margin-bottom:10px}.alert-toast.warning,.call-card-academy.featured,.pip-card.level-warn,.report-type-friday,.sdr-card.watch{border-left:3px solid var(--gold)}.pip-card.level-pip{border-left:3px solid var(--orange)}.alert-toast.critical,.call-card-academy.worst,.pip-card.level-final{border-left:3px solid var(--red)}.pip-card.level-exec{border-left:3px solid var(--purple)}.pip-progress{display:flex;align-items:center;gap:8px;margin-top:10px}.pip-days-track{flex:1;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden}.pip-days-fill{height:100%;border-radius:3px}.strike-card{background:var(--red-dim);border:1px solid rgba(224,59,59,.25);border-radius:var(--radius2);padding:14px;margin-bottom:10px}.decision-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;border:1px solid transparent}.decision-badge.ON_TRACK{background:var(--green-dim);color:var(--green);border-color:rgba(46,204,142,.2)}.decision-badge.REVIEW{background:var(--orange-dim);color:var(--orange);border-color:rgba(240,112,32,.2)}.decision-badge.SEPARATE{background:var(--red-dim);color:var(--red);border-color:rgba(224,59,59,.2)}.decision-badge.IMMEDIATE{background:var(--red-dim);color:var(--red);border-color:rgba(224,59,59,.3);animation:1.5s infinite urgentPulse}@keyframes urgentPulse{0%,100%{opacity:1}50%{opacity:.6}}.kpi-grid{display:grid;gap:12px}.kpi-grid-5{grid-template-columns:repeat(5,1fr)}.kpi-grid-4{grid-template-columns:repeat(4,1fr)}.kpi-grid-3{grid-template-columns:repeat(3,1fr)}.kpi-grid-2{grid-template-columns:repeat(2,1fr)}.kpi-card{background:var(--bg2);border-radius:var(--radius2);padding:14px;position:relative;overflow:hidden}.kpi-card-label{font-size:10px;color:var(--text3);margin-bottom:4px}.kpi-card-sub{font-size:9px;color:var(--text4);margin-bottom:6px}.kpi-card-val{font-size:22px;font-weight:700;color:var(--text);line-height:1}.fw-600,.toast-title{font-weight:600}.kpi-card-val.lg{font-size:30px}.gauge-ring{transform:rotate(-90deg);transform-origin:center}.report-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:16px;margin-bottom:10px;cursor:pointer}.report-type-nightly{border-left:3px solid var(--blue)}.alert-toast-container{position:fixed;top:60px;right:16px;z-index:2000;display:flex;flex-direction:column;gap:8px}.alert-toast{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius2);padding:12px 16px;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,.4);animation:.25s toastIn;display:flex;gap:10px;align-items:flex-start}@keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}.toast-icon{font-size:16px;flex-shrink:0;margin-top:1px}.toast-title{font-size:12px;color:var(--text)}.toast-msg{font-size:11px;color:var(--text2);margin-top:2px;line-height:1.4}.academy-tab,.readiness-label,.text-muted,.toast-dismiss{color:var(--text3)}.toast-dismiss{background:0 0;border:none;cursor:pointer;margin-left:auto;flex-shrink:0;font-size:14px}.flex-col{flex-direction:column}.items-center{align-items:center}.justify-between{justify-content:space-between}.gap-6{gap:6px}.gap-8{gap:8px}.gap-10{gap:10px}.academy-tab,.academy-tag,.fw-700,.promo-badge,.readiness-num,.stage-num{font-weight:700}.fs-10{font-size:10px}.fs-11{font-size:11px}.fs-12{font-size:12px}.academy-sidebar{width:280px;flex-shrink:0;border-left:1px solid var(--border);background:var(--bg2);overflow-y:auto}.call-card-academy{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:.12s;position:relative;overflow:hidden}.academy-tag,.marker-pill{align-items:center;padding:3px 9px;font-size:10px}.call-card-academy:hover,.tag-option:hover{border-color:var(--border2);background:var(--bg3)}.call-card-academy.best,.sdr-card.ready{border-left:3px solid var(--green)}.academy-tag{display:inline-flex;gap:4px;border-radius:20px}.marker-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.marker-pill{display:inline-flex;gap:5px;border-radius:4px;border:1px solid var(--border2);background:var(--bg3);cursor:pointer;transition:.1s}.marker-pill:hover{border-color:var(--gold);color:var(--gold)}.academy-tab.active.exemplar,.marker-pill.green{background:var(--green-dim);color:var(--green);border-color:rgba(46,204,142,.3)}.marker-pill.red{border-color:rgba(224,59,59,.3);color:var(--red);background:var(--red-dim)}.marker-pill.gold{border-color:rgba(232,160,32,.3);color:var(--gold);background:var(--gold-dim)}.waveform-bar{display:flex;align-items:center;gap:2px;height:32px;cursor:pointer}.wave-seg{width:3px;border-radius:1.5px;background:var(--border3);transition:background .1s;flex-shrink:0}.wave-seg.played{background:var(--gold)}.wave-seg.marker-green{background:var(--green)}.wave-seg.marker-red{background:var(--red)}.academy-filter-tabs{display:flex;gap:4px}.academy-tab{padding:5px 14px;border-radius:var(--radius);font-size:11px;cursor:pointer;border:1px solid var(--border2);background:var(--bg3);transition:.12s}.sdr-card,.sdr-sidebar,.tag-modal{background:var(--bg2)}.academy-tab.active.warning{background:var(--red-dim);color:var(--red);border-color:rgba(224,59,59,.3)}.academy-tab.active.featured{background:var(--gold-dim);color:var(--gold);border-color:rgba(232,160,32,.3)}.tag-modal{border:1px solid var(--border2);border-radius:var(--radius2);padding:20px;width:480px;max-width:95vw;box-shadow:0 24px 80px rgba(0,0,0,.6);animation:.2s modalIn}.tag-option{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius);margin-bottom:6px;cursor:pointer;border:1px solid var(--border);transition:.1s}.stage-pillar.active,.tag-option.selected{border-color:var(--gold);background:var(--gold-dim2)}.sdr-sidebar{width:300px;flex-shrink:0;border-left:1px solid var(--border);overflow-y:auto}.sdr-card{border:1px solid var(--border);border-radius:var(--radius2);padding:16px;margin-bottom:10px;transition:border-color .15s;position:relative}.sdr-card.not-yet{border-left:3px solid var(--border3)}.sdr-card.promoted{border-left:3px solid var(--purple);opacity:.7}.readiness-num{font-size:18px;line-height:1}.readiness-label{font-size:8px}.dim-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}.dim-name{font-size:10px;color:var(--text2);min-width:120px}.dim-bar-track{flex:1;height:5px;background:var(--bg4);border-radius:3px;overflow:hidden}.dim-bar-fill{height:100%;border-radius:3px;transition:width .4s}.dim-val{font-size:10px;min-width:30px;text-align:right}.stage-pillar{display:flex;flex-direction:column;align-items:center;flex:1;padding:10px 6px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg3);cursor:pointer;transition:.12s}.stage-num{font-size:20px}.stage-label{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);text-align:center;margin-top:3px}.promo-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:11px}.promo-badge.PROMOTED{background:var(--purple-dim);color:var(--purple);border:1px solid rgba(155,108,240,.25)}.tracker-group{border: 1px solid #1e2538;border-radius: 8px;margin-bottom: 10px;overflow: hidden;}
+        body,html{height:100%}.app,.sidebar,body{overflow:hidden}.nav-item,.topbar-btn{transition:.12s;cursor:pointer}.progress-label,.user-name{text-overflow:ellipsis;white-space:nowrap}.bar-x-label,.data-table th,.progress-label,.ticker-item,.topbar-btn,.user-name{white-space:nowrap}:root{--bg0:#080b12;--bg1:#0d1017;--bg2:#111520;--bg3:#161b28;--bg4:#1c2235;--bg5:#232a3e;--border:#1e2538;--border2:#2a3348;--border3:#364058;--text:#e8eaf2;--text2:#9ba3bc;--text3:#5c657e;--text4:#363d52;--gold:#e8a020;--gold2:#f5bc50;--gold3:#ffd880;--gold-dim:rgba(232,160,32,0.12);--gold-dim2:rgba(232,160,32,0.06);--red:#e03b3b;--red2:#ff6b6b;--red-dim:rgba(224,59,59,0.12);--green:#2ecc8e;--green2:#4eeaaa;--green-dim:rgba(46,204,142,0.10);--blue:#4d8ef0;--blue-dim:rgba(77,142,240,0.12);--orange:#f07020;--orange-dim:rgba(240,112,32,0.12);--purple:#9b6cf0;--purple-dim:rgba(155,108,240,0.12);--font:'DM Sans',sans-serif;--mono:'JetBrains Mono',monospace;--display:'Syne',sans-serif;--sidebar-w:220px;--topbar-h:48px;--radius:8px;--radius2:12px}*,::after,::before{box-sizing:border-box;margin:0;padding:0}body{font-family:var(--font);background:var(--bg0);color:var(--text);font-size:13px;-webkit-font-smoothing:antialiased}::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:0 0}::-webkit-scrollbar-thumb{background:var(--border3);border-radius:2px}.app{display:flex;height:100vh}.sidebar{width:var(--sidebar-w);flex-shrink:0;background:var(--bg1);border-right:1px solid var(--border);display:flex;flex-direction:column}.sidebar-logo{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}.sidebar-logo-mark{width:32px;height:32px;border-radius:7px;background:linear-gradient(135deg,var(--gold) 0,#b07010 100%);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:14px;font-weight:800;color:#000;flex-shrink:0}.sidebar-logo-text{font-family:var(--display);font-size:13px;font-weight:700;color:var(--text);letter-spacing:-.02em;line-height:1.2}.sidebar-logo-sub{font-size:9px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase}.sidebar-nav{flex:1;overflow-y:auto;padding:8px 0}.nav-item,.sidebar-bottom{align-items:center;display:flex}.nav-section{margin-bottom:4px}.nav-section-label{font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text4);padding:10px 16px 4px}.live-pill,.stat-card-label,.topbar-stat-label{letter-spacing:.06em;text-transform:uppercase}.nav-item{gap:9px;padding:7px 16px;color:var(--text3);font-size:12px;font-weight:500;border-radius:0;position:relative;user-select:none;border-left:2px solid transparent}.nav-item:hover{background:var(--bg3);color:var(--text2)}.nav-item.active{background:var(--gold-dim2);color:var(--gold);border-left-color:var(--gold)}.nav-item svg{flex-shrink:0;opacity:.7}.nav-item.active svg{opacity:1}.nav-badge{margin-left:auto;font-family:var(--mono);font-size:9px;font-weight:600;background:var(--red-dim);color:var(--red);padding:1px 5px;border-radius:10px;border:1px solid rgba(224,59,59,.2)}.decision-badge.WATCH,.nav-badge.gold{background:var(--gold-dim);color:var(--gold);border-color:rgba(232,160,32,.2)}.sidebar-bottom{border-top:1px solid var(--border);padding:10px 16px;gap:8px}.user-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#b07010);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#000;flex-shrink:0}.user-info{flex:1;min-width:0}.user-name{font-size:12px;font-weight:600;color:var(--text);overflow:hidden}.date-range-sep,.gauge-label,.user-role{font-size:10px;color:var(--text3)}.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}.topbar{height:var(--topbar-h);flex-shrink:0;background:var(--bg1);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0;padding:0 16px}.topbar-title{font-family:var(--display);font-size:15px;font-weight:700;color:var(--text);flex:1}.live-pill,.topbar-stats{align-items:center;display:flex}.topbar-meta{font-size:11px;color:var(--text3);margin-left:8px}.topbar-stats{gap:2px;margin-left:16px}.topbar-stat{padding:4px 12px;border-radius:var(--radius);text-align:center;min-width:64px}.topbar-stat-val{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--text)}.kpi-card-val.gold,.stat-val.gold,.text-gold,.topbar-stat-val.gold{color:var(--gold)}.kpi-card-val.green,.stat-val.green,.text-green,.topbar-stat-val.green{color:var(--green)}.kpi-card-val.red,.stat-val.red,.text-red,.topbar-stat-val.red{color:var(--red)}.topbar-stat-label{font-size:9px;color:var(--text3)}.topbar-divider{width:1px;height:24px;background:var(--border);margin:0 8px}.live-pill{gap:5px;background:var(--green-dim);border:1px solid rgba(46,204,142,.2);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:600;color:var(--green)}.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:2s infinite pulse}.date-range input,.topbar-btn{background:var(--bg3);font-size:11px;color:var(--text2)}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}.date-range{display:flex;align-items:center;gap:6px;margin-left:12px}.date-range input{border:1px solid var(--border2);border-radius:var(--radius);font-family:var(--mono);padding:4px 8px}.filter-select,.topbar-btn{border-radius:var(--radius)}.date-range input:focus,.filter-select:focus{outline:0;border-color:var(--gold);color:var(--text)}.topbar-btn{padding:5px 12px;border:1px solid var(--border2);font-family:var(--font);margin-left:6px}.filter-row,.section-hdr,.stat-card,.ticker-bar{background:var(--bg2)}.data-table .mono,.stat-val,.ticker-score{font-family:var(--mono)}.topbar-btn:hover{background:var(--bg4);color:var(--text)}.topbar-btn.primary{background:var(--gold);color:#000;border-color:var(--gold);font-weight:600}.topbar-btn.primary:hover,.wave-seg.marker-gold{background:var(--gold2)}.data-table tr:hover td,.filter-select,.ticker-item:hover{background:var(--bg3)}.ticker-bar{height:32px;flex-shrink:0;border-bottom:1px solid var(--border);display:flex;align-items:center;overflow-x:auto;scrollbar-width:none}.ticker-bar::-webkit-scrollbar{display:none}.ticker-item{display:flex;align-items:center;gap:5px;padding:0 10px;border-right:1px solid var(--border);height:100%;cursor:pointer;transition:background .1s;flex-shrink:0}.ticker-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}.ticker-name{font-size:10px;color:var(--text2)}.ticker-score{font-size:10px;font-weight:600}.ticker-delta{font-size:9px}.stat-card-label,.stat-card-sub{font-size:10px;color:var(--text3)}.academy-main,.content,.lb-main,.sdr-main{flex:1;overflow-y:auto}.modal-tab-content,.page{display:none}.modal-tab-content.active,.page.active{display:block}.stat-card{border:1px solid var(--border);border-radius:var(--radius2);padding:16px;transition:border-color .15s}.pip-card:hover,.report-card:hover,.sdr-card:hover,.stage-pillar:hover,.stat-card:hover{border-color:var(--border2)}.data-table td,.data-table th,.filter-row,.section-hdr{border-bottom:1px solid var(--border)}.stat-card-label{margin-bottom:6px}.stat-card-sub{margin-top:2px}.stat-val{font-size:26px;font-weight:600;color:var(--text);line-height:1}.stat-val.blue{color:var(--blue)}.stat-val.lg{font-size:32px}.stat-val.sm{font-size:18px}.section-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;position:sticky;top:0;z-index:20}.section-hdr-title{font-family:var(--display);font-size:13px;font-weight:700;color:var(--text)}.section-hdr-actions{display:flex;gap:6px;align-items:center}.grid-2,.grid-3,.grid-4,.grid-5,.grid-6{display:grid}.gap-12,.grid-2,.grid-3,.grid-4,.grid-5,.grid-6{gap:12px}.grid-2{grid-template-columns:1fr 1fr}.grid-3{grid-template-columns:repeat(3,1fr)}.grid-4{grid-template-columns:repeat(4,1fr)}.grid-5{grid-template-columns:repeat(5,1fr)}.grid-6{grid-template-columns:repeat(6,1fr)}.p-12{padding:12px}.p-16{padding:16px}.mb-12{margin-bottom:12px}.mb-16{margin-bottom:16px}.data-table{width:100%;border-collapse:collapse}.data-table th{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);padding:7px 12px;text-align:left}.data-table td{padding:8px 12px;font-size:12px;color:var(--text2)}.data-table .mono{font-size:11px}.data-table .score-great{color:var(--green);font-weight:600}.data-table .score-ok{color:var(--gold);font-weight:600}.data-table .score-bad{color:var(--red);font-weight:600}.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600}.filter-btn,.filter-select{color:var(--text2);font-size:11px;font-family:var(--font);cursor:pointer}.badge.green,.scale-kill-badge.SCALE{background:var(--green-dim);color:var(--green);border:1px solid rgba(46,204,142,.2)}.badge.red,.scale-kill-badge.KILL{background:var(--red-dim);color:var(--red);border:1px solid rgba(224,59,59,.2)}.badge.gold,.scale-kill-badge.WATCH{background:var(--gold-dim);color:var(--gold);border:1px solid rgba(232,160,32,.2)}.badge.blue{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(77,142,240,.2)}.badge.orange{background:var(--orange-dim);color:var(--orange);border:1px solid rgba(240,112,32,.2)}.badge.purple{background:var(--purple-dim);color:var(--purple);border:1px solid rgba(155,108,240,.2)}.academy-tag.untagged,.badge.grey,.promo-badge.NOT_YET{background:var(--bg4);color:var(--text3);border:1px solid var(--border2)}.filter-row{display:flex;align-items:center;gap:6px;padding:8px 12px;flex-wrap:wrap;position:sticky;top:0px;z-index: 10;}.filter-select{padding:4px 20px 4px 8px;border:1px solid var(--border2);appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%235c657e'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center}.filter-btn{padding:4px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);transition:.12s}.donut-center-val,.filter-count,.gauge-val,.progress-val{font-family:var(--mono)}.academy-tab.active.all,.filter-btn.active,.filter-btn:hover{background:var(--bg5);color:var(--text);border-color:var(--border3)}.call-row-expanded,.panel-hdr{border-bottom:1px solid var(--border)}.filter-count{margin-left:auto;font-size:10px;color:var(--text3)}.gauge-wrap{text-align:center;position:relative}.gauge-val{font-weight:700;color:var(--text)}.mini-bar-wrap{flex:1;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden}.mini-bar{height:100%;border-radius:2px}.progress-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}.progress-label{font-size:11px;color:var(--text2);min-width:120px;overflow:hidden}.progress-val{font-size:10px;min-width:36px;text-align:right}.donut-wrap,.readiness-ring{position:relative;display:inline-flex;align-items:center;justify-content:center}.donut-center,.readiness-val{position:absolute;text-align:center}.donut-center-val{font-size:20px;font-weight:700;color:var(--text);line-height:1}.donut-center-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}.panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);overflow:hidden}.panel-hdr{padding:10px 14px;display:flex;align-items:center;justify-content:space-between}.panel-title{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em}.kpi-page-content,.panel-body{padding:14px}.call-table-wrap{overflow-x:auto}.call-row-expanded{background:var(--bg3);padding:14px 14px 14px 48px}.checkpoint-grid{display:flex;flex-wrap:wrap;gap:6px}.checkpoint-pill{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:var(--radius);font-size:10px;border:1px solid var(--border)}.checkpoint-pill.pass{background:var(--green-dim);border-color:rgba(46,204,142,.2);color:var(--green)}.checkpoint-pill.fail{background:var(--red-dim);border-color:rgba(224,59,59,.2);color:var(--red)}.checkpoint-pill.na,.tracker-item.na{background:var(--bg4);color:var(--text3)}.academy-layout,.lb-layout,.sdr-layout,.split-layout{display:flex;height:100%;overflow:hidden}.split-main{flex:1;overflow-y:auto;min-width:0}.split-sidebar{width:240px;flex-shrink:0;border-left:1px solid var(--border);background:var(--bg2);overflow-y:auto;z-index: 2;}.split-sidebar-section{border-bottom:1px solid var(--border);padding:12px}.split-sidebar-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:10px}.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}.ai-insight,.flex,.modal,.modal-actions,.modal-hdr,.modal-overlay.open,.modal-tabs,.tracker-group-hdr,.tracker-item{display:flex}.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius2);width:640px;max-width:95vw;max-height:90vh;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,.6);animation:.2s modalIn}.modal-close,.modal-tab{background:0 0;cursor:pointer}@keyframes modalIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}.modal-hdr{padding:16px 20px;border-bottom:1px solid var(--border);align-items:flex-start;justify-content:space-between}.modal-close{border:none;color:var(--text3);font-size:18px;line-height:1;padding:2px}.ai-insight-text strong,.modal-agent-name,.modal-close:hover{color:var(--text)}.modal-agent-name{font-family:var(--display);font-size:16px;font-weight:700}.modal-meta{font-size:11px;color:var(--text3);margin-top:3px}.modal-score-badge{font-family:var(--mono);font-size:28px;font-weight:700;width:64px;height:64px;border-radius:var(--radius2);display:flex;align-items:center;justify-content:center;flex-shrink:0}.modal-score-badge.great{background:var(--green-dim);color:var(--green);border:1px solid rgba(46,204,142,.3)}.modal-score-badge.ok{background:var(--gold-dim);color:var(--gold);border:1px solid rgba(232,160,32,.3)}.modal-score-badge.bad{background:var(--red-dim);color:var(--red);border:1px solid rgba(224,59,59,.3)}.modal-tabs{border-bottom:1px solid var(--border)}.modal-tab{padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);border-bottom:2px solid transparent;border-top:none;border-left:none;border-right:none;transition:.12s}.ai-insight-text,.modal-tab:hover{color:var(--text2)}.modal-tab.active{color:var(--gold);border-bottom-color:var(--gold)}.modal-body{flex:1;overflow-y:auto;padding:20px}.ai-insight{gap:12px;margin-bottom:16px;align-items:flex-start}.ai-insight-icon{font-size:20px;flex-shrink:0;margin-top:1px}.bar-x-label,.wpm-x{margin-top:3px;font-size:8px}.ai-insight-text{font-size:13px;line-height:1.6}.tracker-group-hdr{align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;background:var(--bg3);font-size:12px;font-weight:600;color:var(--text)}.tracker-group-hdr:hover{background:var(--bg4)}.tracker-group-count{font-size:10px;color:var(--text3);font-weight:400}.tracker-group-body{padding:8px}.tracker-item{align-items:center;gap:8px;padding:7px 10px;border-radius:var(--radius);margin-bottom:4px;font-size:11px}.tracker-item.good,.tracker-item.pass{background:var(--green-dim);color:var(--green)}.tracker-item.bad,.tracker-item.fail{background:var(--red-dim);color:var(--red)}.tracker-icon{font-size:12px;flex-shrink:0}.modal-actions{gap:8px;padding:12px 20px;border-top:1px solid var(--border)}.modal-btn{padding:7px 16px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:2px solid transparent;display:inline-flex;align-items:center;gap:6px}.modal-btn.primary{background:var(--gold);color:#000;border-color:var(--gold)}.modal-btn.outline{background:var(--bg3);color:var(--gold);border-color:var(--gold)}.lb-sidebar{width:260px;flex-shrink:0;border-left:1px solid var(--border);background:var(--bg2);overflow-y:auto}.lb-toggle{display:flex;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border2);overflow:hidden}.lb-toggle-btn{padding:4px 14px;font-size:11px;font-family:var(--font);border:none;background:0 0;color:var(--text2);cursor:pointer;transition:.12s}.bar-x-label,.bar-y-val,.dim-val,.font-mono,.kpi-card-val,.lead-score-badge,.marker-pill,.readiness-num,.stage-num,.wpm-x{font-family:var(--mono)}.lb-toggle-btn.active{background:var(--bg5);color:var(--gold)}.analytics-content{padding:14px;display:flex;flex-direction:column;gap:14px}.bar-chart{display:flex;align-items:flex-end;gap:3px;height:80px}.bar-col,.wpm-bar-col{display:flex;flex-direction:column;align-items:center;flex:1}.bar-seg{width:100%;border-radius:2px 2px 0 0;transition:opacity .15s}.pip-card,.report-card{transition:border-color .15s}.bar-seg:hover{opacity:.8}.bar-x-label{color:var(--text3)}.bar-y-val{font-size:8px;color:var(--text2);margin-bottom:2px}.qb-bar-wrap{display:flex;align-items:center;gap:6px;width:160px}.qb-bar{height:6px;border-radius:3px}.wpm-chart{display:flex;align-items:flex-end;gap:4px;height:100px}.lead-score-badge,.scale-kill-badge{display:inline-flex;align-items:center;font-weight:700}.wpm-bar{width:100%;border-radius:2px 2px 0 0}.wpm-x{color:var(--text3)}.lead-score-badge{justify-content:center;width:44px;height:24px;border-radius:var(--radius);font-size:11px}.academy-tag.exemplar,.flag-scale,.promo-badge.READY{background:var(--green-dim);color:var(--green);border:1px solid rgba(46,204,142,.25)}.academy-tag.featured,.flag-watch,.promo-badge.WATCH{background:var(--gold-dim);color:var(--gold);border:1px solid rgba(232,160,32,.25)}.academy-tag.warning,.flag-kill{background:var(--red-dim);color:var(--red);border:1px solid rgba(224,59,59,.25)}.scale-kill-badge{gap:4px;padding:2px 8px;border-radius:20px;font-size:10px;text-transform:uppercase;letter-spacing:.04em}.kpi-card,.pip-card{border:1px solid var(--border)}.academy-tag,.readiness-label{letter-spacing:.05em;text-transform:uppercase}.pip-card{background:var(--bg2);border-radius:var(--radius2);padding:16px;margin-bottom:10px}.alert-toast.warning,.call-card-academy.featured,.pip-card.level-warn,.report-type-friday,.sdr-card.watch{border-left:3px solid var(--gold)}.pip-card.level-pip{border-left:3px solid var(--orange)}.alert-toast.critical,.call-card-academy.worst,.pip-card.level-final{border-left:3px solid var(--red)}.pip-card.level-exec{border-left:3px solid var(--purple)}.pip-progress{display:flex;align-items:center;gap:8px;margin-top:10px}.pip-days-track{flex:1;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden}.pip-days-fill{height:100%;border-radius:3px}.strike-card{background:var(--red-dim);border:1px solid rgba(224,59,59,.25);border-radius:var(--radius2);padding:14px;margin-bottom:10px}.decision-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;border:1px solid transparent}.decision-badge.ON_TRACK{background:var(--green-dim);color:var(--green);border-color:rgba(46,204,142,.2)}.decision-badge.REVIEW{background:var(--orange-dim);color:var(--orange);border-color:rgba(240,112,32,.2)}.decision-badge.SEPARATE{background:var(--red-dim);color:var(--red);border-color:rgba(224,59,59,.2)}.decision-badge.IMMEDIATE{background:var(--red-dim);color:var(--red);border-color:rgba(224,59,59,.3);animation:1.5s infinite urgentPulse}@keyframes urgentPulse{0%,100%{opacity:1}50%{opacity:.6}}.kpi-grid{display:grid;gap:12px}.kpi-grid-5{grid-template-columns:repeat(5,1fr)}.kpi-grid-4{grid-template-columns:repeat(4,1fr)}.kpi-grid-3{grid-template-columns:repeat(3,1fr)}.kpi-grid-2{grid-template-columns:repeat(2,1fr)}.kpi-card{background:var(--bg2);border-radius:var(--radius2);padding:14px;position:relative;overflow:hidden}.kpi-card-label{font-size:10px;color:var(--text3);margin-bottom:4px}.kpi-card-sub{font-size:9px;color:var(--text4);margin-bottom:6px}.kpi-card-val{font-size:22px;font-weight:700;color:var(--text);line-height:1}.fw-600,.toast-title{font-weight:600}.kpi-card-val.lg{font-size:30px}.gauge-ring{transform:rotate(-90deg);transform-origin:center}.report-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:16px;margin-bottom:10px;cursor:pointer}.report-type-nightly{border-left:3px solid var(--blue)}.alert-toast-container{position:fixed;top:60px;right:16px;z-index:2000;display:flex;flex-direction:column;gap:8px}.alert-toast{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius2);padding:12px 16px;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,.4);animation:.25s toastIn;display:flex;gap:10px;align-items:flex-start}@keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}.toast-icon{font-size:16px;flex-shrink:0;margin-top:1px}.toast-title{font-size:12px;color:var(--text)}.toast-msg{font-size:11px;color:var(--text2);margin-top:2px;line-height:1.4}.academy-tab,.readiness-label,.text-muted,.toast-dismiss{color:var(--text3)}.toast-dismiss{background:0 0;border:none;cursor:pointer;margin-left:auto;flex-shrink:0;font-size:14px}.flex-col{flex-direction:column}.items-center{align-items:center}.justify-between{justify-content:space-between}.gap-6{gap:6px}.gap-8{gap:8px}.gap-10{gap:10px}.academy-tab,.academy-tag,.fw-700,.promo-badge,.readiness-num,.stage-num{font-weight:700}.fs-10{font-size:10px}.fs-11{font-size:11px}.fs-12{font-size:12px}.academy-sidebar{width:280px;flex-shrink:0;border-left:1px solid var(--border);background:var(--bg2);overflow-y:auto}.call-card-academy{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:.12s;position:relative;overflow:hidden}.academy-tag,.marker-pill{align-items:center;padding:3px 9px;font-size:10px}.call-card-academy:hover,.tag-option:hover{border-color:var(--border2);background:var(--bg3)}.call-card-academy.best,.sdr-card.ready{border-left:3px solid var(--green)}.academy-tag{display:inline-flex;gap:4px;border-radius:20px}.marker-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.marker-pill{display:inline-flex;gap:5px;border-radius:4px;border:1px solid var(--border2);background:var(--bg3);cursor:pointer;transition:.1s}.marker-pill:hover{border-color:var(--gold);color:var(--gold)}.academy-tab.active.exemplar,.marker-pill.green{background:var(--green-dim);color:var(--green);border-color:rgba(46,204,142,.3)}.marker-pill.red{border-color:rgba(224,59,59,.3);color:var(--red);background:var(--red-dim)}.marker-pill.gold{border-color:rgba(232,160,32,.3);color:var(--gold);background:var(--gold-dim)}.waveform-bar{display:flex;align-items:center;gap:2px;height:32px;cursor:pointer}.wave-seg{width:3px;border-radius:1.5px;background:var(--border3);transition:background .1s;flex-shrink:0}.wave-seg.played{background:var(--gold)}.wave-seg.marker-green{background:var(--green)}.wave-seg.marker-red{background:var(--red)}.academy-filter-tabs{display:flex;gap:4px}.academy-tab{padding:5px 14px;border-radius:var(--radius);font-size:11px;cursor:pointer;border:1px solid var(--border2);background:var(--bg3);transition:.12s}.sdr-card,.sdr-sidebar,.tag-modal{background:var(--bg2)}.academy-tab.active.warning{background:var(--red-dim);color:var(--red);border-color:rgba(224,59,59,.3)}.academy-tab.active.featured{background:var(--gold-dim);color:var(--gold);border-color:rgba(232,160,32,.3)}.tag-modal{border:1px solid var(--border2);border-radius:var(--radius2);padding:20px;width:480px;max-width:95vw;box-shadow:0 24px 80px rgba(0,0,0,.6);animation:.2s modalIn}.tag-option{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius);margin-bottom:6px;cursor:pointer;border:1px solid var(--border);transition:.1s}.stage-pillar.active,.tag-option.selected{border-color:var(--gold);background:var(--gold-dim2)}.sdr-sidebar{width:300px;flex-shrink:0;border-left:1px solid var(--border);overflow-y:auto}.sdr-card{border:1px solid var(--border);border-radius:var(--radius2);padding:16px;margin-bottom:10px;transition:border-color .15s;position:relative}.sdr-card.not-yet{border-left:3px solid var(--border3)}.sdr-card.promoted{border-left:3px solid var(--purple);opacity:.7}.readiness-num{font-size:18px;line-height:1}.readiness-label{font-size:8px}.dim-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}.dim-name{font-size:10px;color:var(--text2);min-width:120px}.dim-bar-track{flex:1;height:5px;background:var(--bg4);border-radius:3px;overflow:hidden}.dim-bar-fill{height:100%;border-radius:3px;transition:width .4s}.dim-val{font-size:10px;min-width:30px;text-align:right}.stage-pillar{display:flex;flex-direction:column;align-items:center;flex:1;padding:10px 6px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg3);cursor:pointer;transition:.12s}.stage-num{font-size:20px}.stage-label{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);text-align:center;margin-top:3px}.promo-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:11px}.promo-badge.PROMOTED{background:var(--purple-dim);color:var(--purple);border:1px solid rgba(155,108,240,.25)}.tracker-group{border: 1px solid #1e2538;border-radius: 8px;margin-bottom: 10px;overflow: hidden;}
       `}</style>
 
       {/* Sidebar */}
@@ -2231,9 +2319,9 @@ const Dashboard: React.FC = () => {
           <div className="topbar-title">{PAGE_TITLES[activePage]?.[0] || activePage}</div>
           <div className="topbar-meta">{PAGE_TITLES[activePage]?.[1] || 'City Financial'}</div>
           <div className="topbar-stats">
-            <div className="topbar-stat"><div className="topbar-stat-val">{allCalls.length.toLocaleString()}</div><div className="topbar-stat-label">Calls</div></div>
-            <div className="topbar-stat"><div className="topbar-stat-val gold">{allCalls.length === 0 ? "0.0" : avgQaScore.toFixed(1)}</div><div className="topbar-stat-label">Avg QA</div></div>
-            <div className="topbar-stat"><div className="topbar-stat-val green">{outcomeCounts.enrolled}</div><div className="topbar-stat-label">Enrolled</div></div>
+            <div className="topbar-stat"><div className="topbar-stat-val">{qaLiveFeedCallWidget?.data.totalCalls}</div><div className="topbar-stat-label">Calls</div></div>
+            <div className="topbar-stat"><div className="topbar-stat-val gold">{qaLiveFeedCallWidget?.data.avgScore}</div><div className="topbar-stat-label">Avg QA</div></div>
+            <div className="topbar-stat"><div className="topbar-stat-val green">{qaLiveFeedCallWidget?.data.totalEnrolled}</div><div className="topbar-stat-label">Enrolled</div></div>
           </div>
           <div className="topbar-divider"></div>
           <div className="date-range">
@@ -2332,13 +2420,13 @@ const Dashboard: React.FC = () => {
                 <div className="split-sidebar-section">
                   <div className="split-sidebar-title">Outcomes Today</div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '8px' }}>
-                    <div style={{ textAlign: 'center' }}><div className="font-mono fw-700 text-green" style={{ fontSize: '18px' }}>{outcomeCounts.enrolled}</div><div className="fs-10 text-muted uppercase">Enrolled</div></div>
-                    <div style={{ textAlign: 'center' }}><div className="font-mono fw-700 text-gold" style={{ fontSize: '18px' }}>{outcomeCounts.pitch}</div><div className="fs-10 text-muted uppercase">Pitch</div></div>
-                    <div style={{ textAlign: 'center' }}><div className="font-mono fw-700" style={{ fontSize: '18px', color: 'var(--blue)' }}>{outcomeCounts.callback}</div><div className="fs-10 text-muted uppercase">Callback</div></div>
+                    <div style={{ textAlign: 'center' }}><div className="font-mono fw-700 text-green" style={{ fontSize: '18px' }}>{qaLiveFeedCallWidget?.data.totalEnrolled}</div><div className="fs-10 text-muted uppercase">Enrolled</div></div>
+                    <div style={{ textAlign: 'center' }}><div className="font-mono fw-700 text-gold" style={{ fontSize: '18px' }}>{qaLiveFeedCallWidget?.data.totalPitch}</div><div className="fs-10 text-muted uppercase">Pitch</div></div>
+                    <div style={{ textAlign: 'center' }}><div className="font-mono fw-700" style={{ fontSize: '18px', color: 'var(--blue)' }}>{qaLiveFeedCallWidget?.data.totalCallback}</div><div className="fs-10 text-muted uppercase">Callback</div></div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                    <div style={{ textAlign: 'center' }}><div className="font-mono fw-700 text-red" style={{ fontSize: '18px' }}>{outcomeCounts.declined}</div><div className="fs-10 text-muted uppercase">Declined</div></div>
-                    <div style={{ textAlign: 'center' }}><div className="font-mono fw-700" style={{ fontSize: '18px', color: 'var(--orange)' }}>{outcomeCounts.hotique}</div><div className="fs-10 text-muted uppercase">Hotique</div></div>
+                    <div style={{ textAlign: 'center' }}><div className="font-mono fw-700 text-red" style={{ fontSize: '18px' }}>{qaLiveFeedCallWidget?.data.totalDeclined}</div><div className="fs-10 text-muted uppercase">Declined</div></div>
+                    <div style={{ textAlign: 'center' }}><div className="font-mono fw-700" style={{ fontSize: '18px', color: 'var(--orange)' }}>{qaLiveFeedCallWidget?.data.totalHotique}</div><div className="fs-10 text-muted uppercase">Hotique</div></div>
                   </div>
                 </div>
 

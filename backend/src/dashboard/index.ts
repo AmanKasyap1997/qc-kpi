@@ -36,6 +36,111 @@ router.get("/zendesk", async (req: Request, res: Response) => {
 });
 
 
+router.get("/live-feed-widget-data", async (req: Request, res: Response) => {
+    const client = await db.connect();
+
+    try {
+        const dateFrom = req.query.dateFrom as string | undefined;
+        const dateTo   = req.query.dateTo   as string | undefined;
+
+        const conditions: string[] = ["c.deleted_at IS NULL"];
+        const params: any[] = [];
+
+        if (dateFrom) {
+            params.push(dateFrom);
+            conditions.push(`c.started_at >= $${params.length}::date`);
+        }
+        if (dateTo) {
+            params.push(dateTo);
+            conditions.push(`c.started_at < ($${params.length}::date + INTERVAL '1 day')`);
+        }
+
+        const whereClause = conditions.join(" AND ");
+
+        // ── Query 1: summary stats + flags in a single scan via CTE ──────────
+        const mainResult = await client.query(
+            `
+            WITH base AS (
+                SELECT
+                    c.id,
+                    c.outcome,
+                    c.started_at,
+                    COALESCE(ca.overall_call_score, 0)  AS score,
+                    COALESCE(ca.flags::jsonb, '[]'::jsonb) AS flags
+                FROM calls c
+                LEFT JOIN call_analytics ca ON ca.call_id = c.id
+                WHERE ${whereClause}
+            )
+            SELECT
+                COUNT(*) AS "totalCalls",
+                ROUND(AVG(score)::numeric, 2) AS "avgScore",
+                COUNT(*) FILTER (WHERE outcome = 'Enrolled') AS "totalEnrolled",
+                COUNT(*) FILTER (WHERE outcome = 'Debt Pitch') AS "totalPitch",
+                COUNT(*) FILTER (WHERE outcome = 'Callback') AS "totalCallback",
+                COUNT(*) FILTER (WHERE outcome = 'Declined') AS "totalDeclined",
+                COUNT(*) FILTER (WHERE outcome = 'Hotique') AS "totalHotique",
+                COUNT(*) FILTER (WHERE flags @> '["Early Debt Pitch"]'::jsonb) AS "earlyDebtPitch",
+                COUNT(*) FILTER (WHERE flags @> '["Skipped Qualifying"]'::jsonb) AS "skippedQualifying",
+                COUNT(*) FILTER (WHERE flags @> '["Rushed Call"]'::jsonb) AS "rushedCall",
+                COUNT(*) FILTER (WHERE flags @> '["Skipped Credit Pull"]'::jsonb) AS "skippedCreditPull",
+                COUNT(*) FILTER (WHERE flags @> '["Early Decline"]'::jsonb) AS "earlyDecline",
+                COALESCE(
+                    jsonb_agg(
+                        jsonb_build_object('id', id, 'flags', flags)
+                        ORDER BY started_at DESC
+                    ),
+                    '[]'::jsonb
+                ) AS "flagsData"
+
+            FROM base
+            `,
+            params
+        );
+
+        // ── Query 2: agent stats (needs GROUP BY, stays separate) ─────────────
+        const agentResult = await client.query(
+            `
+            SELECT
+                a.id,
+                a.name AS "agentName",
+                COUNT(c.id) AS "totalCalls",
+                ROUND(
+                    SUM(COALESCE(ca.overall_call_score, 0))::numeric
+                    / NULLIF(COUNT(c.id), 0),
+                    2
+                ) AS "avgScore"
+            FROM calls c
+            INNER JOIN agents a  ON a.id  = c.agent_id
+            LEFT  JOIN call_analytics ca ON ca.call_id = c.id
+            WHERE ${whereClause}
+            GROUP BY a.id, a.name
+            ORDER BY "avgScore" DESC, a.name ASC
+            `,
+            params
+        );
+
+        const { flagsData, ...summary } = mainResult.rows[0];
+
+        return res.status(200).json({
+            success:   true,
+            data:      summary,
+            agentData: agentResult.rows,
+            flagsData: flagsData,   // already an array from jsonb_agg
+        });
+
+    } catch (error: any) {
+        console.error("GET /live-feed-widget-data error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to read call data",
+            error:   error.message,
+        });
+    } finally {
+        client.release();
+    }
+});
+
+
 router.get("/calls", async (req: Request, res: Response) => {
     const mode = String(req.query.mode || 'all');
     const rawDateFrom = String(req.query.dateFrom || '2026-06-16');
@@ -46,68 +151,95 @@ router.get("/calls", async (req: Request, res: Response) => {
     const client = await db.connect();
 
     try {
-        const queryParams = [dateFrom, dateTo];
+        const page = Math.max(1, parseInt(req.query.page as string) || 1);
+        const pageSize = Math.min(200, Math.max(1, parseInt(req.query.pageSize as string) || 50));
+        const offset = (page - 1) * pageSize;
+
+        const dateFrom = req.query.dateFrom as string | undefined;
+        const dateTo = req.query.dateTo as string | undefined;
+
+        // Build WHERE clause
+        const conditions: string[] = ["c.deleted_at IS NULL"];
+        const params: any[] = [];
+
+        if (dateFrom) {
+            params.push(dateFrom);
+            conditions.push(`c.started_at >= $${params.length}::date`);
+        }
+        if (dateTo) {
+            params.push(dateTo);
+            conditions.push(`c.started_at < ($${params.length}::date + INTERVAL '1 day')`);
+        }
+
+        const whereClause = conditions.join(" AND ");
+
+        // Count query for total
+        const countResult = await client.query(
+            `SELECT COUNT(*) AS total FROM calls c WHERE ${whereClause}`,
+            params
+        );
+        const total = parseInt(countResult.rows[0].total);
+        const totalPages = Math.ceil(total / pageSize);
+
+        // Data query
+        params.push(pageSize);
+        const limitParam = params.length;
+        params.push(offset);
+        const offsetParam = params.length;
+
         const result = await client.query(`
             SELECT
                 a.id AS "agentIdx",
                 a.name AS "agentName",
-
                 COALESCE(ca.ai_generated_department, '') AS "agentDept",
                 COALESCE(ca.overall_call_score, 0) AS "score",
-
                 c.id AS "id",
                 COALESCE(c.client_name, '') AS "client",
                 COALESCE(c.client_phone, '') AS "clientPhone",
                 COALESCE(c.outcome, 'Unknown') AS "outcome",
                 COALESCE(c.duration_seconds, 0) AS "duration",
                 COALESCE(c.campaign, '') AS "campaign",
-
                 COALESCE(ca.flags, '[]'::jsonb) AS "flags",
-
                 COALESCE(ca.call_quality, 0) AS "callQuality",
                 COALESCE(ca.disclosures_percentage, 0) AS "disclosuresPercentage",
                 COALESCE(ca.compliance_percentage, 0) AS "compliancePercentage",
-
                 COALESCE(ca.call_summary, '') AS "callSummary",
-
                 COALESCE(ca.agent_strengths, '[]'::jsonb) AS "agentStrengths",
                 COALESCE(ca.agent_improvements, '[]'::jsonb) AS "agentImprovements",
                 COALESCE(ca.coaching_actions, '[]'::jsonb) AS "coachingActions",
-
                 COALESCE(ca.academy_tag, '') AS "academyTag",
                 COALESCE(ca.academy_collection, '') AS "academyCollection",
-
                 COALESCE(ca.ai_insights, '{}'::jsonb) AS "insights",
                 COALESCE(ca.checkpoint_results, '[]'::jsonb) AS "checkpointResults",
                 COALESCE(ca.risk_flags, '[]'::jsonb) AS "riskFlags",
                 COALESCE(ca.good_trackers_hit, '[]'::jsonb) AS "goodTrackersHit",
                 COALESCE(ca.bad_trackers_triggered, '[]'::jsonb) AS "badTrackersTriggered",
-
                 c.started_at AS "startedAt",
                 c.started_at AS "date",
                 c.ended_at AS "endedAt"
             FROM calls c
-            LEFT JOIN agents a
-                ON a.id = c.agent_id
-            LEFT JOIN call_analytics ca
-                ON ca.call_id = c.id
-            WHERE c.deleted_at IS NULL AND (c.started_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP))
+            LEFT JOIN agents a ON a.id = c.agent_id
+            LEFT JOIN call_analytics ca ON ca.call_id = c.id
+            WHERE ${whereClause}
             ORDER BY c.started_at DESC
-        `, queryParams);
+            LIMIT $${limitParam} OFFSET $${offsetParam}
+        `, params);
 
         return res.status(200).json({
             success: true,
-            count: result.rows.length,
-            data: result.rows
+            data: result.rows,
+            pagination: {
+                page,
+                pageSize,
+                total,
+                totalPages,
+                hasNext: page < totalPages,
+                hasPrev: page > 1,
+            }
         });
     } catch (error: any) {
         console.error("GET /calls error:", error);
-
-        return res.status(500).json({
-            success: false,
-            message: "Failed to read call data",
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: "Failed to read call data", error: error.message });
     } finally {
         client.release();
     }
