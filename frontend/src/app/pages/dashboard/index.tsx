@@ -48,8 +48,8 @@ interface Call {
 
 interface QaLiveFeedCallWidget {
   data: {
-    totalCalls:number;
-    avgScore:number;
+    totalCalls: number;
+    avgScore: number;
     totalEnrolled: number;
     totalPitch: number;
     totalCallback: number;
@@ -413,6 +413,7 @@ const Dashboard: React.FC = () => {
   };
   // State
   const [activePage, setActivePage] = useState('qa-live');
+  const [totalCallsCount, setTotalCallsCount] = useState(0);
   const [allCalls, setAllCalls] = useState<Call[]>([]);
   const [qaLiveFeedCallWidget, setQaLiveFeedCallWidget] = useState<QaLiveFeedCallWidget | null>(null);
   const [loadingCalls, setLoadingCalls] = useState<boolean>(true);
@@ -596,7 +597,7 @@ const Dashboard: React.FC = () => {
   };
   const fetchLiveFeedwidgetData = async () => {
     try {
-            setLoadingCalls(true);
+      setLoadingCalls(true);
 
       const response = await fetch(
         `${API_URL}/api/dashboard/live-feed-widget-data?dateFrom=${dateFrom}&dateTo=${dateTo}`
@@ -606,6 +607,7 @@ const Dashboard: React.FC = () => {
       const result = await response.json();
       console.log(result, 'resultresult')
       if (result.success) {
+        setTotalCallsCount(result.data.totalCalls);
         setQaLiveFeedCallWidget({
           data: result.data,
           agentData: result.agentData,
@@ -615,7 +617,7 @@ const Dashboard: React.FC = () => {
     } catch (err: any) {
       showToast('critical', 'Database Link Error', err.message || 'Could not fetch call records.', setToasts);
     } finally {
-            setLoadingCalls(false);
+      setLoadingCalls(false);
 
     }
   };
@@ -664,17 +666,20 @@ const Dashboard: React.FC = () => {
     }
   }
 
-  const fetchAcademyData = async () => {
+  const fetchAcademyData = async (page = 1) => {
     try {
       setIsDataLoading(true);
-      const response = await fetch(`${API_URL}/api/dashboard/academy?dateFrom=${dateFrom}&dateTo=${dateTo}`);
+      setCurrentPage(page);
+      const response = await fetch(`${API_URL}/api/dashboard/academy?dateFrom=${dateFrom}&dateTo=${dateTo}&page=${page}&pageSize=${ROWS_PER_PAGE}`);
       const data = await response.json();
       if (data && data.calls) {
-        data.calls = data.calls.map(call => ({
+        data.calls = data.calls.map((call: any) => ({
           ...call,
           date: new Date(call.date) // This makes .toLocaleDateString() work everywhere!
         }));
       }
+      setTotalCallsCount(data.totalCallsCount || 0);
+      setTotalPages(Math.ceil(totalCallsCount / ROWS_PER_PAGE) || 1);
       setAcademyData(data);
     } catch (error) {
       console.error("Error fetching leaderboard data:", error);
@@ -771,6 +776,7 @@ const Dashboard: React.FC = () => {
     if (activePage === 'qa-live') { fetchLiveFeedData(1); fetchLiveFeedwidgetData(); }
     if (activePage === 'zendesk') { fetchZendeskData(); }
     if (activePage === 'leaderboard') { fetchLeaderBoardData(); }
+    if (activePage === 'analytics') { fetchAnalitycsData(); }
     if (activePage === 'academy') { fetchAcademyData(); }
     if (activePage === 'pips') { fetchPipData(); }
   };
@@ -910,7 +916,7 @@ const Dashboard: React.FC = () => {
           <div><span className={`badge ${outcomeClass(c.outcome)}`} style={{ fontSize: '10px' }}>{c.outcome}</span></div>
           <div className="fs-11 text-muted" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.agentDept}</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-            <span className = 'fs-10 text-muted'>{c.campaign}</span>
+            <span className='fs-10 text-muted'>{c.campaign}</span>
             {flagsHtml.length > 0 ? flagsHtml : <span style={{ color: 'var(--text4)', fontSize: '10px' }}>—</span>}
           </div>
         </div>
@@ -954,7 +960,7 @@ const Dashboard: React.FC = () => {
     return (
       <>
         {rows}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 12px', borderTop: '1px solid var(--border)', background: 'var(--bg2)', position: 'fixed', bottom: 0,width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 12px', borderTop: '1px solid var(--border)', background: 'var(--bg2)', position: 'fixed', bottom: 0, width: '100%' }}>
           <button
             onClick={() => fetchLiveFeedData(currentPage - 1)}
             disabled={currentPage === 1}
@@ -1205,11 +1211,44 @@ const Dashboard: React.FC = () => {
     if (academyDept) calls = calls.filter((c: any) => c.agentDept === academyDept);
     if (academyMarker) calls = calls.filter((c: any) => c.markers && c.markers.some((m: any) => m.label === academyMarker));
 
-    // 3. Exact original count math execution using safe navigation chains
-    const ex = academyData && (academyData as any).calls ? (academyData as any).calls.filter((c: any) => c.academyTag === 'exemplar').length : 0;
-    const ft = academyData && (academyData as any).calls ? (academyData as any).calls.filter((c: any) => c.academyTag === 'featured').length : 0;
-    const wn = academyData && (academyData as any).calls ? (academyData as any).calls.filter((c: any) => c.academyTag === 'warning').length : 0;
-    const totalCount = academyData && (academyData as any).calls ? (academyData as any).calls.length : 0;
+    const ex = academyData && (academyData as any).aggregations?.exemplarCount ? (academyData as any).aggregations.exemplarCount : 0;
+    const ft = academyData && (academyData as any).aggregations?.featuredCount ? (academyData as any).aggregations.featuredCount : 0;
+    const wn = academyData && (academyData as any).aggregations?.warningCount ? (academyData as any).aggregations.warningCount : 0;
+    const totalCount = totalCallsCount;
+
+    const pgBtnStyle = (active: boolean): React.CSSProperties => ({
+      padding: '3px 8px',
+      borderRadius: 'var(--radius)',
+      border: `1px solid ${active ? 'var(--gold)' : 'var(--border2)'}`,
+      background: active ? 'var(--gold-dim)' : 'var(--bg3)',
+      color: active ? 'var(--gold)' : 'var(--text2)',
+      fontFamily: 'var(--mono)',
+      fontSize: '11px',
+      cursor: active ? 'default' : 'pointer',
+      minWidth: '28px',
+    });
+
+    const pageButtons = () => {
+      const buttons = [];
+      const delta = 2;
+      const left = Math.max(1, currentPage - delta);
+      const right = Math.min(totalPages, currentPage + delta);
+      if (left > 1) {
+        buttons.push(<button key={1} onClick={() => fetchAcademyData(1)} style={pgBtnStyle(currentPage == 1)}>1</button>);
+        if (left > 2) buttons.push(<span key="l-ellipsis" style={{ color: 'var(--text3)', padding: '0 4px', fontSize: '11px' }}>…</span>);
+      }
+      for (let i = left; i <= right; i++) {
+        buttons.push(<button key={i} onClick={() => fetchAcademyData(i)} style={pgBtnStyle(i == currentPage)}>{i}</button>);
+      }
+      if (right < totalPages) {
+        if (right < totalPages - 1) buttons.push(<span key="r-ellipsis" style={{ color: 'var(--text3)', padding: '0 4px', fontSize: '11px' }}>…</span>);
+        buttons.push(<button key={totalPages} onClick={() => fetchAcademyData(totalPages)} style={pgBtnStyle(currentPage === totalPages)}>{totalPages}</button>);
+      }
+      return buttons;
+    };
+
+    const startIdx = totalCount > 0 ? (currentPage - 1) * ROWS_PER_PAGE + 1 : 0;
+    const endIdx = Math.min(currentPage * ROWS_PER_PAGE, totalCount);
 
     return (
       <>
@@ -1234,11 +1273,8 @@ const Dashboard: React.FC = () => {
             const scCol = scoreColor(c.score);
             const tagCls = c.academyTag;
             const tagLabels = { exemplar: '⭐ Exemplar', featured: '🎯 Featured', warning: '⚠️ Warning' };
-
-            // Convert backend API string timestamp cleanly into a JavaScript date object
             const cleanDate = c.date instanceof Date ? c.date : new Date(c.date);
 
-            // Build waveform visualization segments
             const segs = Array.from({ length: 60 }, (_, i) => {
               const callSeed = c.id ? String(c.id).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : i;
               const stableRandomValue = Math.sin(callSeed + i) * 10000;
@@ -1453,6 +1489,43 @@ const Dashboard: React.FC = () => {
             </div>
           )}
         </div>
+        {/* FIXED POSITION OUTSIDE THE MAP CONTAINER - STICKY LOWER PAGINATION BAR */}
+        {totalPages > 1 && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '10px 12px',
+            borderTop: '1px solid var(--border)',
+            background: 'var(--bg2)',
+            position: 'sticky',
+            bottom: 0,
+            width: '100%',
+            zIndex: 100
+          }}>
+            <button
+              onClick={() => fetchAcademyData(currentPage - 1)}
+              disabled={currentPage === 1}
+              style={{ ...pgBtnStyle(false), opacity: currentPage === 1 ? 0.4 : 1 }}
+            >
+              ← Prev
+            </button>
+
+            {pageButtons()}
+
+            <button
+              onClick={() => fetchAcademyData(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              style={{ ...pgBtnStyle(false), opacity: currentPage === totalPages ? 0.4 : 1 }}
+            >
+              Next →
+            </button>
+
+            <span style={{ marginLeft: 'auto', fontSize: '10px', color: 'var(--text3)', fontFamily: 'var(--mono)' }}>
+              {startIdx}–{endIdx} of {totalCount.toLocaleString()}
+            </span>
+          </div>
+        )}
       </>
     );
   };
@@ -2224,7 +2297,7 @@ const Dashboard: React.FC = () => {
             <div className={`nav-item ${activePage === 'qa-live' ? 'active' : ''}`} onClick={() => setActivePage('qa-live')}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
               Live Feed
-              <span className="nav-badge">{allCalls.length.toLocaleString()}</span>
+              <span className="nav-badge">{totalCallsCount.toLocaleString()}</span>
             </div>
             <div className={`nav-item ${activePage === 'leaderboard' ? 'active' : ''}`} onClick={() => setActivePage('leaderboard')}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
@@ -2620,7 +2693,7 @@ const Dashboard: React.FC = () => {
                     <div className="panel-hdr"><span className="panel-title">Score Distribution</span></div>
                     <div className="panel-body">
                       <div className="bar-chart" style={{ height: '90px' }}>
-                        {analyticsData.scoreDistribution?.map((b) => (
+                        {(analyticsData as any).scoreDistribution?.map((b: any) => (
                           <div key={b.min} className="bar-col">
                             <div className="bar-y-val fs-10">{b.count}</div>
                             <div className="bar-seg" style={{ height: `${(b.count / 614) * 100}%`, background: b.min < 50 ? 'var(--red)' : b.min < 80 ? 'var(--gold)' : 'var(--green)' }}></div>
@@ -2635,7 +2708,7 @@ const Dashboard: React.FC = () => {
                   <div className="panel">
                     <div className="panel-hdr"><span className="panel-title">Agent Comparison</span></div>
                     <div className="panel-body">
-                      {analyticsData.agentComparison?.map((a, idx) => (
+                      {(analyticsData as any).agentComparison?.map((a: any, idx: any) => (
                         <div key={a.name} style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '5px' }}>
                           <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: agentColor(idx), flexShrink: 0 }}></div>
                           <div style={{ fontSize: '10px', color: 'var(--text2)', minWidth: '110px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</div>
@@ -2714,7 +2787,7 @@ const Dashboard: React.FC = () => {
                         Loading hierarchy data...
                       </div>
                     ) : (
-                      escalationSteps.map((step, index) => {
+                      escalationSteps.map((step: any, index) => {
                         const isLast = index === escalationSteps.length - 1;
 
                         return (

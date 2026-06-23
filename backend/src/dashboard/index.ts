@@ -1,47 +1,43 @@
 import express from "express";
 import { Request, Response } from "express";
 import db from "../db/pool";
-import { any } from "joi";
 const router = express.Router();
 
-// Your interface/type definition for safety
-interface Call {
-    id: number;
-    agentIdx: number;
-    agentName: string;
-    agentDept: string;
-    score: number;
-    outcome: string;
-    flags: string[];
-    date: Date;
-    duration: string;
-    campaign: string;
-    client: string;
-    leadSource: string;
-    subId: string;
-    expanded: boolean;
-}
 
 router.get("/zendesk", async (req: Request, res: Response) => {
-    const { dateFrom } = req.query;
+    const rawDateFrom = String(req.query.dateFrom || '2026-06-16');
+    const rawDateTo = String(req.query.dateTo || '2026-06-18');
+    const dateFrom = `${rawDateFrom} 00:00:00`;
+    const dateTo = `${rawDateTo} 23:59:59`;
     try {
-        const today = dateFrom || new Date().toISOString().slice(0, 10);
-        const statsQuery = `SELECT COUNT(*) FILTER (WHERE entity = 'TAX') AS tax_total, COUNT(*) FILTER (WHERE entity = 'TAX' AND status = 'PENDING') AS tax_pending, COUNT(*) FILTER (WHERE entity = 'TAX' AND status = 'PENDING' AND priority = 'urgent') AS tax_urgent_pending, COUNT(*) FILTER (WHERE entity = 'TAX' AND status = 'SOLVED') AS tax_solved, COUNT(*) FILTER (WHERE entity = 'DEBT') AS debt_total, COUNT(*) FILTER (WHERE entity = 'DEBT' AND status = 'OPEN') AS debt_open, COUNT(*) FILTER (WHERE entity = 'DEBT' AND assignee_id IS NULL) AS debt_unassigned, COUNT(*) FILTER (WHERE entity = 'DEBT' AND status = 'SOLVED') AS debt_solved FROM zendesk_tickets WHERE DATE(created_at) = $1`;
-        const result = await db.query(statsQuery, [today]);
-        res.json(result.rows[0]);
+        const statsQuery = `
+                            SELECT 
+                                COUNT(*) FILTER (WHERE entity = 'TAX') AS tax_total, 
+                                COUNT(*) FILTER (WHERE entity = 'TAX' AND LOWER(status) = 'pending') AS tax_pending, 
+                                COUNT(*) FILTER (WHERE entity = 'TAX' AND LOWER(status) = 'pending' AND LOWER(priority) = 'urgent') AS tax_urgent_pending, 
+                                COUNT(*) FILTER (WHERE entity = 'TAX' AND LOWER(status) = 'solved') AS tax_solved, 
+                                COUNT(*) FILTER (WHERE entity = 'DEBT') AS debt_total, 
+                                COUNT(*) FILTER (WHERE entity = 'DEBT' AND LOWER(status) = 'open') AS debt_open, 
+                                COUNT(*) FILTER (WHERE entity = 'DEBT' AND assignee_id IS NULL) AS debt_unassigned, 
+                                COUNT(*) FILTER (WHERE entity = 'DEBT' AND LOWER(status) = 'solved') AS debt_solved 
+                            FROM zendesk_tickets 
+                            WHERE webhook_trigger >= CAST($1 AS TIMESTAMP) AND webhook_trigger <= CAST($2 AS TIMESTAMP);
+        `;
+        const result = await db.query(statsQuery, [dateFrom, dateTo]);
+
+        res.json(result.rows[0] || { tax_total: 0, tax_pending: 0, tax_urgent_pending: 0, tax_solved: 0, debt_total: 0, debt_open: 0, debt_unassigned: 0, debt_solved: 0 });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
     }
 });
 
-
 router.get("/live-feed-widget-data", async (req: Request, res: Response) => {
     const client = await db.connect();
 
     try {
         const dateFrom = req.query.dateFrom as string | undefined;
-        const dateTo   = req.query.dateTo   as string | undefined;
+        const dateTo = req.query.dateTo as string | undefined;
 
         const conditions: string[] = ["c.deleted_at IS NULL"];
         const params: any[] = [];
@@ -122,8 +118,8 @@ router.get("/live-feed-widget-data", async (req: Request, res: Response) => {
         const { flagsData, ...summary } = mainResult.rows[0];
 
         return res.status(200).json({
-            success:   true,
-            data:      summary,
+            success: true,
+            data: summary,
             agentData: agentResult.rows,
             flagsData: flagsData,   // already an array from jsonb_agg
         });
@@ -133,13 +129,12 @@ router.get("/live-feed-widget-data", async (req: Request, res: Response) => {
         return res.status(500).json({
             success: false,
             message: "Failed to read call data",
-            error:   error.message,
+            error: error.message,
         });
     } finally {
         client.release();
     }
 });
-
 
 router.get("/calls", async (req: Request, res: Response) => {
     const mode = String(req.query.mode || 'all');
@@ -245,7 +240,6 @@ router.get("/calls", async (req: Request, res: Response) => {
     }
 });
 
-
 router.get('/leaderboard', async (req: Request, res: Response): Promise<void> => {
     try {
         const mode = String(req.query.mode || 'all');
@@ -315,111 +309,228 @@ router.get('/leaderboard', async (req: Request, res: Response): Promise<void> =>
 
 router.get('/analytics', async (req: Request, res: Response): Promise<void> => {
     try {
-        // Extract query parameters (ready for when you transition to dynamic data)
         const { dateFrom, dateTo } = req.query;
 
-        const staticAnalyticsData = {
+        if (!dateFrom || !dateTo) {
+            res.status(400).json({ error: "dateFrom and dateTo query parameters are required." });
+            return;
+        }
+
+        // 1. OVERVIEW & CONVERSION BREAKDOWN (Single-pass conditional query)
+        const overviewQuery = `
+            SELECT 
+                COUNT(c.id)::int AS "totalCalls",
+                COALESCE(AVG(ca.compliance_percentage), 0)::float AS "avgAdherence",
+                COALESCE(AVG(c.duration_seconds), 0)::float AS "avgDurationSeconds",
+                COUNT(CASE WHEN ca.overall_call_score IS NOT NULL THEN 1 END)::int AS "scored",
+                
+                -- Conversions / Outcomes Breakdown
+                COUNT(CASE WHEN LOWER(TRIM(c.outcome)) = 'enrolled' THEN 1 END)::int AS "enrolled",
+                COUNT(CASE WHEN LOWER(TRIM(c.outcome)) = 'debt pitch' OR LOWER(TRIM(c.outcome)) = 'debtpitch' THEN 1 END)::int AS "debtPitch",
+                COUNT(CASE WHEN LOWER(TRIM(c.outcome)) = 'callback' THEN 1 END)::int AS "callback",
+                COUNT(CASE WHEN LOWER(TRIM(c.outcome)) = 'declined' THEN 1 END)::int AS "declined",
+                COUNT(CASE WHEN LOWER(TRIM(c.outcome)) = 'hotique' THEN 1 END)::int AS "hotique"
+            FROM calls c
+            LEFT JOIN call_analytics ca ON ca.call_id = c.id
+            WHERE (c.created_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP));
+        `;
+        const overviewRes = await db.query(overviewQuery, [dateFrom, dateTo]);
+        const overviewData = overviewRes.rows[0];
+
+        // Format Duration from Seconds into MM:SS
+        const formatDuration = (totalSeconds: number): string => {
+            const mins = Math.floor(totalSeconds / 60);
+            const secs = Math.floor(totalSeconds % 60);
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        };
+
+        const totalCalls = overviewData.totalCalls || 0;
+        const scoredCount = overviewData.scored || 0;
+
+        // Calculate Rate Percentages safely
+        const enrollmentPercent = scoredCount > 0 ? parseFloat(((overviewData.enrolled / scoredCount) * 100).toFixed(1)) : 0.0;
+        const debtPitchPercent = scoredCount > 0 ? parseFloat(((overviewData.debtPitch / scoredCount) * 100).toFixed(1)) : 0.0;
+
+        // 2. DAILY QA TREND (Grouped by Day)
+        const dailyTrendQuery = `
+            SELECT 
+                TO_CHAR(c.created_at, 'MM/DD') AS "date",
+                ROUND(AVG(COALESCE(ca.overall_call_score, 0))::numeric, 1)::float AS "value"
+            FROM calls c
+            INNER JOIN call_analytics ca ON ca.call_id = c.id
+            WHERE (c.created_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP))
+            GROUP BY TO_CHAR(c.created_at, 'MM/DD'), DATE(c.created_at)
+            ORDER BY DATE(c.created_at) ASC;
+        `;
+        const dailyTrendRes = await db.query(dailyTrendQuery, [dateFrom, dateTo]);
+
+        // 3. SCORE DISTRIBUTION histogram (0-9, 10-19, etc.)
+        const scoreDistQuery = `
+            SELECT 
+                COUNT(CASE WHEN ca.overall_call_score BETWEEN 0 AND 9 THEN 1 END)::int AS "bucket_0_9",
+                COUNT(CASE WHEN ca.overall_call_score BETWEEN 10 AND 19 THEN 1 END)::int AS "bucket_10_19",
+                COUNT(CASE WHEN ca.overall_call_score BETWEEN 20 AND 29 THEN 1 END)::int AS "bucket_20_29",
+                COUNT(CASE WHEN ca.overall_call_score BETWEEN 30 AND 39 THEN 1 END)::int AS "bucket_30_39",
+                COUNT(CASE WHEN ca.overall_call_score BETWEEN 40 AND 49 THEN 1 END)::int AS "bucket_40_49",
+                COUNT(CASE WHEN ca.overall_call_score BETWEEN 50 AND 59 THEN 1 END)::int AS "bucket_50_59",
+                COUNT(CASE WHEN ca.overall_call_score BETWEEN 60 AND 69 THEN 1 END)::int AS "bucket_60_69",
+                COUNT(CASE WHEN ca.overall_call_score BETWEEN 70 AND 79 THEN 1 END)::int AS "bucket_70_79",
+                COUNT(CASE WHEN ca.overall_call_score BETWEEN 80 AND 89 THEN 1 END)::int AS "bucket_80_89",
+                COUNT(CASE WHEN ca.overall_call_score BETWEEN 90 AND 100 THEN 1 END)::int AS "bucket_90_100"
+            FROM calls c
+            INNER JOIN call_analytics ca ON ca.call_id = c.id
+            WHERE (c.created_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP));
+        `;
+        const scoreDistRes = await db.query(scoreDistQuery, [dateFrom, dateTo]);
+        const distData = scoreDistRes.rows[0];
+
+        const scoreDistribution = [
+            { min: 0, max: 9, count: distData?.bucket_0_9 || 0 },
+            { min: 10, max: 19, count: distData?.bucket_10_19 || 0 },
+            { min: 20, max: 29, count: distData?.bucket_20_29 || 0 },
+            { min: 30, max: 39, count: distData?.bucket_30_39 || 0 },
+            { min: 40, max: 49, count: distData?.bucket_40_49 || 0 },
+            { min: 50, max: 59, count: distData?.bucket_50_59 || 0 },
+            { min: 60, max: 69, count: distData?.bucket_60_69 || 0 },
+            { min: 70, max: 79, count: distData?.bucket_70_79 || 0 },
+            { min: 80, max: 89, count: distData?.bucket_80_89 || 0 },
+            { min: 90, max: 100, count: distData?.bucket_90_100 || 0 }
+        ];
+
+        // 4. AGENT COMPARISON RANKINGS
+        const agentCompQuery = `
+            SELECT 
+                a.name AS "name",
+                ROUND(AVG(COALESCE(ca.overall_call_score, 0))::numeric, 1)::float AS "score"
+            FROM calls c
+            INNER JOIN agents a ON c.agent_id = a.id
+            INNER JOIN call_analytics ca ON ca.call_id = c.id
+            WHERE (c.created_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP))
+            GROUP BY a.id, a.name
+            ORDER BY score DESC;
+        `;
+        const agentCompRes = await db.query(agentCompQuery, [dateFrom, dateTo]);
+
+        // 5. ASSEMBLE DYNAMIC RESPONSE OBJECT
+        const dynamicAnalyticsData = {
             overview: {
-                totalCalls: 5555,
-                avgAdherence: 53.6,
-                avgLength: "6:46",
-                scored: 2273,
-                pending: 0,
+                totalCalls: totalCalls,
+                avgAdherence: parseFloat(Number(overviewData.avgAdherence).toFixed(1)),
+                avgLength: formatDuration(overviewData.avgDurationSeconds || 0),
+                scored: scoredCount,
+                pending: 0, // Hardcoded or link to tracking system if necessary
                 errors: 0
             },
             conversionRates: {
                 rates: {
-                    enrollment: { percentage: 3.3, count: 74, total: 2273 },
-                    debtPitch: { percentage: 2.3, count: 52, total: 2273 },
+                    enrollment: { percentage: enrollmentPercent, count: overviewData.enrolled, total: scoredCount },
+                    debtPitch: { percentage: debtPitchPercent, count: overviewData.debtPitch, total: scoredCount },
                     other: { percentage: 0.0, count: null, total: null }
                 },
                 breakdown: {
-                    enrolled: 74,
-                    debtPitch: 82,
-                    callback: 622,
-                    declined: 148,
-                    hotique: 242
+                    enrolled: overviewData.enrolled || 0,
+                    debtPitch: overviewData.debtPitch || 0,
+                    callback: overviewData.callback || 0,
+                    declined: overviewData.declined || 0,
+                    hotique: overviewData.hotique || 0
                 }
             },
-            dailyQaTrend: [
-                { date: '3/22', value: 48 },
-                { date: '3/23', value: 52 },
-                { date: '3/24', value: 49 },
-                { date: '3/25', value: 55 },
-                { date: '3/26', value: 51 },
-                { date: '3/27', value: 54 },
-                { date: '3/28', value: 50 },
-                { date: '3/29', value: 53.6 }
-            ],
-            scoreDistribution: [
-                { min: 0, max: 9, count: 22 },
-                { min: 10, max: 19, count: 105 },
-                { min: 20, max: 29, count: 195 },
-                { min: 30, max: 39, count: 327 },
-                { min: 40, max: 49, count: 119 },
-                { min: 50, max: 59, count: 401 },
-                { min: 60, max: 69, count: 614 },
-                { min: 70, max: 79, count: 401 },
-                { min: 80, max: 89, count: 119 },
-                { min: 90, max: 100, count: 8 }
-            ],
-            // Note: Substitute mock records here matching your AGENTS structure
-            agentComparison: [
-                { name: "Agent 1", score: 85 },
-                { name: "Agent 2", score: 72 },
-                { name: "Agent 3", score: 54 },
-                { name: "Agent 4", score: 91 },
-                { name: "Agent 5", score: 43 },
-                { name: "Agent 6", score: 68 }
-            ]
+            dailyQaTrend: dailyTrendRes.rows,
+            scoreDistribution: scoreDistribution,
+            agentComparison: agentCompRes.rows
         };
 
-        res.status(200).json(staticAnalyticsData);
-    } catch (error) {
-        console.error("Error generating analytics data:", error);
-        res.status(500).json({ error: "Internal Server Error" });
+        res.status(200).json(dynamicAnalyticsData);
+    } catch (error: any) {
+        console.error("Error generating dynamic analytics data:", error);
+        res.status(500).json({ error: "Internal Server Error", details: error.message });
     }
 });
 
 router.get('/academy', async (req: Request, res: Response): Promise<void> => {
     try {
         const { dateFrom, dateTo } = req.query;
+
+        // 1. Parse pagination parameters with safe fallbacks
+        const page = parseInt(req.query.page as string) || 1;
+        const pageSize = parseInt(req.query.pageSize as string) || 50;
+        const offset = (page - 1) * pageSize;
+
+        // 2. Query to get the global total match count for pagination math
+        const countQuery = `
+            SELECT COUNT(*) as total
+            FROM calls c
+            WHERE (c.created_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP));
+        `;
+        const countResult = await db.query(countQuery, [dateFrom, dateTo]);
+        const totalCallsCount = parseInt(countResult.rows[0].total) || 0;
+
+        const collectionsQuery = ` SELECT 
+                COUNT(CASE WHEN TRIM(ca.academy_collection) = 'Disclosure Excellence' THEN 1 END)::int AS "disclosureExcellence",
+                COUNT(CASE WHEN TRIM(ca.academy_collection) = 'Discovery Masters' THEN 1 END)::int AS "discoveryMasters",
+                COUNT(CASE WHEN TRIM(ca.academy_collection) = 'Common Mistakes' THEN 1 END)::int AS "commonMistakes",
+                COUNT(CASE WHEN TRIM(ca.academy_collection) = 'Objection Handlers' THEN 1 END)::int AS "objectionHandlers",
+                COUNT(CASE WHEN TRIM(ca.academy_tag) = 'featured' THEN 1 END)::int AS "featuredCalls"
+                FROM calls c
+                INNER JOIN agents a ON c.agent_id = a.id
+                LEFT JOIN call_analytics ca ON ca.call_id = c.id
+                WHERE (c.created_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP));
+        `;
+
+        const collectionsResult = await db.query(collectionsQuery, [dateFrom, dateTo]);
+        const counts = collectionsResult.rows[0] || {
+            disclosureExcellence: 0,
+            discoveryMasters: 0,
+            commonMistakes: 0,
+            objectionHandlers: 0,
+            featuredCalls: 0
+        };
+        const finalCollections = [
+            { name: 'Disclosure Excellence', count: counts.disclosureExcellence },
+            { name: 'Discovery Masters', count: counts.discoveryMasters },
+            { name: 'Common Mistakes', count: counts.commonMistakes },
+            { name: 'Featured Calls', count: counts.featuredCalls },
+            { name: 'Objection Handlers', count: counts.objectionHandlers }
+        ];
+
+        // 3. Paginated Main Query matching your setup
         const sqlQuery = `
-                        SELECT 
-                            c.id,
-                            a.name AS agent_name,
-                            a.id AS agent_idx,
-                            d.name AS agent_dept,
-                            c.started_at AS date,
-                            c.duration_seconds,
-                            c.recording_url AS audio_url,
-                            c.campaign,
-                            COALESCE(c.outcome, 'Unknown') AS "outcome",
-                            COALESCE(ca.overall_call_score, 0) AS "score",
-                            COALESCE(ca.call_quality, 0) AS "callQuality",
-                            COALESCE(ca.disclosures_percentage, 0) AS "disclosuresPercentage",
-                            COALESCE(ca.compliance_percentage, 0) AS "compliancePercentage",
+            SELECT 
+                c.id,
+                a.name AS agent_name,
+                a.id AS agent_idx,
+                d.name AS agent_dept,
+                c.started_at AS date,
+                c.duration_seconds,
+                c.recording_url AS audio_url,
+                c.campaign,
+                COALESCE(c.outcome, 'Unknown') AS "outcome",
+                COALESCE(ca.overall_call_score, 0) AS "score",
+                COALESCE(ca.call_quality, 0) AS "callQuality",
+                COALESCE(ca.disclosures_percentage, 0) AS "disclosuresPercentage",
+                COALESCE(ca.compliance_percentage, 0) AS "compliancePercentage",
+                COALESCE(ca.call_summary, '') AS "callSummary",
+                COALESCE(ca.agent_strengths, '[]'::jsonb) AS "agentStrengths",
+                COALESCE(ca.agent_improvements, '[]'::jsonb) AS "agentImprovements",
+                COALESCE(ca.coaching_actions, '[]'::jsonb) AS "coachingActions",
+                COALESCE(ca.academy_tag, '') AS "academyTag",
+                COALESCE(ca.academy_collection, '') AS "academyCollection",
+                COALESCE(ca.ai_insights, '{}'::jsonb) AS "insights",
+                COALESCE(ca.checkpoint_results, '[]'::jsonb) AS "checkpointResults",
+                COALESCE(ca.risk_flags, '[]'::jsonb) AS "riskFlags",
+                COALESCE(ca.good_trackers_hit, '[]'::jsonb) AS "goodTrackersHit",
+                COALESCE(ca.bad_trackers_triggered, '[]'::jsonb) AS "badTrackersTriggered"
+            FROM calls c
+            INNER JOIN agents a ON c.agent_id = a.id
+            INNER JOIN departments d ON a.department_id = d.id
+            LEFT JOIN call_analytics ca ON ca.call_id = c.id
+            WHERE (c.created_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP))
+            ORDER BY c.started_at DESC
+            LIMIT $3 OFFSET $4;
+        `;
 
-                            COALESCE(ca.call_summary, '') AS "callSummary",
-                            COALESCE(ca.agent_strengths, '[]'::jsonb) AS "agentStrengths",
-                            COALESCE(ca.agent_improvements, '[]'::jsonb) AS "agentImprovements",
-                            COALESCE(ca.coaching_actions, '[]'::jsonb) AS "coachingActions",
-                            COALESCE(ca.academy_tag, '') AS "academyTag",
-                            COALESCE(ca.academy_collection, '') AS "academyCollection",
-                            COALESCE(ca.ai_insights, '{}'::jsonb) AS "insights",
-                            COALESCE(ca.checkpoint_results, '[]'::jsonb) AS "checkpointResults",
-                            COALESCE(ca.risk_flags, '[]'::jsonb) AS "riskFlags",
-                            COALESCE(ca.good_trackers_hit, '[]'::jsonb) AS "goodTrackersHit",
-                            COALESCE(ca.bad_trackers_triggered, '[]'::jsonb) AS "badTrackersTriggered"
-                        FROM calls c
-                        INNER JOIN agents a ON c.agent_id = a.id
-                        INNER JOIN departments d ON a.department_id = d.id
-                        LEFT JOIN call_analytics ca ON ca.call_id = c.id
-                        WHERE (c.created_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP))
-                        ORDER BY c.started_at DESC;
-                    `;
+        const dbResult = await db.query(sqlQuery, [dateFrom, dateTo, pageSize, offset]);
 
-        const dbResult = await db.query(sqlQuery, [dateFrom, dateTo]);
         const formatDuration = (totalSeconds: number | null): string => {
             if (!totalSeconds) return "0:00";
             const minutes = Math.floor(totalSeconds / 60);
@@ -427,26 +538,22 @@ router.get('/academy', async (req: Request, res: Response): Promise<void> => {
             return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
         };
 
-        // 2. Map database rows into the clean object layout your frontend requires
         const mappedCalls = dbResult.rows.map((row: any) => {
-            const collectionGroup = row.collection || "Common Mistakes";
+            const collectionGroup = row.academyCollection || "Common Mistakes";
             const score = row.score !== undefined && row.score !== null ? Number(row.score) : 0;
+
             let tag = 'featured';
-            if (score >= 85) {
-                tag = 'exemplar';
-            } else if (score <= 35) {
-                tag = 'warning';
-            }
+            if (score >= 85) { tag = 'exemplar'; }
+            else if (score <= 35) { tag = 'warning'; }
+
             let cleanAudioUrl = row.audio_url;
             if (typeof cleanAudioUrl === 'string') {
                 cleanAudioUrl = cleanAudioUrl.replace(/&amp;/g, '&');
             }
-            // --- DYNAMIC AUDIO TIMESTAMP JUMP CALCULATION ---
+
             const durationSec = row.duration_seconds ? Number(row.duration_seconds) : 0;
             const jumpSeconds = durationSec > 0 ? Math.floor(durationSec * 0.20) : 75;
             const readableMarkerTime = formatDuration(jumpSeconds);
-
-            // Append standard media fragment hash (#t=seconds) so browsers jump instantly on load
             const audioUrlWithJump = cleanAudioUrl ? `${cleanAudioUrl}#t=${jumpSeconds}` : "";
 
             return {
@@ -458,9 +565,9 @@ router.get('/academy', async (req: Request, res: Response): Promise<void> => {
                 date: row.date ? new Date(row.date).toISOString() : new Date().toISOString(),
                 duration: formatDuration(row.duration_seconds),
                 campaign: row.campaign || "General Support — Inbound",
-                score: score,     // Database doesn't have a score column, generating static/dynamic value
+                score: score,
                 collection: collectionGroup,
-                flags: [], // Static property requested
+                flags: [],
                 audioUrl: audioUrlWithJump,
                 markers: [
                     { id: `m_${row.id}`, time: readableMarkerTime, label: "Customer Conversation", color: "green", rawSeconds: jumpSeconds }
@@ -472,7 +579,7 @@ router.get('/academy', async (req: Request, res: Response): Promise<void> => {
                 agentStrengths: row.agentStrengths,
                 agentImprovements: row.agentImprovements,
                 coachingActions: row.coachingActions,
-                academyTag: row.academyTag,
+                academyTag: row.academyTag || tag,
                 academyCollection: row.academyCollection,
                 insights: row.insights,
                 checkpointResults: row.checkpointResults,
@@ -482,27 +589,21 @@ router.get('/academy', async (req: Request, res: Response): Promise<void> => {
             };
         });
 
-        // 3. Combine with the remaining dashboard aggregation properties
         const finalAcademyData = {
             aggregations: {
                 exemplarCount: mappedCalls.filter((c: any) => c.academyTag === 'exemplar').length,
                 featuredCount: mappedCalls.filter((c: any) => c.academyTag === 'featured').length,
                 warningCount: mappedCalls.filter((c: any) => c.academyTag === 'warning').length,
-                totalTaggedCount: mappedCalls.length
+                totalTaggedCount: totalCallsCount // Pass global total matching records count metric
             },
-            collections: [
-                { name: 'Disclosure Excellence', count: mappedCalls.filter((c: any) => c.collection === 'Disclosure Excellence').length },
-                { name: 'Discovery Masters', count: 4 },
-                { name: 'Common Mistakes', count: mappedCalls.filter((c: any) => c.collection === 'Common Mistakes').length },
-                { name: 'Featured Calls', count: 3 },
-                { name: 'Objection Handlers', count: 7 }
-            ],
+            collections: finalCollections,
             recentActivity: [
                 { id: 1, icon: '⭐', text: 'Summer Spence — tagged Exemplar', timeOffset: '2m ago' },
                 { id: 2, icon: '⏱', text: 'Marker added: "Great Opening" at 1:22 — Kaila Minarcin', timeOffset: '8m ago' },
                 { id: 3, icon: '📁', text: '3 calls added to Disclosure Excellence', timeOffset: '14m ago' }
             ],
-            calls: mappedCalls // Real live data loaded right here
+            calls: mappedCalls,
+            totalCallsCount: totalCallsCount // Explicit pagination parameter target
         };
 
         res.status(200).json(finalAcademyData);
