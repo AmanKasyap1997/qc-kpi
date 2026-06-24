@@ -2,6 +2,9 @@ import axios from "axios";
 import cron from "node-cron";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import db from "../db/pool";
+import fs from "fs";
+import path from "path";
+import { exec } from "child_process";
 
 const ASSEMBLY_API_KEY = process.env.ASSEMBLYAI_API_KEY!;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
@@ -82,46 +85,124 @@ async function sleep(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function getTranscript(audioUrl: string): Promise<string> {
-    const submitResponse = await axios.post(
-        "https://api.assemblyai.com/v2/transcript",
-        {
-            audio_url: audioUrl,
-            speaker_labels: true
-        },
-        {
-            headers: {
-                authorization: ASSEMBLY_API_KEY,
-                "content-type": "application/json"
-            }
-        }
+export async function getTranscript(
+    recordingUrl: string
+): Promise<string> {
+
+    const uploadsDir = path.join(
+        process.cwd(),
+        "uploads"
     );
 
-    const transcriptId = submitResponse.data.id;
+    if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, {
+            recursive: true
+        });
+    }
 
-    while (true) {
-        const poll = await axios.get(
-            `https://api.assemblyai.com/v2/transcript/${transcriptId}`,
+    const filePath = path.join(
+        uploadsDir,
+        `${Date.now()}.mp3`
+    );
+
+    console.log("Downloading:", recordingUrl);
+
+    const response = await axios({
+        method: "GET",
+        url: recordingUrl,
+        responseType: "stream"
+    });
+
+    const writer = fs.createWriteStream(filePath);
+
+    response.data.pipe(writer);
+
+    await new Promise<void>((resolve, reject) => {
+        writer.on("finish", resolve);
+        writer.on("error", reject);
+    });
+
+    console.log("Downloaded:", filePath);
+
+    const pythonExe = path.resolve(
+        process.cwd(),
+        "../venv/Scripts/python.exe"
+    );
+
+    const scriptPath = path.resolve(
+        process.cwd(),
+        "../python/transcribe.py"
+    );
+
+    console.log("Python:", pythonExe);
+    console.log("Script:", scriptPath);
+
+    if (!fs.existsSync(pythonExe)) {
+        throw new Error(
+            `Python executable not found: ${pythonExe}`
+        );
+    }
+
+    if (!fs.existsSync(scriptPath)) {
+        throw new Error(
+            `transcribe.py not found: ${scriptPath}`
+        );
+    }
+
+    return new Promise<string>((resolve, reject) => {
+
+        const command = `"${pythonExe}" "${scriptPath}" "${filePath}"`;
+
+        console.log("Executing:", command);
+
+        exec(
+            command,
             {
-                headers: {
-                    authorization: ASSEMBLY_API_KEY
+                maxBuffer: 1024 * 1024 * 20
+            },
+            (error, stdout, stderr) => {
+
+                try {
+
+                    if (stderr) {
+                        console.log(
+                            "Python stderr:",
+                            stderr
+                        );
+                    }
+
+                    if (error) {
+                        console.error(error);
+
+                        return reject(error);
+                    }
+
+                    const result = JSON.parse(
+                        stdout.trim()
+                    );
+
+                    if (
+                        fs.existsSync(filePath)
+                    ) {
+                        fs.unlinkSync(filePath);
+                    }
+
+                    resolve(
+                        result.transcript || ""
+                    );
+
+                } catch (err) {
+
+                    console.error(
+                        "Parse Error:",
+                        err
+                    );
+
+                    reject(err);
                 }
             }
         );
-
-        const status = poll.data.status;
-
-        if (status === "completed") {
-            return poll.data.text || "";
-        }
-
-        if (status === "error") {
-            throw new Error(poll.data.error);
-        }
-
-        console.log(`AssemblyAI Status: ${status}`);
-        await sleep(5000);
-    }
+    });
 }
 
 async function analyzeTranscript(transcript: string): Promise<TranscriptAnalysis> {

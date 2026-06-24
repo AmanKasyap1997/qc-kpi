@@ -122,7 +122,7 @@ model Agent {
  
   departmentId Int @map("department_id")
  
-  callerReadyExtensionId String @unique @map("rc_extension_id")
+  callerReadyExtensionId String @map("rc_extension_id")
  
   active Boolean @default(true)
  
@@ -341,34 +341,28 @@ model Lead {
 model Call {
   id             Int     @id @default(autoincrement())
   externalCallId String? @unique @map("external_call_id")
- 
   leadId            Int? @map("lead_id")
   agentId           Int? @map("agent_id")
   departmentId      Int? @map("department_id")
   leadAttributionId Int? @map("lead_attribution_id")
- 
   clientPhone String  @map("client_phone")
   clientName  String  @map("client_name")
   direction   String
   connected   String?
   location    String?
   campaign    String?
- 
   startedAt       DateTime  @map("started_at")
   endedAt         DateTime? @map("ended_at")
   durationSeconds Int?      @map("duration_seconds")
- 
   recordingUrl      String? @map("recording_url")
   transcriptUrl     String? @map("transcript_url")
-  transcriptDetails String? @map("transcript_details") @db.Text
- 
   outcome    String?
   nextAction String?  @map("next_action")
   revenue    Decimal? @db.Decimal(10, 2)
- 
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
+  transcriptDetails String? @map("transcript_details") @db.Text
  
   lead            Lead?            @relation(fields: [leadId], references: [id])
   agent           Agent?           @relation(fields: [agentId], references: [id])
@@ -402,10 +396,7 @@ model CallAnalytics {
  
   // Lead Quality
   leadQuality String? @map("lead_quality")
- 
-  // AI Summary
-  callSummary String? @map("call_summary") @db.Text
- 
+
   // Coaching
   agentStrengths    Json? @map("agent_strengths")
   agentImprovements Json? @map("agent_improvements")
@@ -434,9 +425,13 @@ model CallAnalytics {
   disclosureAdherence   Float? @map("disclosure_adherence")
   talkRatioPercent      Float? @map("talk_ratio_percent")
   objectionHandledCount Int?   @map("objection_handled_count")
- 
+  aiGeneratedDepartment String?   @map("ai_generated_department")
+
   processedAt DateTime? @map("processed_at")
  
+   // AI Summary
+  callSummary String? @map("call_summary") @db.Text
+  
   call Call @relation(fields: [callId], references: [id], onDelete: Cascade)
  
   createdAt DateTime @default(now()) @map("created_at")
