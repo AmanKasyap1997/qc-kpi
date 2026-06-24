@@ -256,7 +256,7 @@ router.get('/leaderboard', async (req: Request, res: Response): Promise<void> =>
                 COUNT(c.id) AS "calls",
                 AVG(COALESCE(ca.overall_call_score, 0))::INT AS "avgScore",
                 AVG(COALESCE(c.duration_seconds, 0))::INT AS "avgDurationSeconds",
-                SUM(CASE WHEN c.outcome = 'Converted' THEN 1 ELSE 0 END) AS "enrolls",
+                SUM(CASE WHEN c.outcome = 'Enrolled' THEN 1 ELSE 0 END) AS "enrolls",
                 SUM(CASE WHEN jsonb_array_length(COALESCE(ca.flags, '[]'::jsonb)) > 0 THEN 1 ELSE 0 END) AS "flagged"
             FROM calls c
             LEFT JOIN agents a ON c.agent_id = a.id
@@ -499,7 +499,7 @@ router.get('/academy', async (req: Request, res: Response): Promise<void> => {
                 c.id,
                 a.name AS agent_name,
                 a.id AS agent_idx,
-                d.name AS agent_dept,
+                ca.ai_generated_department AS agent_dept,
                 c.started_at AS date,
                 c.duration_seconds,
                 c.recording_url AS audio_url,
@@ -517,6 +517,7 @@ router.get('/academy', async (req: Request, res: Response): Promise<void> => {
                 COALESCE(ca.academy_collection, '') AS "academyCollection",
                 COALESCE(ca.ai_insights, '{}'::jsonb) AS "insights",
                 COALESCE(ca.checkpoint_results, '[]'::jsonb) AS "checkpointResults",
+                COALESCE(ca.flags, '[]'::jsonb) AS "flags",
                 COALESCE(ca.risk_flags, '[]'::jsonb) AS "riskFlags",
                 COALESCE(ca.good_trackers_hit, '[]'::jsonb) AS "goodTrackersHit",
                 COALESCE(ca.bad_trackers_triggered, '[]'::jsonb) AS "badTrackersTriggered"
@@ -567,7 +568,7 @@ router.get('/academy', async (req: Request, res: Response): Promise<void> => {
                 campaign: row.campaign || "General Support — Inbound",
                 score: score,
                 collection: collectionGroup,
-                flags: [],
+                flags: row.flags,
                 audioUrl: audioUrlWithJump,
                 markers: [
                     { id: `m_${row.id}`, time: readableMarkerTime, label: "Customer Conversation", color: "green", rawSeconds: jumpSeconds }
@@ -766,6 +767,42 @@ router.get("/pips", async (req: Request, res: Response) => {
     } catch (error: any) {
         console.error("GET /pips calculation failure:", error);
         return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Add this route to your academy/calls router file
+router.post('/flag', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { callId } = req.body;
+
+        if (!callId) {
+            res.status(400).json({ error: "Missing callId parameter." });
+            return;
+        }
+
+        const updateQuery = `
+            UPDATE call_analytics 
+            SET flags = COALESCE(flags, '[]'::jsonb) || '["🚩 Flag"]'::jsonb
+            WHERE call_id = $1
+            RETURNING flags;
+        `;
+
+        const result = await db.query(updateQuery, [callId]);
+
+        if (result.rowCount === 0) {
+            res.status(404).json({ error: "Call analytics record not found for this ID." });
+            return;
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Record marked as 🚩 Flag",
+            updatedFlags: result.rows[0].risk_flags
+        });
+
+    } catch (error: any) {
+        console.error("Error flagging call:", error);
+        res.status(500).json({ error: "Internal Server Error", details: error.message });
     }
 });
 

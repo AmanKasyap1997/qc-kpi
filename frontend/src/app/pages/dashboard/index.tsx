@@ -15,6 +15,7 @@ interface Agent {
   eff: string;       // 👈 You might want to add this too if it's missing ("2.10x")
   flagged: number;   // 👈 Add this if missing
   flagRate: string;  // 👈 Add this if missing
+  status: string;
 }
 
 interface Call {
@@ -153,17 +154,17 @@ interface SdrAgent extends Agent {
 const AGENT_COLORS = ['#e8a020', '#2ecc8e', '#4d8ef0', '#9b6cf0', '#f07020', '#ec4899', '#14b8a6', '#f87171', '#6366f1', '#34d399', '#fbbf24', '#60a5fa', '#c084fc', '#fb923c', '#22d3ee', '#f43f5e', '#84cc16', '#e879f9', '#2dd4bf', '#fb7185', '#a3e635', '#38bdf8', '#818cf8', '#f472b6'];
 
 const AGENTS: Agent[] = [
-  { name: 'Jamison Bray', score: 82, delta: '+1.2', calls: 1, enrolls: 0, dept: 'Debt Sales', avgLen: '4:15', eff: '1.80x', flagged: 0, flagRate: '0%' },
-  { name: 'Kaila Minarcin', score: 68.8, delta: '+63', calls: 31, enrolls: 0, dept: 'Debt Sales', avgLen: '5:42', eff: '2.10x', flagged: 3, flagRate: '10%' },
-  { name: '411', score: 68, delta: '—', calls: 9, enrolls: 0, dept: 'Debt Sales', avgLen: '6:12', eff: '1.45x', flagged: 1, flagRate: '11%' },
-  { name: 'Bayleigh Tinajero', score: 67.2, delta: '+0.3', calls: 13, enrolls: 0, dept: 'Debt Sales', avgLen: '3:50', eff: '2.40x', flagged: 0, flagRate: '0%' },
-  { name: '302', score: 64.4, delta: '—', calls: 15, enrolls: 1, dept: 'Debt Sales', avgLen: '7:22', eff: '1.95x', flagged: 2, flagRate: '13%' },
-  { name: 'Ryan Choi', score: 63.4, delta: '+3.3', calls: 27, enrolls: 0, dept: 'Debt Sales', avgLen: '5:05', eff: '2.15x', flagged: 4, flagRate: '15%' },
-  { name: 'Terrence Quiroz', score: 62.5, delta: '+4.03', calls: 3, enrolls: 0, dept: 'Debt Sales', avgLen: '4:40', eff: '1.60x', flagged: 0, flagRate: '0%' },
-  { name: 'Mossa Khan', score: 62, delta: '—', calls: 1, enrolls: 0, dept: 'Debt Sales', avgLen: '3:15', eff: '2.80x', flagged: 0, flagRate: '0%' },
-  { name: 'Summer Spence', score: 61, delta: '+4.6', calls: 19, enrolls: 2, dept: 'Debt Sales', avgLen: '6:55', eff: '2.30x', flagged: 1, flagRate: '5%' },
-  { name: '412', score: 59.6, delta: '+46.0', calls: 17, enrolls: 1, dept: 'Debt Sales', avgLen: '5:18', eff: '1.75x', flagged: 2, flagRate: '12%' },
-  { name: 'Fernanda Garcia', score: 59.6, delta: '+3.88', calls: 12, enrolls: 1, dept: 'Debt Sales', avgLen: '4:59', eff: '2.05x', flagged: 1, flagRate: '8%' },
+  { name: 'Jamison Bray', score: 82, delta: '+1.2', calls: 1, enrolls: 0, dept: 'SDR', avgLen: '4:15', eff: '1.80x', flagged: 0, flagRate: '0%', status: 'READY' },
+  { name: 'Kaila Minarcin', score: 68.8, delta: '+63', calls: 31, enrolls: 0, dept: 'Jr Closer', avgLen: '5:42', eff: '2.10x', flagged: 3, flagRate: '10%', status: 'READY' },
+  { name: '411', score: 68, delta: '—', calls: 9, enrolls: 0, dept: 'Debt Sales', avgLen: '6:12', eff: '1.45x', flagged: 1, flagRate: '11%', status: 'READY' },
+  { name: 'Bayleigh Tinajero', score: 67.2, delta: '+0.3', calls: 13, enrolls: 0, dept: 'Debt Sales', avgLen: '3:50', eff: '2.40x', flagged: 0, flagRate: '0%', status: 'READY' },
+  { name: '302', score: 64.4, delta: '—', calls: 15, enrolls: 1, dept: 'Debt Sales', avgLen: '7:22', eff: '1.95x', flagged: 2, flagRate: '13%', status: 'READY' },
+  { name: 'Ryan Choi', score: 63.4, delta: '+3.3', calls: 27, enrolls: 0, dept: 'Debt Sales', avgLen: '5:05', eff: '2.15x', flagged: 4, flagRate: '15%', status: 'READY' },
+  { name: 'Terrence Quiroz', score: 62.5, delta: '+4.03', calls: 3, enrolls: 0, dept: 'Debt Sales', avgLen: '4:40', eff: '1.60x', flagged: 0, flagRate: '0%', status: 'READY' },
+  { name: 'Mossa Khan', score: 62, delta: '—', calls: 1, enrolls: 0, dept: 'Debt Sales', avgLen: '3:15', eff: '2.80x', flagged: 0, flagRate: '0%', status: 'READY' },
+  { name: 'Summer Spence', score: 61, delta: '+4.6', calls: 19, enrolls: 2, dept: 'Jr Closer', avgLen: '6:55', eff: '2.30x', flagged: 1, flagRate: '5%', status: 'READY' },
+  { name: '412', score: 59.6, delta: '+46.0', calls: 17, enrolls: 1, dept: 'Debt Sales', avgLen: '5:18', eff: '1.75x', flagged: 2, flagRate: '12%', status: 'READY' },
+  { name: 'Fernanda Garcia', score: 59.6, delta: '+3.88', calls: 12, enrolls: 1, dept: 'Debt Sales', avgLen: '4:59', eff: '2.05x', flagged: 1, flagRate: '8%', status: 'READY' },
 ];
 
 const OUTCOMES = ['Enrolled', 'Callback', 'Declined', 'Debt Pitch', 'Hotique', 'Loan Transfer', 'Not Qualified'];
@@ -405,6 +406,7 @@ const showToast = (type: 'critical' | 'warning' | 'success' | 'info', title: str
 const Dashboard: React.FC = () => {
   const getFormattedDateString = (offsetDays = 0) => {
     const d = new Date();
+    d.setHours(0, 0, 0, 0);
     d.setDate(d.getDate() - offsetDays);
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -436,7 +438,7 @@ const Dashboard: React.FC = () => {
   const [sdrFilter, setSdrFilter] = useState<'all' | 'ready' | 'watch' | 'not-yet' | 'promoted'>('all');
   const [sdrView, setSdrView] = useState<'board' | 'table' | 'strategy'>('board');
   const [dateFrom, setDateFrom] = useState<string>(getFormattedDateString(1));
-  const [dateTo, setDateTo] = useState<string>(getFormattedDateString(-1));
+  const [dateTo, setDateTo] = useState<string>(getFormattedDateString(0));
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
 
   // 1. State to hold dynamic backend data
@@ -449,7 +451,7 @@ const Dashboard: React.FC = () => {
   const [escalationSteps, setEscalationSteps] = useState([]);
   const [playingCallId, setPlayingCallId] = useState(null);
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState("0:00");
-
+  const [selectedDept, setSelectedDept] = React.useState('All Depts');
 
   const [recentActivities, setRecentActivities] = React.useState<Array<{
     id: string;
@@ -467,6 +469,7 @@ const Dashboard: React.FC = () => {
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
+
   const formatTimeOffset = (timestamp: number): string => {
     const diffMs = Date.now() - timestamp;
     const diffSec = Math.floor(diffMs / 1000);
@@ -804,8 +807,43 @@ const Dashboard: React.FC = () => {
     showToast('info', 'Link Copied', 'Scorecard link copied to clipboard.', setToasts);
   };
 
-  const flagCall = () => {
-    showToast('warning', 'Call Flagged', 'This call has been flagged for management review.', setToasts);
+  const flagCall = async () => {
+    try {
+      if (selectedCall?.flags?.includes('🚩 Flag')) {
+        showToast('warning', 'Already Flagged', 'This call has already been flagged.', setToasts);
+        return;
+      }
+      // 1. Make the fetch call to your backend endpoint
+      const response = await fetch(`${API_URL}/api/dashboard/flag`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', },
+        body: JSON.stringify({ callId: selectedCall?.id, }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        if (activePage === 'qa-live') await fetchLiveFeedData();
+        if (activePage === 'academy') await fetchAcademyData();
+        setSelectedCall(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            // Use the updated array returned directly from your database update response
+            flags: data.updatedFlags || [...(prev.flags || []), "🚩 Flag"]
+          };
+        });
+
+        showToast('info', 'Call Flagged', 'This call has been flagged for management review.', setToasts);
+
+      } else {
+        // Handle server error responses cleanly
+        showToast('critical', 'Action Failed', data.error || 'Could not flag this call.', setToasts);
+      }
+    } catch (error) {
+      console.error('Error triggering flag call action:', error);
+      showToast('critical', 'Network Error', 'Failed to connect to the server.', setToasts);
+    }
   };
 
   const generateReport = (type: string) => {
@@ -1031,6 +1069,27 @@ const Dashboard: React.FC = () => {
     ));
   };
 
+  const filteredAndSortedData = React.useMemo(() => {
+    if (!leaderboardData || leaderboardData.length === 0) return [];
+
+    // 1. Filter the dataset based on state
+    const filtered = leaderboardData.filter(item => {
+      if (selectedDept === 'All Depts') return true;
+
+      const itemDept = (item.dept || '').trim().toLowerCase();
+      const targetDept = selectedDept.trim().toLowerCase();
+
+      if (targetDept === 'debt sales') {
+        return itemDept === 'debt sales' || itemDept === 'sales';
+      }
+
+      return itemDept === targetDept;
+    });
+
+    // 2. Sort the freshly filtered records descending by score
+    return [...filtered].sort((a, b) => b.score - a.score);
+  }, [leaderboardData, selectedDept]);
+
   const renderLeaderboardRows = () => {
     if (isDataLoading) {
       return (
@@ -1042,24 +1101,25 @@ const Dashboard: React.FC = () => {
       );
     }
 
-    if (!leaderboardData || leaderboardData.length === 0) {
+    // If there are absolutely no records in the computed array
+    if (filteredAndSortedData.length === 0 && selectedDept == 'All Depts') return (<tr><td colSpan={13} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}> No record found for matching filter. </td></tr>);
+    if (filteredAndSortedData.length === 0) {
       return (
         <tr>
           <td colSpan={13} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
-            No leaderboard data found.
+            No data available for "{selectedDept}".
           </td>
         </tr>
       );
     }
-    // Sort agents by score descending
-    const sorted = [...leaderboardData].sort((a, b) => b.score - a.score);
 
-    return sorted.map((a, i) => {
-      // NOTE: agentColor index logic now safely tracks original position in array
+
+    // Map over the final cleaned array. This guarantees row sequence resets to 1, 2, 3...
+    return filteredAndSortedData.map((a, i) => {
+      // Keep indexing original array to maintain stable profile color distributions
       const color = agentColor(leaderboardData.findIndex(item => item.name === a.name));
       const sc = scoreClass(a.score);
 
-      // Dynamic math logic relying directly on backend payloads
       const closeRate = a.enrolls > 0 ? ((a.enrolls / a.calls) * 100).toFixed(1) + '%' : '0.0%';
       const pctCalls = ((a.calls / 1023) * 100).toFixed(1) + '%';
 
@@ -1072,7 +1132,8 @@ const Dashboard: React.FC = () => {
       };
 
       return (
-        <tr key={a.name}>
+        <tr key={`${a.name}-${i}`}>
+          {/* FIX: i + 1 here will now strictly output 1, 2, 3, 4 sequential ordering */}
           <td className="mono text-muted">{i + 1}</td>
           <td>
             <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
@@ -1099,13 +1160,40 @@ const Dashboard: React.FC = () => {
   };
 
   const renderTopConverters = () => {
-    const sorted = [...AGENTS].sort((a, b) => b.score - a.score).filter(a => a.enrolls > 0).slice(0, 4);
+    if (!leaderboardData || leaderboardData.length === 0) {
+      return (
+        <div className="text-muted fs-11" style={{ padding: '8px 0', textAlign: 'center' }}>
+          No converter data available.
+        </div>
+      );
+    }
+
+    const sorted = [...leaderboardData]
+      .sort((a, b) => b.score - a.score)
+      .filter(a => a.enrolls > 0)
+      .slice(0, 4);
+
+    if (sorted.length === 0) {
+      return (
+        <div className="text-muted fs-11" style={{ padding: '8px 0', textAlign: 'center' }}>
+          No top converters found.
+        </div>
+      );
+    }
+
     return sorted.map(a => {
-      const pct = (a.enrolls / a.calls) * 100;
+      const totalCalls = a.calls || 1;
+      const pct = (a.enrolls / totalCalls) * 100;
+
       return (
         <div key={a.name} className="progress-row" style={{ marginBottom: '8px' }}>
           <div className="progress-label">{a.name}</div>
-          <div className="mini-bar-wrap"><div className="mini-bar" style={{ width: `${Math.min(pct * 5, 100)}%`, background: 'var(--green)' }}></div></div>
+          <div className="mini-bar-wrap">
+            <div
+              className="mini-bar"
+              style={{ width: `${Math.min(pct * 5, 100)}%`, background: 'var(--green)' }}
+            ></div>
+          </div>
           <div className="progress-val text-green">{pct.toFixed(1)}%</div>
         </div>
       );
@@ -2527,12 +2615,16 @@ const Dashboard: React.FC = () => {
                       <button className={`lb-toggle-btn ${leaderboardMode === 'agent' ? 'active' : ''}`} onClick={() => setLeaderboardMode('agent')}>By Agent</button>
                       <button className={`lb-toggle-btn ${leaderboardMode === 'campaign' ? 'active' : ''}`} onClick={() => setLeaderboardMode('campaign')}>By Campaign</button>
                     </div>
-                    <select className="filter-select">
-                      <option>All Depts</option>
-                      <option>Debt Sales</option>
-                      <option>Verification</option>
-                      <option>Customer Service</option>
-                      <option>Case Managers</option>
+                    <select
+                      className="filter-select"
+                      value={selectedDept}
+                      onChange={(e) => setSelectedDept(e.target.value)}
+                    >
+                      <option value="All Depts">All Depts</option>
+                      <option value="Debt Sales">Debt Sales</option>
+                      <option value="Verification">Verification</option>
+                      <option value="Customer Service">Customer Service</option>
+                      <option value="Case Managers">Case Managers</option>
                     </select>
                     <div className="lb-toggle">
                       <button className={`lb-toggle-btn ${leaderboardTime === '1d' ? 'active' : ''}`} onClick={() => handleTimePresetClick('1d')}>1D</button>
