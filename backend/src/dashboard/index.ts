@@ -320,7 +320,7 @@ router.get('/analytics', async (req: Request, res: Response): Promise<void> => {
         const overviewQuery = `
             SELECT 
                 COUNT(c.id)::int AS "totalCalls",
-                COALESCE(AVG(ca.compliance_percentage), 0)::float AS "avgAdherence",
+                COALESCE(AVG(ca.disclosure_adherence), 0)::float AS "avgAdherence",
                 COALESCE(AVG(c.duration_seconds), 0)::float AS "avgDurationSeconds",
                 COUNT(CASE WHEN ca.overall_call_score IS NOT NULL THEN 1 END)::int AS "scored",
                 
@@ -332,7 +332,7 @@ router.get('/analytics', async (req: Request, res: Response): Promise<void> => {
                 COUNT(CASE WHEN LOWER(TRIM(c.outcome)) = 'hotique' THEN 1 END)::int AS "hotique"
             FROM calls c
             LEFT JOIN call_analytics ca ON ca.call_id = c.id
-            WHERE (c.created_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP));
+            WHERE (c.started_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP));
         `;
         const overviewRes = await db.query(overviewQuery, [dateFrom, dateTo]);
         const overviewData = overviewRes.rows[0];
@@ -348,9 +348,9 @@ router.get('/analytics', async (req: Request, res: Response): Promise<void> => {
         const scoredCount = overviewData.scored || 0;
 
         // Calculate Rate Percentages safely
-        const enrollmentPercent = scoredCount > 0 ? parseFloat(((overviewData.enrolled / scoredCount) * 100).toFixed(1)) : 0.0;
-        const debtPitchPercent = scoredCount > 0 ? parseFloat(((overviewData.debtPitch / scoredCount) * 100).toFixed(1)) : 0.0;
-
+        const enrollmentPercent = scoredCount > 0 ? parseFloat(((overviewData.enrolled / totalCalls) * 100).toFixed(1)) : 0.0;
+        const debtPitchPercent = scoredCount > 0 ? parseFloat(((overviewData.debtPitch / totalCalls) * 100).toFixed(1)) : 0.0;
+        const otherPercentage = totalCalls ? (((overviewData.hotique + overviewData.declined + overviewData.callback) / totalCalls) * 100).toFixed(1): '0';
         // 2. DAILY QA TREND (Grouped by Day)
         const dailyTrendQuery = `
             SELECT 
@@ -423,9 +423,9 @@ router.get('/analytics', async (req: Request, res: Response): Promise<void> => {
             },
             conversionRates: {
                 rates: {
-                    enrollment: { percentage: enrollmentPercent, count: overviewData.enrolled, total: scoredCount },
-                    debtPitch: { percentage: debtPitchPercent, count: overviewData.debtPitch, total: scoredCount },
-                    other: { percentage: 0.0, count: null, total: null }
+                    enrollment: { percentage: enrollmentPercent, count: overviewData.enrolled, total: totalCalls },
+                    debtPitch: { percentage: debtPitchPercent, count: overviewData.debtPitch, total: totalCalls },
+                    other: { percentage: otherPercentage, count: overviewData.hotique + overviewData.declined + overviewData.callback, total: totalCalls }
                 },
                 breakdown: {
                     enrolled: overviewData.enrolled || 0,

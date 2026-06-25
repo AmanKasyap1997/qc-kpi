@@ -155,16 +155,16 @@ const AGENT_COLORS = ['#e8a020', '#2ecc8e', '#4d8ef0', '#9b6cf0', '#f07020', '#e
 
 const AGENTS: Agent[] = [
   { name: 'Jamison Bray', score: 82, delta: '+1.2', calls: 1, enrolls: 0, dept: 'SDR', avgLen: '4:15', eff: '1.80x', flagged: 0, flagRate: '0%', status: 'READY' },
-  { name: 'Kaila Minarcin', score: 68.8, delta: '+63', calls: 31, enrolls: 0, dept: 'Jr Closer', avgLen: '5:42', eff: '2.10x', flagged: 3, flagRate: '10%', status: 'READY' },
+  { name: 'Kaila Minarcin', score: 68.8, delta: '+63', calls: 31, enrolls: 0, dept: 'Debt Sales', avgLen: '5:42', eff: '2.10x', flagged: 3, flagRate: '10%', status: 'READY' },
   { name: '411', score: 68, delta: '—', calls: 9, enrolls: 0, dept: 'Debt Sales', avgLen: '6:12', eff: '1.45x', flagged: 1, flagRate: '11%', status: 'READY' },
-  { name: 'Bayleigh Tinajero', score: 67.2, delta: '+0.3', calls: 13, enrolls: 0, dept: 'Debt Sales', avgLen: '3:50', eff: '2.40x', flagged: 0, flagRate: '0%', status: 'READY' },
+  { name: 'Bayleigh Tinajero', score: 67.2, delta: '+0.3', calls: 13, enrolls: 0, dept: 'Jr Closer', avgLen: '3:50', eff: '2.40x', flagged: 0, flagRate: '0%', status: 'READY' },
   { name: '302', score: 64.4, delta: '—', calls: 15, enrolls: 1, dept: 'Debt Sales', avgLen: '7:22', eff: '1.95x', flagged: 2, flagRate: '13%', status: 'READY' },
-  { name: 'Ryan Choi', score: 63.4, delta: '+3.3', calls: 27, enrolls: 0, dept: 'Debt Sales', avgLen: '5:05', eff: '2.15x', flagged: 4, flagRate: '15%', status: 'READY' },
-  { name: 'Terrence Quiroz', score: 62.5, delta: '+4.03', calls: 3, enrolls: 0, dept: 'Debt Sales', avgLen: '4:40', eff: '1.60x', flagged: 0, flagRate: '0%', status: 'READY' },
+  { name: 'Ryan Choi', score: 63.4, delta: '+3.3', calls: 27, enrolls: 0, dept: 'Jr Closer', avgLen: '5:05', eff: '2.15x', flagged: 4, flagRate: '15%', status: 'READY' },
+  { name: 'Terrence Quiroz', score: 62.5, delta: '+4.03', calls: 3, enrolls: 0, dept: 'Jr Closer', avgLen: '4:40', eff: '1.60x', flagged: 0, flagRate: '0%', status: 'READY' },
   { name: 'Mossa Khan', score: 62, delta: '—', calls: 1, enrolls: 0, dept: 'Debt Sales', avgLen: '3:15', eff: '2.80x', flagged: 0, flagRate: '0%', status: 'READY' },
-  { name: 'Summer Spence', score: 61, delta: '+4.6', calls: 19, enrolls: 2, dept: 'Jr Closer', avgLen: '6:55', eff: '2.30x', flagged: 1, flagRate: '5%', status: 'READY' },
-  { name: '412', score: 59.6, delta: '+46.0', calls: 17, enrolls: 1, dept: 'Debt Sales', avgLen: '5:18', eff: '1.75x', flagged: 2, flagRate: '12%', status: 'READY' },
-  { name: 'Fernanda Garcia', score: 59.6, delta: '+3.88', calls: 12, enrolls: 1, dept: 'Debt Sales', avgLen: '4:59', eff: '2.05x', flagged: 1, flagRate: '8%', status: 'READY' },
+  { name: 'Summer Spence', score: 61, delta: '+4.6', calls: 19, enrolls: 2, dept: 'Debt Sales', avgLen: '6:55', eff: '2.30x', flagged: 1, flagRate: '5%', status: 'READY' },
+  { name: '412', score: 59.6, delta: '+46.0', calls: 17, enrolls: 1, dept: 'SDR', avgLen: '5:18', eff: '1.75x', flagged: 2, flagRate: '12%', status: 'READY' },
+  { name: 'Fernanda Garcia', score: 59.6, delta: '+3.88', calls: 12, enrolls: 1, dept: 'Jr Closer', avgLen: '4:59', eff: '2.05x', flagged: 1, flagRate: '8%', status: 'READY' },
 ];
 
 const OUTCOMES = ['Enrolled', 'Callback', 'Declined', 'Debt Pitch', 'Hotique', 'Loan Transfer', 'Not Qualified'];
@@ -445,7 +445,7 @@ const Dashboard: React.FC = () => {
   const [leaderboardData, setLeaderboardData] = useState<Agent[]>([]);
   const [isDataLoading, setIsDataLoading] = useState<boolean>(false);
   const [analyticsData, setAnalyticsData] = useState(null);
-  const [academyData, setAcademyData] = useState(null);
+  const [academyData, setAcademyData] = useState<any[]>([]);
   const [pipData, setPipData] = useState<any[]>([]);
   const [ztStats, setZtStats] = useState({ strike1s: 0, strike2s: 0, clean: 0 });
   const [escalationSteps, setEscalationSteps] = useState([]);
@@ -608,7 +608,6 @@ const Dashboard: React.FC = () => {
       if (!response.ok) throw new Error('Network error syncing calls database.');
 
       const result = await response.json();
-      console.log(result, 'resultresult')
       if (result.success) {
         setTotalCallsCount(result.data.totalCalls);
         setQaLiveFeedCallWidget({
@@ -777,11 +776,11 @@ const Dashboard: React.FC = () => {
     showToast('info', 'Date Range Applied', 'Refreshing data for selected date range...', setToasts);
     setCurrentPage(1);
     if (activePage === 'qa-live') { fetchLiveFeedData(1); fetchLiveFeedwidgetData(); }
-    if (activePage === 'zendesk') { fetchZendeskData(); }
-    if (activePage === 'leaderboard') { fetchLeaderBoardData(); }
-    if (activePage === 'analytics') { fetchAnalitycsData(); }
-    if (activePage === 'academy') { fetchAcademyData(); }
-    if (activePage === 'pips') { fetchPipData(); }
+    if (activePage === 'zendesk') { fetchZendeskData(); fetchLiveFeedwidgetData(); }
+    if (activePage === 'leaderboard') { fetchLeaderBoardData(); fetchLiveFeedwidgetData(); }
+    if (activePage === 'analytics') { fetchAnalitycsData(); fetchLiveFeedwidgetData(); }
+    if (activePage === 'academy') { fetchAcademyData(); fetchLiveFeedwidgetData(); }
+    if (activePage === 'pips') { fetchPipData(); fetchLiveFeedwidgetData(); }
   };
 
   const openScorecard = (call: Call) => {
@@ -1618,7 +1617,7 @@ const Dashboard: React.FC = () => {
     );
   };
 
-  const renderSDRCards = () => {
+  const renderSDRTopBar = () => {
     const agents = sdrFilter === 'all' ? sdrAgents : sdrAgents.filter(a =>
       (sdrFilter === 'ready' && a.status === 'READY') ||
       (sdrFilter === 'watch' && a.status === 'WATCH') ||
@@ -1667,8 +1666,30 @@ const Dashboard: React.FC = () => {
             <div className={`stage-pillar`} onClick={() => showStageDetail(4)}><div className="stage-num" style={{ color: 'var(--purple)' }}>{counts.promoted}</div><div className="stage-label">Closer<br />Track</div></div>
           </div>
         </div>
+      </>
+    );
+  };
+const renderSDRCard = () => {
+      const agents = sdrFilter === 'all' ? sdrAgents : sdrAgents.filter(a =>
+      (sdrFilter === 'ready' && a.status === 'READY') ||
+      (sdrFilter === 'watch' && a.status === 'WATCH') ||
+      (sdrFilter === 'not-yet' && a.status === 'NOT_YET') ||
+      (sdrFilter === 'promoted' && a.status === 'PROMOTED')
+    );
 
-        <div id="sdr-cards" style={{ padding: '14px' }}>
+    const counts = {
+      total: sdrAgents.length,
+      ready: sdrAgents.filter(a => a.status === 'READY').length,
+      watch: sdrAgents.filter(a => a.status === 'WATCH').length,
+      notYet: sdrAgents.filter(a => a.status === 'NOT_YET').length,
+      promoted: sdrAgents.filter(a => a.status === 'PROMOTED').length,
+    };
+
+    const statusSort = { READY: 0, WATCH: 1, NOT_YET: 2, PROMOTED: 3 };
+    const sorted = [...agents].sort((a, b) => statusSort[a.status] - statusSort[b.status] || b.readiness - a.readiness);
+    return (
+      <>
+          <div id="sdr-cards" style={{ padding: '14px' , flex:1, overflowY:'auto'}}>
           {sorted.map(a => {
             const cardCls = a.status === 'READY' ? 'ready' : a.status === 'WATCH' ? 'watch' : a.status === 'PROMOTED' ? 'promoted' : 'not-yet';
             const ringColor = a.readiness >= 72 ? 'var(--green)' : a.readiness >= 55 ? 'var(--gold)' : 'var(--border3)';
@@ -1731,10 +1752,9 @@ const Dashboard: React.FC = () => {
             );
           })}
         </div>
-      </>
-    );
-  };
-
+        </>
+    )
+}
   const renderSDRTable = () => {
     const agents = sdrFilter === 'all' ? sdrAgents : sdrAgents.filter(a =>
       (sdrFilter === 'ready' && a.status === 'READY') ||
@@ -1747,7 +1767,7 @@ const Dashboard: React.FC = () => {
     const sorted = [...agents].sort((a, b) => statusSort[a.status] - statusSort[b.status] || b.readiness - a.readiness);
 
     return (
-      <div style={{ overflowX: 'auto', padding: '14px' }}>
+      <div style={{ overflowX: 'auto', padding: '14px' ,flex:1, overflowY:'auto'}}>
         <table className="data-table" style={{ minWidth: '1000px' }}>
           <thead>
             <tr>
@@ -1785,7 +1805,7 @@ const Dashboard: React.FC = () => {
 
   const renderSDRStrategy = () => {
     return (
-      <div style={{ maxWidth: '860px', padding: '14px' }}>
+      <div style={{  padding: '14px', flex:1, overflowY:'auto'}}>
         <div style={{ background: 'linear-gradient(135deg,var(--bg3) 0%,var(--bg4) 100%)', border: '1px solid var(--border2)', borderRadius: 'var(--radius2)', padding: '20px', marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
             <div style={{ fontSize: '28px' }}>🎯</div>
@@ -1954,7 +1974,6 @@ const Dashboard: React.FC = () => {
       'Discovery & Qualification': call.checkpointResults?.discoveryQualification || {},
       'Objection Handling & Close': call.checkpointResults?.objectionHandlingClose || {},
     };
-    console.log(call, 'callcallcallcallcall');
     if (modalTab === 'overview') {
       const strengths = (call.agentStrengths || []).slice(0, 10).map((strength: string) => `<li>${strength}</li>`).join('');
 
@@ -2749,7 +2768,7 @@ const Dashboard: React.FC = () => {
                         <div style={{ textAlign: 'center', background: 'var(--bg3)', borderRadius: 'var(--radius)', padding: '10px' }}>
                           <div className="font-mono fw-700 text-muted" style={{ fontSize: '22px' }}>{analyticsData.conversionRates?.rates?.other?.percentage || 0}%</div>
                           <div className="fs-10 text-muted" style={{ marginTop: '3px' }}>Other</div>
-                          <div className="fs-10 text-muted">—</div>
+                          <div className="fs-10 text-muted">{analyticsData.conversionRates?.rates?.other?.count || 0} of {analyticsData.conversionRates?.rates?.other?.total || 0}</div>
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
@@ -3153,70 +3172,75 @@ const Dashboard: React.FC = () => {
                 <button className="topbar-btn primary" onClick={() => showPromoteModal()}>🚀 Promote to Closer</button>
               </div>
             </div>
+              {sdrView === 'board'  && renderSDRTopBar()}
+              {sdrView === 'table'  && renderSDRTopBar()}
+              {sdrView === 'strategy'  && renderSDRTopBar()}
+            <div className="sdr-layout" style={{height:'calc(100vh - var(--topbar-h) - 32px - 80px - 48px'}}>
+              {sdrView === 'board' && renderSDRCard()}
+              {sdrView === 'table' && renderSDRTable()}
+              {sdrView === 'strategy' && renderSDRStrategy()}
 
-            {sdrView === 'board' && renderSDRCards()}
-            {sdrView === 'table' && renderSDRTable()}
-            {sdrView === 'strategy' && renderSDRStrategy()}
-
-            <div className="sdr-sidebar" style={{ position: 'fixed', right: 0, top: 'var(--topbar-h)', width: '300px', height: 'calc(100vh - var(--topbar-h))' }}>
-              <div style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>
-                <div className="split-sidebar-title">This Week's Decisions</div>
-                <div id="sdr-decisions">
-                  {sdrAgents.filter(a => a.day >= 14).map(a => (
-                    <div key={a.name} style={{ padding: '8px', border: `1px solid ${a.status === 'READY' ? 'rgba(46,204,142,0.3)' : 'var(--border)'}`, borderRadius: 'var(--radius)', marginBottom: '6px', background: a.status === 'READY' ? 'var(--green-dim)' : 'var(--bg3)' }}>
-                      <div className="fs-12 fw-600 mb-12">{a.name}</div>
-                      <div className="fs-11 text-muted">Readiness: <strong style={{ color: a.readiness >= 72 ? 'var(--green)' : a.readiness >= 55 ? 'var(--gold)' : 'var(--red)' }}>{a.readiness}/100</strong></div>
-                      <div style={{ marginTop: '6px' }}><span className={`promo-badge ${a.status}`} style={{ fontSize: '9px' }}>{a.status.replace('_', ' ')}</span></div>
-                    </div>
-                  ))}
-                  {sdrAgents.filter(a => a.day >= 14).length === 0 && <div className="fs-11 text-muted">No SDRs at Day 14 this week</div>}
-                </div>
-              </div>
-              <div style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>
-                <div className="split-sidebar-title">Readiness Distribution</div>
-                <div id="sdr-distribution">
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <div className="progress-row"><div className="progress-label" style={{ color: 'var(--green)' }}>✅ Ready</div><div className="mini-bar-wrap"><div className="mini-bar" style={{ width: `${(sdrAgents.filter(a => a.status === 'READY').length / sdrAgents.length) * 100}%`, background: 'var(--green)' }}></div></div><div className="progress-val text-green">{sdrAgents.filter(a => a.status === 'READY').length}</div></div>
-                    <div className="progress-row"><div className="progress-label" style={{ color: 'var(--gold)' }}>⚠️ Watch</div><div className="mini-bar-wrap"><div className="mini-bar" style={{ width: `${(sdrAgents.filter(a => a.status === 'WATCH').length / sdrAgents.length) * 100}%`, background: 'var(--gold)' }}></div></div><div className="progress-val text-gold">{sdrAgents.filter(a => a.status === 'WATCH').length}</div></div>
-                    <div className="progress-row"><div className="progress-label text-muted">🕐 Not Yet</div><div className="mini-bar-wrap"><div className="mini-bar" style={{ width: `${(sdrAgents.filter(a => a.status === 'NOT_YET').length / sdrAgents.length) * 100}%`, background: 'var(--border3)' }}></div></div><div className="progress-val">{sdrAgents.filter(a => a.status === 'NOT_YET').length}</div></div>
-                    <div className="progress-row"><div className="progress-label" style={{ color: 'var(--purple)' }}>⭐ Promoted</div><div className="mini-bar-wrap"><div className="mini-bar" style={{ width: `${(sdrAgents.filter(a => a.status === 'PROMOTED').length / sdrAgents.length) * 100}%`, background: 'var(--purple)' }}></div></div><div className="progress-val" style={{ color: 'var(--purple)' }}>{sdrAgents.filter(a => a.status === 'PROMOTED').length}</div></div>
-                  </div>
-                </div>
-              </div>
-              <div style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>
-                <div className="split-sidebar-title">Academy Suggested</div>
-                <div className="fs-11 text-muted" style={{ marginBottom: '8px', lineHeight: '1.5' }}>Exemplar calls matched to SDR's weakest checkpoint</div>
-                <div id="sdr-academy-match">
-                  {sdrAgents.slice(0, 3).map(a => {
-                    const dims = [
-                      { name: 'Disclosures', val: a.dims.discDim },
-                      { name: 'Talk Ratio', val: a.dims.talkDim },
-                      { name: 'Objections', val: a.dims.objDim },
-                      { name: 'Bad Trackers', val: a.dims.badDim },
-                    ];
-                    const worst = dims.sort((x, y) => x.val - y.val)[0];
-                    const exemplar = academyCalls.find(c => c.academyTag === 'exemplar');
-                    return (
-                      <div key={a.name} style={{ padding: '7px 0', borderBottom: '1px solid var(--border)' }}>
-                        <div className="fs-11 fw-600" style={{ color: 'var(--text)' }}>{a.name}</div>
-                        <div className="fs-10 text-muted">Weakest: <strong style={{ color: 'var(--gold)' }}>{worst.name}</strong></div>
-                        {exemplar && <div className="fs-10 text-muted" style={{ marginTop: '3px' }}>→ Play: <span style={{ color: 'var(--green)', cursor: 'pointer' }} onClick={() => showToast('info', 'Playing Exemplar', `Opening call by ${exemplar.agentName}...`, setToasts)}>{exemplar.agentName} ({exemplar.score})</span></div>}
+              <div className="sdr-sidebar" style={{  right: 0, top: 'var(--topbar-h)', width: '300px', height: 'calc(100vh - var(--topbar-h))' }}>
+                <div style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>
+                  <div className="split-sidebar-title">This Week's Decisions</div>
+                  <div id="sdr-decisions">
+                    {sdrAgents.filter(a => a.day >= 14).map(a => (
+                      <div key={a.name} style={{ padding: '8px', border: `1px solid ${a.status === 'READY' ? 'rgba(46,204,142,0.3)' : 'var(--border)'}`, borderRadius: 'var(--radius)', marginBottom: '6px', background: a.status === 'READY' ? 'var(--green-dim)' : 'var(--bg3)' }}>
+                        <div className="fs-12 fw-600 mb-12">{a.name}</div>
+                        <div className="fs-11 text-muted">Readiness: <strong style={{ color: a.readiness >= 72 ? 'var(--green)' : a.readiness >= 55 ? 'var(--gold)' : 'var(--red)' }}>{a.readiness}/100</strong></div>
+                        <div style={{ marginTop: '6px' }}><span className={`promo-badge ${a.status}`} style={{ fontSize: '9px' }}>{a.status.replace('_', ' ')}</span></div>
                       </div>
-                    );
-                  })}
+                    ))}
+                    {sdrAgents.filter(a => a.day >= 14).length === 0 && <div className="fs-11 text-muted">No SDRs at Day 14 this week</div>}
+                  </div>
                 </div>
-              </div>
-              <div style={{ padding: '12px' }}>
-                <div className="split-sidebar-title">Closer Floor Openings</div>
-                <div id="sdr-openings">
-                  <div style={{ padding: '8px', background: 'var(--green-dim)', border: '1px solid rgba(46,204,142,0.2)', borderRadius: 'var(--radius)' }}>
-                    <div className="fs-12 fw-700 text-green mb-12">2 Closer Seats Open</div>
-                    <div className="fs-11 text-muted" style={{ lineHeight: '1.6' }}>Floor has capacity for 2 additional Jr Closers. {sdrAgents.filter(a => a.status === 'READY').length} SDR{sdrAgents.filter(a => a.status === 'READY').length !== 1 ? 's' : ''} currently meet all promotion criteria.</div>
-                    {sdrAgents.filter(a => a.status === 'READY').length > 0 && <button className="filter-btn" style={{ width: '100%', marginTop: '8px', fontSize: '11px', color: 'var(--green)', borderColor: 'var(--green)' }} onClick={() => showPromoteModal()}>🚀 Initiate Promotions</button>}
+                <div style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>
+                  <div className="split-sidebar-title">Readiness Distribution</div>
+                  <div id="sdr-distribution">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div className="progress-row"><div className="progress-label" style={{ color: 'var(--green)' }}>✅ Ready</div><div className="mini-bar-wrap"><div className="mini-bar" style={{ width: `${(sdrAgents.filter(a => a.status === 'READY').length / sdrAgents.length) * 100}%`, background: 'var(--green)' }}></div></div><div className="progress-val text-green">{sdrAgents.filter(a => a.status === 'READY').length}</div></div>
+                      <div className="progress-row"><div className="progress-label" style={{ color: 'var(--gold)' }}>⚠️ Watch</div><div className="mini-bar-wrap"><div className="mini-bar" style={{ width: `${(sdrAgents.filter(a => a.status === 'WATCH').length / sdrAgents.length) * 100}%`, background: 'var(--gold)' }}></div></div><div className="progress-val text-gold">{sdrAgents.filter(a => a.status === 'WATCH').length}</div></div>
+                      <div className="progress-row"><div className="progress-label text-muted">🕐 Not Yet</div><div className="mini-bar-wrap"><div className="mini-bar" style={{ width: `${(sdrAgents.filter(a => a.status === 'NOT_YET').length / sdrAgents.length) * 100}%`, background: 'var(--border3)' }}></div></div><div className="progress-val">{sdrAgents.filter(a => a.status === 'NOT_YET').length}</div></div>
+                      <div className="progress-row"><div className="progress-label" style={{ color: 'var(--purple)' }}>⭐ Promoted</div><div className="mini-bar-wrap"><div className="mini-bar" style={{ width: `${(sdrAgents.filter(a => a.status === 'PROMOTED').length / sdrAgents.length) * 100}%`, background: 'var(--purple)' }}></div></div><div className="progress-val" style={{ color: 'var(--purple)' }}>{sdrAgents.filter(a => a.status === 'PROMOTED').length}</div></div>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>
+                  <div className="split-sidebar-title">Academy Suggested</div>
+                  <div className="fs-11 text-muted" style={{ marginBottom: '8px', lineHeight: '1.5' }}>Exemplar calls matched to SDR's weakest checkpoint</div>
+                  <div id="sdr-academy-match">
+                    {sdrAgents.slice(0, 3).map(a => {
+                      const dims = [
+                        { name: 'Disclosures', val: a.dims.discDim },
+                        { name: 'Talk Ratio', val: a.dims.talkDim },
+                        { name: 'Objections', val: a.dims.objDim },
+                        { name: 'Bad Trackers', val: a.dims.badDim },
+                      ];
+                      const worst = dims.sort((x, y) => x.val - y.val)[0];
+                      const exemplar = academyCalls.find(c => c.academyTag === 'exemplar');
+                      return (
+                        <div key={a.name} style={{ padding: '7px 0', borderBottom: '1px solid var(--border)' }}>
+                          <div className="fs-11 fw-600" style={{ color: 'var(--text)' }}>{a.name}</div>
+                          <div className="fs-10 text-muted">Weakest: <strong style={{ color: 'var(--gold)' }}>{worst.name}</strong></div>
+                          {exemplar && <div className="fs-10 text-muted" style={{ marginTop: '3px' }}>→ Play: <span style={{ color: 'var(--green)', cursor: 'pointer' }} onClick={() => showToast('info', 'Playing Exemplar', `Opening call by ${exemplar.agentName}...`, setToasts)}>{exemplar.agentName} ({exemplar.score})</span></div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div style={{ padding: '12px' }}>
+                  <div className="split-sidebar-title">Closer Floor Openings</div>
+                  <div id="sdr-openings">
+                    <div style={{ padding: '8px', background: 'var(--green-dim)', border: '1px solid rgba(46,204,142,0.2)', borderRadius: 'var(--radius)' }}>
+                      <div className="fs-12 fw-700 text-green mb-12">2 Closer Seats Open</div>
+                      <div className="fs-11 text-muted" style={{ lineHeight: '1.6' }}>Floor has capacity for 2 additional Jr Closers. {sdrAgents.filter(a => a.status === 'READY').length} SDR{sdrAgents.filter(a => a.status === 'READY').length !== 1 ? 's' : ''} currently meet all promotion criteria.</div>
+                      {sdrAgents.filter(a => a.status === 'READY').length > 0 && <button className="filter-btn" style={{ width: '100%', marginTop: '8px', fontSize: '11px', color: 'var(--green)', borderColor: 'var(--green)' }} onClick={() => showPromoteModal()}>🚀 Initiate Promotions</button>}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+              </div>
+            
           </div>
 
           {/* KPI Board Pages */}
