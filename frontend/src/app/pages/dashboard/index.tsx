@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { API_URL } from '@/config';
+import { io } from "socket.io-client"; // 1. Import Socket.IO client
 
 // ============================================
 // TYPES
@@ -294,8 +295,9 @@ const PAGE_TITLES: Record<string, [string, string]> = {
 const agentColor = (i: number) => AGENT_COLORS[i % AGENT_COLORS.length];
 const scoreClass = (s: number) => s >= 80 ? 'great' : s >= 50 ? 'ok' : 'bad';
 const scoreColor = (s: number) => s >= 80 ? 'var(--green)' : s >= 50 ? 'var(--gold)' : 'var(--red)';
-const initials = (name?: string | null) => {if (!name) return "";return name.trim().split(" ").map(word => word[0]).join("").toUpperCase();
-};const outcomeClass = (o: string) => {
+const initials = (name?: string | null) => {
+  if (!name) return ""; return name.trim().split(" ").map(word => word[0]).join("").toUpperCase();
+}; const outcomeClass = (o: string) => {
   const map: Record<string, string> = { 'Enrolled': 'green', 'Callback': 'blue', 'Declined': 'red', 'Debt Pitch': 'gold', 'Hotique': 'orange', 'Loan Transfer': 'purple', 'Not Qualified': 'grey' };
   return map[o] || 'grey';
 };
@@ -459,7 +461,6 @@ const Dashboard: React.FC = () => {
   const [selectedDept, setSelectedDept] = React.useState('All Depts');
   const [boardData, setBoardData] = React.useState(null);
   const [sdrAgents, setSdrAgents] = useState<any[]>([]);
-
   const [recentActivities, setRecentActivities] = React.useState<Array<{
     id: string;
     icon: string;
@@ -469,6 +470,10 @@ const Dashboard: React.FC = () => {
     { id: 'init-1', icon: '⭐', text: 'Live DB Stream Synchronized Successfully', timestamp: Date.now() },
     { id: 'init-2', icon: '⚡', text: 'Academy workspace initialized.', timestamp: Date.now() - 60000 }
   ]);
+
+  const socket = io(API_URL, {
+    transports: ["websocket"] // This disables the repeating HTTP polling requests
+  });
 
   const formatPlaybackTime = (seconds: any) => {
     if (!seconds || isNaN(seconds)) return "0:00";
@@ -534,7 +539,19 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     fetchLiveFeedData();
     fetchLiveFeedwidgetData();
-  }, [callOutcome,callFlag,callScore,callDepartment]);
+  }, [callOutcome, callFlag, callScore, callDepartment]);
+
+
+  useEffect(() => {
+    socket.on("db_calls_updated", () => {
+      console.log("WebSocket event captured! Syncing UI indicators with DB data layers...");
+      fetchConversionBoardData();
+    });
+    return () => {
+      socket.off("db_calls_updated");
+    };
+  }, []);
+
   const outcomeCounts = useMemo(() => {
     // 1. Initialize your dynamic counter object with 0s
     const counts = { enrolled: 0, pitch: 0, callback: 0, declined: 0, hotique: 0, };
@@ -740,6 +757,8 @@ const Dashboard: React.FC = () => {
   const fetchConversionBoardData = async () => {
     try {
       setIsDataLoading(true);
+      console.log('-- dateFrom --', dateFrom, '---', dateTo);
+
       const response = await fetch(`${API_URL}/api/dashboard/conversion-board?dateFrom=${dateFrom}&dateTo=${dateTo}`);
       const result = await response.json();
       if (result) {
@@ -858,24 +877,24 @@ const Dashboard: React.FC = () => {
     // setCurrentPage(1);                // reset to page 1 on filter change
   };
 
-const handleFilterChange = (key: string, value: string) => {
-  console.log(key,'keykey');
-  console.log(value,'valuevalue');
-  setFilters(prev => ({ ...prev, [key]: value }));
+  const handleFilterChange = (key: string, value: string) => {
+    console.log(key, 'keykey');
+    console.log(value, 'valuevalue');
+    setFilters(prev => ({ ...prev, [key]: value }));
 
-  if (key === 'outcome') {
-    setCallOutcome(value);
-  }
-  if (key === 'flag') {
-    setcallFlag(value);
-  }
-  if (key === 'score') {
-    setcallScore(value);
-  }
-  if (key === 'dept') {
-    setcallDepartment(value);
-  }
-};
+    if (key === 'outcome') {
+      setCallOutcome(value);
+    }
+    if (key === 'flag') {
+      setcallFlag(value);
+    }
+    if (key === 'score') {
+      setcallScore(value);
+    }
+    if (key === 'dept') {
+      setcallDepartment(value);
+    }
+  };
 
   const handleDateRangeApply = () => {
     showToast('info', 'Date Range Applied', 'Refreshing data for selected date range...', setToasts);

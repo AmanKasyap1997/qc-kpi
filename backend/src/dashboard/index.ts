@@ -1101,11 +1101,11 @@ router.get('/conversion-board', async (req: Request, res: Response): Promise<voi
                 TO_CHAR(c.started_at, 'HH:MI PM') AS "time"
             FROM calls c
             WHERE c.deleted_at IS NULL
-              AND c.outcome = 'Enrolled'
+              AND c.outcome = 'Enrolled' AND c.started_at BETWEEN $1::timestamp AND $2::timestamp
             ORDER BY c.started_at DESC
             LIMIT 5;
         `;
-        const feedResult = await client.query(feedQuery);
+        const feedResult = await client.query(feedQuery, [dateFrom, dateTo]);
         const feed = feedResult.rows.map((row: any) => {
             // Mask phone numbers dynamically matching user client snapshot masking style
             let rawPhone = row.phone || "(555) 000-0000";
