@@ -69,7 +69,7 @@ router.get("/live-feed-widget-data", async (req: Request, res: Response) => {
             )
             SELECT
                 COUNT(*) AS "totalCalls",
-                ROUND(AVG(score)::numeric, 2) AS "avgScore",
+                COALESCE(ROUND(AVG(score)::numeric, 2), 0) AS "avgScore",
                 COUNT(*) FILTER (WHERE outcome = 'Enrolled') AS "totalEnrolled",
                 COUNT(*) FILTER (WHERE outcome = 'Debt Pitch') AS "totalPitch",
                 COUNT(*) FILTER (WHERE outcome = 'Callback') AS "totalCallback",
@@ -350,7 +350,7 @@ router.get('/analytics', async (req: Request, res: Response): Promise<void> => {
         // Calculate Rate Percentages safely
         const enrollmentPercent = scoredCount > 0 ? parseFloat(((overviewData.enrolled / totalCalls) * 100).toFixed(1)) : 0.0;
         const debtPitchPercent = scoredCount > 0 ? parseFloat(((overviewData.debtPitch / totalCalls) * 100).toFixed(1)) : 0.0;
-        const otherPercentage = totalCalls ? (((overviewData.hotique + overviewData.declined + overviewData.callback) / totalCalls) * 100).toFixed(1): '0';
+        const otherPercentage = totalCalls ? (((overviewData.hotique + overviewData.declined + overviewData.callback) / totalCalls) * 100).toFixed(1) : '0';
         // 2. DAILY QA TREND (Grouped by Day)
         const dailyTrendQuery = `
             SELECT 
@@ -615,6 +615,126 @@ router.get('/academy', async (req: Request, res: Response): Promise<void> => {
     }
 });
 
+router.get('/sdr-pipeline', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const rawDateFrom = String(req.query.dateFrom || '2026-06-16');
+        const rawDateTo = String(req.query.dateTo || '2026-06-18');
+        const dateFrom = `${rawDateFrom} 00:00:00`;
+        const dateTo = `${rawDateTo} 23:59:59`;
+
+        // Helper function to generate an absolute unique/consistent color based on string hash
+        const getAgentColor = (name: string): string => {
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) {
+                hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+            return "#" + "00000".substring(0, 6 - c.length) + c;
+        };
+
+        // Query fetching all active agents with safe JSONB array handles
+        const sqlQuery = `
+    SELECT 
+        a.name AS "name",
+        COALESCE(ca.ai_generated_department, 'SDR') AS "dept",
+        COUNT(c.id)::INT AS "calls",
+        ROUND(AVG(COALESCE(ca.overall_call_score, 0))::NUMERIC, 1)::FLOAT AS "qa",
+        ROUND(AVG(COALESCE(ca.disclosures_percentage, 0))::NUMERIC, 1)::FLOAT AS "discAdh",
+        ROUND(COALESCE(AVG(ca.talk_ratio_percent::NUMERIC), 49.2)::NUMERIC, 1)::FLOAT AS "talkRatio",
+        
+        SUM(COALESCE(ca.objection_handled_count, 0))::INT AS "objRate",        
+        SUM(COALESCE(ca.bad_tracker_count, 0))::INT AS "badTrack",
+        
+        -- Dynamic conversion outcome aggregations
+        SUM(CASE WHEN LOWER(TRIM(c.outcome)) = 'enrolled' THEN 1 ELSE 0 END)::INT AS "enrolls",
+        GREATEST(1, EXTRACT(DAY FROM (NOW() - MIN(c.started_at))))::INT AS "computedDay",
+        
+        -- Subquery tracking the precise final score achieved by this agent
+        (
+            SELECT COALESCE(inner_ca.overall_call_score, 0)
+            FROM calls inner_c
+            LEFT JOIN call_analytics inner_ca ON inner_ca.call_id = inner_c.id
+            WHERE inner_c.agent_id = a.id AND inner_c.deleted_at IS NULL
+            ORDER BY inner_c.started_at DESC
+            LIMIT 1
+        )::INT AS "lastScore"
+    FROM calls c
+    INNER JOIN agents a ON c.agent_id = a.id
+    LEFT JOIN call_analytics ca ON ca.call_id = c.id
+    WHERE c.deleted_at IS NULL
+      AND (c.started_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP))
+      AND (
+           ca.ai_generated_department ILIKE '%SDR%' 
+           OR LOWER(TRIM(ca.ai_generated_department)) = 'jr closer'
+      )
+    GROUP BY a.id, a.name, ca.ai_generated_department;
+`;
+
+        const queryParams = [dateFrom, dateTo];
+        const result = await db.query(sqlQuery, queryParams);
+
+        // Map database records into standard layout entities
+        const sdrAgents = result.rows.map((row: any) => {
+            // Determine active days tracked on the platform (cap timeline scale contextually at 14 days)
+            const dynamicDay = Math.min(14, row.computedDay || 1);
+
+            // Calculate overall metric readiness score dynamically using weighted formula matrices
+            const computedReadiness = Math.round(
+                (row.qa * 0.4) +
+                (row.discAdh * 0.4) +
+                (Math.max(0, 100 - (row.badTrack * 12)) * 0.2)
+            );
+            const finalReadiness = Math.min(100, Math.max(0, computedReadiness));
+
+            // Dynamic evaluation gate status rule calculations
+            let dynamicStatus = "NOT_YET";
+            if (finalReadiness >= 82 && dynamicDay >= 12) {
+                dynamicStatus = "READY";
+            } else if (finalReadiness >= 92 && dynamicDay === 14) {
+                dynamicStatus = "PROMOTED";
+            } else if (row.qa < 70 || row.badTrack > 3) {
+                dynamicStatus = "WATCH";
+            }
+
+            // Trend flag matching current performance vs their final historical call
+            const dynamicTrend = row.lastScore >= row.qa ? "up" : "flat";
+
+            return {
+                name: row.name,
+                day: dynamicDay,
+                qa: row.qa,
+                discAdh: row.discAdh,
+                talkRatio: row.talkRatio,
+                objRate: row.objRate,
+                badTrack: row.badTrack,
+                readiness: finalReadiness,
+                status: dynamicStatus,
+                agentColor: getAgentColor(row.name),
+                dept: row.dept,
+                calls: row.calls,
+                trend: dynamicTrend,
+                enrolls: row.enrolls,
+                lastScore: row.lastScore || Math.round(row.qa),
+                dims: {
+                    qaDim: row.qa,
+                    discDim: row.discAdh,
+                    talkDim: row.talkRatio,
+                    badDim: row.badTrack,
+                    objDim: row.objRate
+                }
+            };
+        });
+
+        res.status(200).json({
+            success: true,
+            sdrAgents
+        });
+    } catch (error: any) {
+        console.error("GET /sdr-pipeline production error:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error Pipeline", error: error.message });
+    }
+});
+
 router.get("/pips", async (req: Request, res: Response) => {
     try {
         const rawDateFrom = String(req.query.dateFrom || '2026-06-16');
@@ -770,7 +890,6 @@ router.get("/pips", async (req: Request, res: Response) => {
     }
 });
 
-// Add this route to your academy/calls router file
 router.post('/flag', async (req: Request, res: Response): Promise<void> => {
     try {
         const { callId } = req.body;
@@ -805,5 +924,166 @@ router.post('/flag', async (req: Request, res: Response): Promise<void> => {
         res.status(500).json({ error: "Internal Server Error", details: error.message });
     }
 });
+
+router.get('/conversion-board', async (req: Request, res: Response): Promise<void> => {
+    const client = await db.connect();
+    try {
+        // Use the current date for real-time live floor tracking metrics
+        const rawDateFrom = String(req.query.dateFrom || '2026-06-16');
+        const rawDateTo = String(req.query.dateTo || '2026-06-18');
+        const dateFrom = `${rawDateFrom} 00:00:00`;
+        const dateTo = `${rawDateTo} 23:59:59`;
+
+        // 1. Fetch Funnel Funnel Funnel Overview / Top cards for the day
+        const metricsQuery = `
+            SELECT 
+                COUNT(c.id) AS "total",
+                SUM(CASE WHEN c.duration_seconds > 0 THEN 1 ELSE 0 END) AS "connected",
+                SUM(CASE WHEN ca.overall_call_score >= 50 THEN 1 ELSE 0 END) AS "qualified",
+                SUM(CASE WHEN c.outcome = 'Enrolled' THEN 1 ELSE 0 END) AS "converted"
+            FROM calls c
+            LEFT JOIN call_analytics ca ON ca.call_id = c.id
+            WHERE c.deleted_at IS NULL
+              AND c.started_at BETWEEN $1::timestamp AND $2::timestamp;
+        `;
+        const metricsResult = await client.query(metricsQuery, [dateFrom, dateTo]);
+        const m = metricsResult.rows[0];
+
+        const total = Math.max(0, parseInt(m.total || 0));
+        const connected = Math.max(0, parseInt(m.connected || 0));
+        const qualified = Math.max(0, parseInt(m.qualified || 0));
+        const converted = Math.max(0, parseInt(m.converted || 0));
+
+        // Constants matching UI rule assumptions
+        const PAYOUT = 40;
+        const GOAL = 75;
+
+        // Calculate business day timeline progress (8 AM to 8 PM window)
+        const now = new Date();
+        const startHour = 8;
+        const endHour = 20;
+        const currentHour = now.getHours();
+        let elapsed = 0.05; // Default minimal start value
+
+        if (currentHour >= startHour && currentHour < endHour) {
+            const totalSecs = (endHour - startHour) * 3600;
+            const currentSecs = ((currentHour - startHour) * 3600) + (now.getMinutes() * 60) + now.getSeconds();
+            elapsed = parseFloat((currentSecs / totalSecs).toFixed(2));
+        } else if (currentHour >= endHour) {
+            elapsed = 1.0;
+        }
+
+        const cvr = total > 0 ? parseFloat(((converted / total) * 100).toFixed(1)) : 0;
+        const revenue = converted * PAYOUT;
+        const projected = Math.round(converted / Math.max(0.01, elapsed));
+        const expectedNow = Math.round(GOAL * elapsed);
+        const runRate = Math.round(revenue / Math.max(0.01, elapsed));
+
+        // 2. Fetch Hourly Trend Sequence
+        const hourlyQuery = `
+            SELECT 
+                EXTRACT(HOUR FROM c.started_at)::int AS "hour",
+                SUM(CASE WHEN c.outcome = 'Enrolled' THEN 1 ELSE 0 END)::int AS "conv"
+            FROM calls c
+            WHERE c.deleted_at IS NULL
+              AND c.started_at BETWEEN $1::timestamp AND $2::timestamp
+            GROUP BY EXTRACT(HOUR FROM c.started_at)
+            ORDER BY "hour" ASC;
+        `;
+        const hourlyResult = await client.query(hourlyQuery, [dateFrom, dateTo]);
+
+        // Structure standard operational hours skeleton list (8am - 8pm)
+        const hours = Array.from({ length: 13 }, (_, i) => {
+            const h = i + 8;
+            const match = hourlyResult.rows.find((row: any) => row.hour === h);
+            return { hour: h, conv: match ? match.conv : 0 };
+        });
+
+        // 3. Fetch Top Lines Performance (Campaign Leaderboard)
+        const sourcesQuery = `
+            SELECT 
+                c.campaign AS "name",
+                COUNT(c.id)::int AS "calls",
+                SUM(CASE WHEN c.outcome = 'Enrolled' THEN 1 ELSE 0 END)::int AS "converted"
+            FROM calls c
+            WHERE c.deleted_at IS NULL
+              AND c.started_at BETWEEN $1::timestamp AND $2::timestamp
+              AND c.campaign IS NOT NULL AND c.campaign != '' AND c.campaign != 'Unknown'
+            GROUP BY c.campaign
+            ORDER BY "converted" DESC, "calls" DESC
+            LIMIT 5;
+        `;
+        const sourcesResult = await client.query(sourcesQuery, [dateFrom, dateTo]);
+        const sources = sourcesResult.rows.map((row: any, index: number) => ({
+            id: `s${index + 1}`,
+            name: row.name,
+            calls: row.calls,
+            converted: row.converted
+        }));
+
+        // Handle fallback structure context if sources display is clean empty
+        if (sources.length === 0) {
+            sources.push(
+                { id: "s1", name: "Inbound General Campaign", calls: total, converted: converted }
+            );
+        }
+
+        // 4. Fetch Live Recent Conversions Ticker Feed
+        const feedQuery = `
+            SELECT 
+                c.id::text AS "id",
+                c.client_phone AS "phone",
+                COALESCE(c.campaign, 'Direct Inbound') AS "source",
+                TO_CHAR(c.started_at, 'HH:MI PM') AS "time"
+            FROM calls c
+            WHERE c.deleted_at IS NULL
+              AND c.outcome = 'Enrolled'
+            ORDER BY c.started_at DESC
+            LIMIT 5;
+        `;
+        const feedResult = await client.query(feedQuery);
+        const feed = feedResult.rows.map((row: any) => {
+            // Mask phone numbers dynamically matching user client snapshot masking style
+            let rawPhone = row.phone || "(555) 000-0000";
+            let maskedPhone = rawPhone;
+            if (rawPhone.length >= 5) {
+                maskedPhone = rawPhone.substring(0, 3) + "•••" + rawPhone.substring(rawPhone.length - 4);
+            }
+            return {
+                id: row.id,
+                phone: maskedPhone,
+                state: "Live", // Static fallback where state lookup field isn't on base call table
+                source: row.source,
+                payout: PAYOUT,
+                time: row.time
+            };
+        });
+
+        // Assemble the uniform payload contract object matching frontend requirements
+        const conversionBoardData = {
+            total,
+            connected,
+            qualified,
+            converted,
+            revenue,
+            projected,
+            expectedNow,
+            elapsed,
+            cvr,
+            runRate,
+            ydayRevenue: 2000, // Static baseline benchmark fallback value
+            hours,
+            sources,
+            feed
+        };
+
+        res.status(200).json(conversionBoardData);
+    } catch (error: any) {
+        console.error("Database compilation failed for conversion board metrics:", error);
+        res.status(500).json({ error: 'Failed to fetch live conversion board data context pipeline', details: error.message });
+    } finally {
+        client.release();
+    }
+})
 
 export default router;

@@ -285,6 +285,7 @@ const PAGE_TITLES: Record<string, [string, string]> = {
   'tax-debt-backend': ['Tax & Debt Backend', 'KPI Board'],
   'tax-prep': ['Tax Prep Tracking', 'KPI Board'],
   'zendesk': ['Zendesk Tickets', 'KPI Board'],
+  'conversion-board': ['Conversion Board', 'KPI Board'],
 };
 
 // ============================================
@@ -420,7 +421,7 @@ const Dashboard: React.FC = () => {
   const [qaLiveFeedCallWidget, setQaLiveFeedCallWidget] = useState<QaLiveFeedCallWidget | null>(null);
   const [loadingCalls, setLoadingCalls] = useState<boolean>(true);
   const [academyCalls] = useState<AcademyCall[]>(buildAcademyCalls(allCalls));
-  const [sdrAgents] = useState<SdrAgent[]>(buildSdrAgents);
+  // const [sdrAgents] = useState<SdrAgent[]>(buildSdrAgents);
   const [toasts, setToasts] = useState<Array<{ id: number; type: string; title: string; msg: string }>>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCall, setSelectedCall] = useState<Call | null>(null);
@@ -452,6 +453,8 @@ const Dashboard: React.FC = () => {
   const [playingCallId, setPlayingCallId] = useState(null);
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState("0:00");
   const [selectedDept, setSelectedDept] = React.useState('All Depts');
+  const [boardData, setBoardData] = React.useState(null);
+  const [sdrAgents, setSdrAgents] = useState<any[]>([]);
 
   const [recentActivities, setRecentActivities] = React.useState<Array<{
     id: string;
@@ -518,31 +521,16 @@ const Dashboard: React.FC = () => {
     if (activePage === 'academy') {
       fetchAcademyData();
     }
-    if (activePage === 'pips') {
-      fetchPipData();
-    }
+    if (activePage === 'sdr-pipeline') fetchsdrcloserData();
+    if (activePage === 'pips') fetchPipData();
+    if (activePage === 'conversion-board') fetchConversionBoardData();
+
   }, [filters, allCalls, activePage, leaderboardMode, leaderboardTime]);
 
   useEffect(() => {
     fetchLiveFeedData();
     fetchLiveFeedwidgetData();
   }, []);
-  const outcomeCounts = useMemo(() => {
-    // 1. Initialize your dynamic counter object with 0s
-    const counts = { enrolled: 0, pitch: 0, callback: 0, declined: 0, hotique: 0, };
-    // 2. Loop through all calls exactly once
-    allCalls.forEach(c => {
-      // Normalize string to lowercase to prevent typos/casing mismatches
-      const outcome = c.outcome?.toLowerCase();
-      if (outcome === 'enrolled') counts.enrolled++;
-      else if (outcome === 'debt pitch') counts.pitch++;
-      else if (outcome === 'callback') counts.callback++;
-      else if (outcome === 'declined') counts.declined++;
-      else if (outcome === 'hotique') counts.hotique++;
-    });
-
-    return counts;
-  }, [allCalls]);
 
   // 1. Dynamically compute occurrences and max value for the progress bar widths
   const deviationsData = useMemo(() => {
@@ -570,7 +558,6 @@ const Dashboard: React.FC = () => {
   const [totalCallCount, setTotalCallCount] = useState(0);
   const ROWS_PER_PAGE = 50;
 
-  // Replace fetchLiveFeedData:
   const fetchLiveFeedData = async (page = 1) => {
     try {
       setLoadingCalls(true);
@@ -690,6 +677,21 @@ const Dashboard: React.FC = () => {
     }
   }
 
+  const fetchsdrcloserData = async () => {
+    try {
+      setIsDataLoading(true);
+      const response = await fetch(`${API_URL}/api/dashboard/sdr-pipeline?dateFrom=${dateFrom}&dateTo=${dateTo}`);
+      const data = await response.json();
+      if (data.success && data.sdrAgents) {
+        setSdrAgents(data.sdrAgents);
+      }
+    } catch (error) {
+      console.error("Error fetching leaderboard data:", error);
+    } finally {
+      setIsDataLoading(false);
+    }
+  }
+
   const fetchPipData = async () => {
     try {
       setIsDataLoading(true);
@@ -711,6 +713,20 @@ const Dashboard: React.FC = () => {
     } catch (error) {
       console.error("Error fetching leaderboard data:", error);
       setPipData([]);
+    } finally {
+      setIsDataLoading(false);
+    }
+  }
+  const fetchConversionBoardData = async () => {
+    try {
+      setIsDataLoading(true);
+      const response = await fetch(`${API_URL}/api/dashboard/conversion-board?dateFrom=${dateFrom}&dateTo=${dateTo}`);
+      const result = await response.json();
+      if (result) {
+        setBoardData(result)
+      }
+    } catch (error) {
+      console.error("Error fetching leaderboard data:", error);
     } finally {
       setIsDataLoading(false);
     }
@@ -751,6 +767,60 @@ const Dashboard: React.FC = () => {
     setDateTo(formatDateString(toDate));
   };
 
+  // ════════════════════════════════════════════════════════════════════════
+  // STATIC CONVERSION BOARD SETUP (PLACE OUTSIDE MAIN COMPONENT)
+  // ════════════════════════════════════════════════════════════════════════
+  const DISPLAY = '"Oswald",system-ui,sans-serif';
+  const UI = '"Inter",-apple-system,system-ui,sans-serif';
+  const MONO = '"JetBrains Mono",ui-monospace,monospace';
+
+  const GOLD = "#F5B833", TEAL = "#34E0C4", CORAL = "#FF7A7A", INK = "#0A0E1A";
+  const GOAL = 75;
+
+  const fmtInt = (n) => Math.round(n).toLocaleString("en-US");
+  const fmt$ = (n) => "$" + Math.round(n).toLocaleString("en-US");
+
+  // ── Static Presentational Subcomponents ─────────────────────────────────
+  function Glass({ children, className = "", glow }) {
+    return (
+      <div className={`relative rounded-2xl border border-white/10 p-5 ${className}`}
+        style={{ background: "rgba(255,255,255,0.035)", boxShadow: glow ? `0 0 0 1px ${glow}22, 0 18px 50px -20px ${glow}55` : "0 18px 50px -28px #000" }}>
+        {children}
+      </div>
+    );
+  }
+
+  function Eyebrow({ children, color = "rgba(255,255,255,0.45)" }) {
+    return <div className="text-[11px] font-600 tracking-[0.2em] uppercase" style={{ color }}>{children}</div>;
+  }
+
+  function StaticGauge({ value, color }) {
+    const size = 132;
+    const stroke = 12;
+    const r = (size - stroke) / 2;
+    const c = 2 * Math.PI * r;
+    const sweep = 0.75;
+    const dash = c * sweep;
+    const offset = dash * (1 - Math.min(100, value) / 100);
+    return (
+      <div className="relative shrink-0" style={{ width: size, height: size }}>
+        <svg width={size} height={size}>
+          <g transform={`rotate(135 ${size / 2} ${size / 2})`}>
+            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} strokeDasharray={`${dash} ${c}`} strokeLinecap="round" />
+            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke}
+              strokeDasharray={`${dash} ${c}`} strokeDashoffset={offset} strokeLinecap="round"
+              style={{ filter: `drop-shadow(0 0 6px ${color}88)` }} />
+          </g>
+        </svg>
+        <div className="absolute inset-0 grid place-items-center">
+          <div className="text-center">
+            <div style={{ fontFamily: MONO, color }} className="text-[15px] font-600 tabular-nums">{value.toFixed(0)}%</div>
+            <div className="text-[9px] tracking-[0.18em] uppercase text-white/35">close</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Functions
   const applyFilters = () => {
@@ -776,11 +846,14 @@ const Dashboard: React.FC = () => {
     showToast('info', 'Date Range Applied', 'Refreshing data for selected date range...', setToasts);
     setCurrentPage(1);
     if (activePage === 'qa-live') { fetchLiveFeedData(1); fetchLiveFeedwidgetData(); }
-    if (activePage === 'zendesk') { fetchZendeskData(); fetchLiveFeedwidgetData(); }
-    if (activePage === 'leaderboard') { fetchLeaderBoardData(); fetchLiveFeedwidgetData(); }
-    if (activePage === 'analytics') { fetchAnalitycsData(); fetchLiveFeedwidgetData(); }
-    if (activePage === 'academy') { fetchAcademyData(); fetchLiveFeedwidgetData(); }
-    if (activePage === 'pips') { fetchPipData(); fetchLiveFeedwidgetData(); }
+    if (activePage === 'zendesk') { fetchZendeskData(); }
+    if (activePage === 'leaderboard') { fetchLeaderBoardData(); }
+    if (activePage === 'analytics') { fetchAnalitycsData(); }
+    if (activePage === 'academy') { fetchAcademyData(); }
+    if (activePage === 'sdr-pipeline') fetchsdrcloserData();
+    if (activePage === 'pips') { fetchPipData(); }
+    if (activePage === 'conversion-board') fetchConversionBoardData();
+
   };
 
   const openScorecard = (call: Call) => {
@@ -1634,7 +1707,7 @@ const Dashboard: React.FC = () => {
     };
 
     const statusSort = { READY: 0, WATCH: 1, NOT_YET: 2, PROMOTED: 3 };
-    const sorted = [...agents].sort((a, b) => statusSort[a.status] - statusSort[b.status] || b.readiness - a.readiness);
+    const sorted = [...agents].sort((a, b) => (statusSort as any)[a.status] - (statusSort as any)[b.status] || b.readiness - a.readiness);
 
     return (
       <>
@@ -1669,8 +1742,8 @@ const Dashboard: React.FC = () => {
       </>
     );
   };
-const renderSDRCard = () => {
-      const agents = sdrFilter === 'all' ? sdrAgents : sdrAgents.filter(a =>
+  const renderSDRCard = () => {
+    const agents = sdrFilter === 'all' ? sdrAgents : sdrAgents.filter(a =>
       (sdrFilter === 'ready' && a.status === 'READY') ||
       (sdrFilter === 'watch' && a.status === 'WATCH') ||
       (sdrFilter === 'not-yet' && a.status === 'NOT_YET') ||
@@ -1686,10 +1759,10 @@ const renderSDRCard = () => {
     };
 
     const statusSort = { READY: 0, WATCH: 1, NOT_YET: 2, PROMOTED: 3 };
-    const sorted = [...agents].sort((a, b) => statusSort[a.status] - statusSort[b.status] || b.readiness - a.readiness);
+    const sorted = [...agents].sort((a, b) => (statusSort as any)[a.status] - (statusSort as any)[b.status] || b.readiness - a.readiness);
     return (
       <>
-          <div id="sdr-cards" style={{ padding: '14px' , flex:1, overflowY:'auto'}}>
+        <div id="sdr-cards" style={{ padding: '14px', flex: 1, overflowY: 'auto' }}>
           {sorted.map(a => {
             const cardCls = a.status === 'READY' ? 'ready' : a.status === 'WATCH' ? 'watch' : a.status === 'PROMOTED' ? 'promoted' : 'not-yet';
             const ringColor = a.readiness >= 72 ? 'var(--green)' : a.readiness >= 55 ? 'var(--gold)' : 'var(--border3)';
@@ -1752,9 +1825,9 @@ const renderSDRCard = () => {
             );
           })}
         </div>
-        </>
+      </>
     )
-}
+  }
   const renderSDRTable = () => {
     const agents = sdrFilter === 'all' ? sdrAgents : sdrAgents.filter(a =>
       (sdrFilter === 'ready' && a.status === 'READY') ||
@@ -1764,10 +1837,10 @@ const renderSDRCard = () => {
     );
 
     const statusSort = { READY: 0, WATCH: 1, NOT_YET: 2, PROMOTED: 3 };
-    const sorted = [...agents].sort((a, b) => statusSort[a.status] - statusSort[b.status] || b.readiness - a.readiness);
+    const sorted = [...agents].sort((a, b) => (statusSort as any)[a.status] - (statusSort as any)[b.status] || b.readiness - a.readiness);
 
     return (
-      <div style={{ overflowX: 'auto', padding: '14px' ,flex:1, overflowY:'auto'}}>
+      <div style={{ overflowX: 'auto', padding: '14px', flex: 1, overflowY: 'auto' }}>
         <table className="data-table" style={{ minWidth: '1000px' }}>
           <thead>
             <tr>
@@ -1804,41 +1877,62 @@ const renderSDRCard = () => {
   };
 
   const renderSDRStrategy = () => {
+    const totalAgents = sdrAgents.length;
+
+    const cohortMetrics = sdrAgents.reduce((acc, agent) => {
+      acc.totalQa += agent.qa || 0;
+      acc.totalDisc += agent.discAdh || 0;
+      acc.totalTalk += agent.talkRatio || 0;
+      acc.totalBadTrackers += agent.badTrack || 0;
+      acc.totalCalls += agent.calls || 0;
+      return acc;
+    }, { totalQa: 0, totalDisc: 0, totalTalk: 0, totalBadTrackers: 0, totalCalls: 0 });
+
+    // Fallbacks to avoid division by zero errors if the list is empty
+    const avgCohortQa = totalAgents > 0 ? Math.round(cohortMetrics.totalQa / totalAgents) : 0;
+    const avgCohortDisc = totalAgents > 0 ? Math.round(cohortMetrics.totalDisc / totalAgents) : 0;
+    const avgCohortTalk = totalAgents > 0 ? Math.round(cohortMetrics.totalTalk / totalAgents) : 0;
+    const totalCohortBad = cohortMetrics.totalBadTrackers;
+    const totalCohortCalls = cohortMetrics.totalCalls;
+
     return (
-      <div style={{  padding: '14px', flex:1, overflowY:'auto'}}>
+      <div style={{ padding: '14px', flex: 1, overflowY: 'auto' }}>
+        {/* Dynamic Cohort Top Blueprint Banner */}
         <div style={{ background: 'linear-gradient(135deg,var(--bg3) 0%,var(--bg4) 100%)', border: '1px solid var(--border2)', borderRadius: 'var(--radius2)', padding: '20px', marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
             <div style={{ fontSize: '28px' }}>🎯</div>
             <div>
               <div style={{ fontFamily: 'var(--display)', fontSize: '16px', fontWeight: 700, color: 'var(--text)' }}>The SDR → Sales Ninja Blueprint</div>
-              <div className="fs-11 text-muted">City Financial · 14-Day Conversion System</div>
+              <div className="fs-11 text-muted">
+                City Financial · Tracking {totalAgents} Active {totalAgents === 1 ? 'Agent' : 'Agents'} Dynamically
+              </div>
             </div>
           </div>
           <div className="fs-12 text-muted" style={{ lineHeight: '1.7', borderLeft: '3px solid var(--gold)', paddingLeft: '12px' }}>
             Your SDRs have one job: qualify aggressively and hand off hot. The best SDRs already show closing instincts — they handle early objections, control pacing, and build instant rapport.
-            This system identifies which ones are doing that organically, puts them on a structured 14-day evaluation track, and gates promotion on hard data — not gut feel.
+            Currently evaluating <strong>{totalAgents} agents</strong> across <strong>{totalCohortCalls} combined call interactions</strong> with a cohort baseline QA standing at <strong>{avgCohortQa}%</strong>.
           </div>
         </div>
 
         <div className="fs-11 fw-600 text-muted uppercase mb-12" style={{ letterSpacing: '0.08em' }}>The 4-Phase Promotion Track</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+
           {/* Phase 1 */}
           <div style={{ border: '1px solid var(--border2)', borderRadius: 'var(--radius2)', overflow: 'hidden' }}>
             <div style={{ background: 'var(--bg3)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid var(--border)' }}>
               <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--bg4)', border: '2px solid var(--text3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: '11px', fontWeight: 700, color: 'var(--text3)' }}>1</div>
-              <div><div className="fs-12 fw-700">Week 1 — Observe & Baseline</div><div className="fs-10 text-muted">Days 1–7 · No pressure, just data</div></div>
+              <div><div className="fs-12 fw-700">Week 1 — Observe & Baseline</div><div className="fs-10 text-muted">Days 1–7 · Live Track Performance Summary</div></div>
               <span className="badge grey" style={{ marginLeft: 'auto' }}>Days 1–7</span>
             </div>
             <div style={{ padding: '14px 16px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <div className="fs-11 fw-600 mb-12">📊 What we're measuring</div>
+                  <div className="fs-11 fw-600 mb-12">📊 Cohort Metrics Live Data</div>
                   <ul style={{ paddingLeft: '16px', color: 'var(--text2)', fontSize: '11px', lineHeight: '2' }}>
-                    <li>QA score trajectory (going up or flat?)</li>
-                    <li>Disclosure adherence rate (CD01–CD05)</li>
-                    <li>Talk-to-listen ratio (target: ≤55% agent)</li>
-                    <li>Number of calls handled per day</li>
-                    <li>How many get to qualifying questions</li>
+                    <li>Current Group Average QA: <strong style={{ color: 'var(--text)' }}>{avgCohortQa}%</strong></li>
+                    <li>Disclosure Compliance Base: <strong style={{ color: 'var(--text)' }}>{avgCohortDisc}%</strong></li>
+                    <li>Average Talk Ratio Position: <strong style={{ color: 'var(--text)' }}>{avgCohortTalk}%</strong></li>
+                    <li>Total Logged Cohort Pipeline Volume: <strong style={{ color: 'var(--text)' }}>{totalCohortCalls} calls</strong></li>
                   </ul>
                 </div>
                 <div>
@@ -1866,11 +1960,11 @@ const renderSDRCard = () => {
                 <div>
                   <div className="fs-11 fw-600 mb-12">📊 Readiness signals we look for</div>
                   <ul style={{ paddingLeft: '16px', color: 'var(--text2)', fontSize: '11px', lineHeight: '2' }}>
-                    <li>QA avg ≥ 65 in days 10–14</li>
+                    <li>QA avg ≥ 65 in days 10–14 (Current: {avgCohortQa}%)</li>
                     <li>Objection handling — do they stay calm?</li>
                     <li>Do they ask for the enrollment unprompted?</li>
-                    <li>Disclosure score ≥ 80% (CD01–CD05)</li>
-                    <li>Zero bad trackers in last 5 calls</li>
+                    <li>Disclosure score ≥ 80% (Current: {avgCohortDisc}%)</li>
+                    <li>Active compliance flags: <strong style={{ color: totalCohortBad > 0 ? 'var(--red)' : 'var(--green)' }}>{totalCohortBad} active trackers</strong></li>
                   </ul>
                 </div>
                 <div>
@@ -1894,14 +1988,32 @@ const renderSDRCard = () => {
               <span className="badge green" style={{ marginLeft: 'auto' }}>Day 14</span>
             </div>
             <div style={{ padding: '14px 16px' }}>
-              <div className="fs-11 fw-600 mb-12">✅ Promotion criteria (must pass ALL)</div>
+              <div className="fs-11 fw-600 mb-12">✅ Dynamic Group Thresholds (Live Team Positioning)</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                <div style={{ background: 'var(--bg2)', borderRadius: 'var(--radius)', padding: '10px', textAlign: 'center', border: '1px solid rgba(46,204,142,0.2)' }}><div className="font-mono fw-700 text-green" style={{ fontSize: '20px' }}>65+</div><div className="fs-10 text-muted">QA Avg<br />Days 10–14</div></div>
-                <div style={{ background: 'var(--bg2)', borderRadius: 'var(--radius)', padding: '10px', textAlign: 'center', border: '1px solid rgba(46,204,142,0.2)' }}><div className="font-mono fw-700 text-green" style={{ fontSize: '20px' }}>80%</div><div className="fs-10 text-muted">Disclosure<br />Adherence</div></div>
-                <div style={{ background: 'var(--bg2)', borderRadius: 'var(--radius)', padding: '10px', textAlign: 'center', border: '1px solid rgba(46,204,142,0.2)' }}><div className="font-mono fw-700 text-green" style={{ fontSize: '20px' }}>0</div><div className="fs-10 text-muted">Bad Trackers<br />Last 5 Calls</div></div>
-                <div style={{ background: 'var(--bg2)', borderRadius: 'var(--radius)', padding: '10px', textAlign: 'center', border: '1px solid rgba(46,204,142,0.2)' }}><div className="font-mono fw-700 text-green" style={{ fontSize: '20px' }}>↑</div><div className="fs-10 text-muted">Score<br />Trending Up</div></div>
-                <div style={{ background: 'var(--bg2)', borderRadius: 'var(--radius)', padding: '10px', textAlign: 'center', border: '1px solid rgba(46,204,142,0.2)' }}><div className="font-mono fw-700 text-green" style={{ fontSize: '20px' }}>≤55%</div><div className="fs-10 text-muted">Talk-to-Listen<br />Ratio</div></div>
-                <div style={{ background: 'var(--bg2)', borderRadius: 'var(--radius)', padding: '10px', textAlign: 'center', border: '1px solid rgba(46,204,142,0.2)' }}><div className="font-mono fw-700 text-green" style={{ fontSize: '20px' }}>1+</div><div className="fs-10 text-muted">Close Attempt<br />In 14 Days</div></div>
+                <div style={{ background: 'var(--bg2)', borderRadius: 'var(--radius)', padding: '10px', textAlign: 'center', border: '1px solid rgba(46,204,142,0.2)' }}>
+                  <div className="font-mono fw-700 text-green" style={{ fontSize: '20px' }}>{avgCohortQa}%</div>
+                  <div className="fs-10 text-muted">Current Cohort<br />QA Average</div>
+                </div>
+                <div style={{ background: 'var(--bg2)', borderRadius: 'var(--radius)', padding: '10px', textAlign: 'center', border: '1px solid rgba(46,204,142,0.2)' }}>
+                  <div className="font-mono fw-700 text-green" style={{ fontSize: '20px' }}>{avgCohortDisc}%</div>
+                  <div className="fs-10 text-muted">Current Cohort<br />Disclosures</div>
+                </div>
+                <div style={{ background: 'var(--bg2)', borderRadius: 'var(--radius)', padding: '10px', textAlign: 'center', border: '1px solid rgba(46,204,142,0.2)' }}>
+                  <div className="font-mono fw-700 text-green" style={{ fontSize: '20px' }}>{totalCohortBad}</div>
+                  <div className="fs-10 text-muted">Total Target Flags<br />Triggered</div>
+                </div>
+                <div style={{ background: 'var(--bg2)', borderRadius: 'var(--radius)', padding: '10px', textAlign: 'center', border: '1px solid rgba(46,204,142,0.2)' }}>
+                  <div className="font-mono fw-700 text-green" style={{ fontSize: '20px' }}>{avgCohortTalk}%</div>
+                  <div className="fs-10 text-muted">Current Cohort<br />Talk-Time Share</div>
+                </div>
+                <div style={{ background: 'var(--bg2)', borderRadius: 'var(--radius)', padding: '10px', textAlign: 'center', border: '1px solid rgba(46,204,142,0.2)' }}>
+                  <div className="font-mono fw-700 text-green" style={{ fontSize: '20px' }}>65+</div>
+                  <div className="fs-10 text-muted">Required QA<br />Target Gate</div>
+                </div>
+                <div style={{ background: 'var(--bg2)', borderRadius: 'var(--radius)', padding: '10px', textAlign: 'center', border: '1px solid rgba(46,204,142,0.2)' }}>
+                  <div className="font-mono fw-700 text-green" style={{ fontSize: '20px' }}>80%</div>
+                  <div className="fs-10 text-muted">Required Disc.<br />Threshold</div>
+                </div>
               </div>
               <div style={{ marginTop: '12px', padding: '10px', background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid rgba(232,160,32,0.2)' }}>
                 <div className="fs-11 text-gold fw-600">⚠️ What happens if they don't pass?</div>
@@ -1942,7 +2054,7 @@ const renderSDRCard = () => {
           </div>
         </div>
 
-        {/* The signal table */}
+        {/* The Dynamic Signal Table */}
         <div className="panel" style={{ marginBottom: '16px' }}>
           <div className="panel-hdr"><span className="panel-title">🧠 The 6 Readiness Signals — Weighted by Impact</span></div>
           <div style={{ overflowX: 'auto' }}>
@@ -1951,12 +2063,54 @@ const renderSDRCard = () => {
                 <tr><th>Signal</th><th>Weight</th><th>Ready Threshold</th><th>Watch Zone</th><th>Not Yet</th><th>Why It Matters</th></tr>
               </thead>
               <tbody>
-                <tr><td className="fw-600">QA Score Trajectory</td><td className="mono text-gold">30%</td><td className="text-green">Avg ≥ 65 (last 5 days)</td><td className="text-gold">Avg 50–64</td><td className="text-red">Avg &lt; 50</td><td className="text-muted fs-11">Core indicator of process mastery</td></tr>
-                <tr><td className="fw-600">Disclosure Adherence</td><td className="mono text-gold">25%</td><td className="text-green">CD01–CD05 ≥ 80%</td><td className="text-gold">60–79%</td><td className="text-red">&lt; 60%</td><td className="text-muted fs-11">Compliance first — can't close if they can't disclose</td></tr>
-                <tr><td className="fw-600">Talk-to-Listen Ratio</td><td className="mono text-gold">15%</td><td className="text-green">Agent ≤ 55% talk time</td><td className="text-gold">56–65%</td><td className="text-red">&gt; 65%</td><td className="text-muted fs-11">Great closers listen more than they talk</td></tr>
-                <tr><td className="fw-600">Bad Tracker Rate</td><td className="mono text-gold">15%</td><td className="text-green">0 in last 5 calls</td><td className="text-gold">1–2 in last 10</td><td className="text-red">Any in last 5</td><td className="text-muted fs-11">One bad tracker on a closer call = $0 deal + liability</td></tr>
-                <tr><td className="fw-600">Objection Handling</td><td className="mono text-gold">10%</td><td className="text-green">Handled calmly ≥ 3×</td><td className="text-gold">1–2×</td><td className="text-red">0 or panicked</td><td className="text-muted fs-11">Closers live on objections. SDRs run from them.</td></tr>
-                <tr><td className="fw-600">Call Volume</td><td className="mono text-gold">5%</td><td className="text-green">≥ 25 calls / 2 weeks</td><td className="text-gold">15–24</td><td className="text-red">&lt; 15</td><td className="text-muted fs-11">Not enough reps = not enough data to evaluate</td></tr>
+                <tr>
+                  <td className="fw-600">QA Score Trajectory</td>
+                  <td className="mono text-gold">30%</td>
+                  <td className="text-green">Avg ≥ 65 (Current Team: {avgCohortQa}%)</td>
+                  <td className="text-gold">Avg 50–64</td>
+                  <td className="text-red">Avg &lt; 50</td>
+                  <td className="text-muted fs-11">Core indicator of process mastery</td>
+                </tr>
+                <tr>
+                  <td className="fw-600">Disclosure Adherence</td>
+                  <td className="mono text-gold">25%</td>
+                  <td className="text-green">CD01–CD05 ≥ 80% (Current: {avgCohortDisc}%)</td>
+                  <td className="text-gold">60–79%</td>
+                  <td className="text-red">&lt; 60%</td>
+                  <td className="text-muted fs-11">Compliance first — can't close if they can't disclose</td>
+                </tr>
+                <tr>
+                  <td className="fw-600">Talk-to-Listen Ratio</td>
+                  <td className="mono text-gold">15%</td>
+                  <td className="text-green">Agent ≤ 55% talk time (Current: {avgCohortTalk}%)</td>
+                  <td className="text-gold">56–65%</td>
+                  <td className="text-red">&gt; 65%</td>
+                  <td className="text-muted fs-11">Great closers listen more than they talk</td>
+                </tr>
+                <tr>
+                  <td className="fw-600">Bad Tracker Rate</td>
+                  <td className="mono text-gold">15%</td>
+                  <td className="text-green">0 in last 5 calls (Current Group Flags: {totalCohortBad})</td>
+                  <td className="text-gold">1–2 in last 10</td>
+                  <td className="text-red">Any in last 5</td>
+                  <td className="text-muted fs-11">One bad tracker on a closer call = $0 deal + liability</td>
+                </tr>
+                <tr>
+                  <td className="fw-600">Objection Handling</td>
+                  <td className="mono text-gold">10%</td>
+                  <td className="text-green">Handled calmly ≥ 3×</td>
+                  <td className="text-gold">1–2×</td>
+                  <td className="text-red">0 or panicked</td>
+                  <td className="text-muted fs-11">Closers live on objections. SDRs run from them.</td>
+                </tr>
+                <tr>
+                  <td className="fw-600">Call Volume</td>
+                  <td className="mono text-gold">5%</td>
+                  <td className="text-green">≥ 25 calls / 2 weeks</td>
+                  <td className="text-gold">15–24</td>
+                  <td className="text-red">&lt; 15</td>
+                  <td className="text-muted fs-11">Total logged cohort repetitions across tracked range: {totalCohortCalls}</td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -2352,30 +2506,343 @@ const renderSDRCard = () => {
     </div>
   );
 
-  const renderZendeskPage = () => (
-    <div className="kpi-page-content">
-      <div className="grid-2 mb-16">
-        <div>
-          <div className="fs-10 uppercase fw-600 text-muted mb-12" style={{ letterSpacing: '0.08em' }}>TAX</div>
-          <div className="kpi-grid kpi-grid-2 mb-12">
-            <div className="kpi-card"><div className="kpi-card-label">TAX Total Tickets</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val lg">{kpi.tax_total}</div></div>
-            <div className="kpi-card"><div className="kpi-card-label">TAX Tickets Pending</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val lg">{kpi.tax_pending}</div></div>
-            <div className="kpi-card"><div className="kpi-card-label">TAX Urgent Tickets Pending</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val gold lg">{kpi.tax_urgent_pending}</div></div>
-            <div className="kpi-card"><div className="kpi-card-label">TAX Tickets Solved</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val green lg">{kpi.tax_solved}</div></div>
+  const renderZendeskPage = () => {
+    // Safe local fallback object in case your api response takes time to load.
+    // It handles undefined properties gracefully so the UI won't blank out.
+    const data = kpi || {};
+
+    return (
+      <div className="kpi-page-content">
+        {/* Top Grid: TAX and DEBT KPIs */}
+        <div className="grid-2 mb-16">
+          <div>
+            <div className="fs-10 uppercase fw-600 text-muted mb-12" style={{ letterSpacing: '0.08em' }}>TAX</div>
+            <div className="kpi-grid kpi-grid-2 mb-12">
+              <div className="kpi-card"><div className="kpi-card-label">TAX Total Tickets</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val lg">{data.tax_total ?? 0}</div></div>
+              <div className="kpi-card"><div className="kpi-card-label">TAX Tickets Pending</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val lg">{data.tax_pending ?? 0}</div></div>
+              <div className="kpi-card"><div className="kpi-card-label">TAX Urgent Tickets Pending</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val gold lg">{data.tax_urgent_pending ?? 0}</div></div>
+              <div className="kpi-card"><div className="kpi-card-label">TAX Tickets Solved</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val green lg">{data.tax_solved ?? 0}</div></div>
+            </div>
+          </div>
+          <div>
+            <div className="fs-10 uppercase fw-600 text-muted mb-12" style={{ letterSpacing: '0.08em' }}>DEBT</div>
+            <div className="kpi-grid kpi-grid-2 mb-12">
+              <div className="kpi-card"><div className="kpi-card-label">DEBT Total Tickets</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val lg">{data.debt_total ?? 0}</div></div>
+              <div className="kpi-card"><div className="kpi-card-label">DEBT Open Tickets</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val lg">{data.debt_open ?? 0}</div></div>
+              <div className="kpi-card"><div className="kpi-card-label">DEBT Unassigned Tickets</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val red lg">{data.debt_unassigned ?? 0}</div></div>
+              <div className="kpi-card"><div className="kpi-card-label">DEBT Solved Tickets</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val green lg">{data.debt_solved ?? 0}</div></div>
+            </div>
           </div>
         </div>
-        <div>
-          <div className="fs-10 uppercase fw-600 text-muted mb-12" style={{ letterSpacing: '0.08em' }}>DEBT</div>
-          <div className="kpi-grid kpi-grid-2 mb-12">
-            <div className="kpi-card"><div className="kpi-card-label">DEBT Total Tickets</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val lg">{kpi.debt_total}</div></div>
-            <div className="kpi-card"><div className="kpi-card-label">DEBT Open Tickets</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val lg">{kpi.debt_open}</div></div>
-            <div className="kpi-card"><div className="kpi-card-label">DEBT Unassigned Tickets</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val red lg">{kpi.debt_unassigned}</div></div>
-            <div className="kpi-card"><div className="kpi-card-label">DEBT Solved Tickets</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val green lg">{kpi.debt_solved}</div></div>
-          </div>
+
+        {/* Case Manager table */}
+        <div className="panel mb-16">
+          <div className="panel-hdr"><span className="panel-title">Case Managers — Today</span></div>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>CM Name</th>
+                <th>Total Calls</th>
+                <th>Answered</th>
+                <th>Missed</th>
+                <th>Negative CS</th>
+                <th>Mad Clients</th>
+                <th>Outcome</th>
+                <th>OB Calls</th>
+                <th>OB Non-Contact</th>
+                <th>OB Contact Made</th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* Map over incoming team agents data rows dynamically when provided by your API query */}
+              {data.case_managers?.map((cm: any, index: number) => (
+                <tr key={index}>
+                  <td className="fw-600">{cm.name}</td>
+                  <td className="mono">{cm.total_calls ?? 0}</td>
+                  <td className="mono">{cm.answered ?? 0}</td>
+                  <td className="mono">{cm.missed ?? 0}</td>
+                  <td className="mono">{cm.negative_cs ?? 0}</td>
+                  <td className="mono">{cm.mad_clients ?? 0}</td>
+                  <td className="mono">{cm.outcome ?? 0}</td>
+                  <td className="mono">{cm.ob_calls ?? 0}</td>
+                  <td className="mono">{cm.ob_non_contact ?? 0}</td>
+                  <td className="mono">{cm.ob_contact_made ?? 0}</td>
+                </tr>
+              ))}
+
+              {/* Global Total Row explicitly tracked against data properties */}
+              <tr>
+                <td className="fw-600">TOTAL</td>
+                <td className="mono">{data.total_calls ?? 0}</td>
+                <td className="mono">{data.total_answered ?? 0}</td>
+                <td className="mono">{data.total_missed ?? 0}</td>
+                <td className="mono">{data.total_negative_cs ?? 0}</td>
+                <td className="mono">{data.total_mad_clients ?? 0}</td>
+                <td className="mono">{data.total_outcome ?? 0}</td>
+                <td className="mono">{data.total_ob_calls ?? 0}</td>
+                <td className="mono">{data.total_ob_non_contact ?? 0}</td>
+                <td className="mono">{data.total_ob_contact_made ?? 0}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* CM stats bottom layout */}
+        <div className="grid-2">
+          <div className="kpi-card"><div className="kpi-card-label">CM Mad Clients</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val lg">{data.cm_mad_clients ?? 0}</div></div>
+          <div className="kpi-card"><div className="kpi-card-label">CM Negative CS</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val lg">{data.cm_negative_cs ?? 0}</div></div>
+          <div className="kpi-card"><div className="kpi-card-label">Unverified Calls</div><div className="kpi-card-sub">Today</div><div className="kpi-card-val red lg">{data.unverified_calls ?? 0}</div></div>
+          <div className="kpi-card"><div className="kpi-card-label">Today</div><div className="kpi-card-sub">Open</div><div className="kpi-card-val lg">{data.today_open ?? 0}</div></div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
+
+  const renderConversionPage = () => {
+    // Loading State while API resolves
+    if (!boardData) {
+      return (
+        <div style={{ fontFamily: UI, background: INK }} className="min-h-screen w-full flex items-center justify-center text-white/50">
+          <div className="text-center space-y-2">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 mx-auto" style={{ borderColor: TEAL }}></div>
+            <div className="text-[11px] tracking-widest uppercase text-white/40 pt-2">Loading Desk Metrics...</div>
+          </div>
+        </div>
+      );
+    }
+
+    const d = boardData;
+    const cvr = (d as any).cvr || 0;
+    const onPace = (d.projected || 0) >= GOAL;
+    const accent = onPace ? TEAL : CORAL;
+    const topFunnel = d.total || 1;
+
+    const stages = [
+      { key: "total", label: "Inbound Calls", value: d.total, color: "#5B6B8C" },
+      { key: "connected", label: "Connected", value: d.connected, color: TEAL },
+      { key: "qualified", label: "Qualified", value: d.qualified, color: "#7CC6FF" },
+      { key: "converted", label: "Converted", value: d.converted, color: GOLD },
+    ];
+
+    const maxHour = Math.max(1, ...(d.hours || []).map((h) => h.conv));
+    const maxSource = Math.max(1, ...(d.sources || []).map((s) => s.converted));
+
+    return (
+      <div style={{ fontFamily: UI, background: `radial-gradient(1200px 600px at 70% -10%, #16203a 0%, ${INK} 55%)` }}
+        className="min-h-screen w-full text-white p-4 md:p-7 overflow-x-hidden rounded-2xl">
+        <div className="max-w-[1400px] mx-auto">
+
+          {/* ── HEADER ─────────────────────────────────────────────────── */}
+          <header className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <span className="relative flex h-3 w-3">
+                <span className="relative inline-flex rounded-full h-3 w-3" style={{ background: TEAL }} />
+              </span>
+              <div>
+                <h1 style={{ fontFamily: DISPLAY }} className="text-[22px] md:text-[28px] font-600 tracking-[0.04em] uppercase leading-none text-white">
+                  Conversion Board
+                </h1>
+                <div className="text-[11px] tracking-[0.22em] uppercase text-white/40 mt-1">City Call Desk · Live Floor</div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div style={{ fontFamily: MONO }} className="text-[20px] md:text-[26px] font-600 tabular-nums leading-none text-white">
+                CONNECTED
+              </div>
+              <div className="text-[11px] tracking-[0.16em] uppercase text-white/40 mt-1">
+                LIVE SERVER SYNC
+              </div>
+            </div>
+          </header>
+
+          {/* ── HERO ROW ───────────────────────────────────────────────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+
+            {/* Conversion Card */}
+            <Glass glow={GOLD}>
+              <Eyebrow color={GOLD}>Conversion Rate</Eyebrow>
+              <div className="flex items-center gap-5 mt-3">
+                <StaticGauge value={cvr} color={GOLD} />
+                <div>
+                  <div style={{ fontFamily: DISPLAY }} className="text-[40px] leading-none font-600 tabular-nums text-white">
+                    {cvr.toFixed(1)}<span className="text-[24px] text-white/40">%</span>
+                  </div>
+                  <div className="mt-2 text-[13px] text-white/55">
+                    <span style={{ fontFamily: MONO, color: GOLD }} className="font-600">{fmtInt(d.converted)}</span> of{" "}
+                    <span style={{ fontFamily: MONO }}>{fmtInt(d.total)}</span> calls
+                  </div>
+                </div>
+              </div>
+            </Glass>
+
+            {/* Pace Card */}
+            <Glass glow={accent}>
+              <div className="flex items-center justify-between">
+                <Eyebrow color={accent}>Pace to Goal</Eyebrow>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-700 tracking-wide uppercase"
+                  style={{ background: `${accent}1f`, color: accent }}>
+                  {onPace ? "On pace" : "Behind"}
+                </span>
+              </div>
+              <div className="flex items-end gap-2 mt-3">
+                <div style={{ fontFamily: DISPLAY }} className="text-[40px] leading-none font-600 tabular-nums text-white">{d.converted}</div>
+                <div className="text-[15px] text-white/40 mb-1.5">/ {GOAL} goal</div>
+              </div>
+              <div className="relative mt-4 h-3 rounded-full bg-white/8 overflow-hidden">
+                <div className="h-full rounded-full" style={{ width: `${Math.min(100, ((d.converted || 0) / GOAL) * 100)}%`, background: `linear-gradient(90deg, ${accent}, ${accent}bb)`, boxShadow: `0 0 12px ${accent}77` }} />
+              </div>
+              <div className="mt-4 text-[13px] text-white/55">
+                Projected EOD <span style={{ fontFamily: MONO, color: accent }} className="font-600">{d.projected}</span>
+                <span className="text-white/35"> · {Math.round((d.elapsed || 0) * 100)}% of day elapsed</span>
+              </div>
+            </Glass>
+
+            {/* Revenue Card */}
+            <Glass glow={GOLD}>
+              <Eyebrow color={GOLD}>Buyer Revenue · Today</Eyebrow>
+              <div style={{ fontFamily: DISPLAY }} className="text-[44px] leading-none font-600 tabular-nums mt-3 text-white" >
+                {fmt$(d.revenue)}
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-white/5 px-3 py-2.5">
+                  <div className="text-[10px] tracking-[0.14em] uppercase text-white/40">Run-rate EOD</div>
+                  <div style={{ fontFamily: MONO }} className="text-[18px] font-600 mt-0.5 text-white">{fmt$(d.runRate)}</div>
+                </div>
+                <div className="rounded-xl bg-white/5 px-3 py-2.5">
+                  <div className="text-[10px] tracking-[0.14em] uppercase text-white/40">vs Yesterday</div>
+                  <div style={{ fontFamily: MONO, color: TEAL }} className="text-[18px] font-600 mt-0.5">
+                    ▲ 36%
+                  </div>
+                </div>
+              </div>
+            </Glass>
+          </div>
+
+          {/* ── LIVE FUNNEL ─────────────────────────────────────────────── */}
+          <Glass>
+            <div className="flex items-center justify-between mb-4">
+              <Eyebrow>Live Funnel</Eyebrow>
+              <span className="text-[11px] text-white/35 tracking-wide">drop-off shown between stages</span>
+            </div>
+            <div className="space-y-2.5">
+              {stages.map((s, i) => {
+                const w = Math.max(6, (s.value / topFunnel) * 100);
+                const prev = i > 0 ? stages[i - 1].value : null;
+
+                // FIXED: Safeguard division by zero and null entries
+                const stepRate = prev ? (s.value / prev) * 100 : 0;
+                const leaked = prev ? Math.max(0, prev - s.value) : 0;
+
+                return (
+                  <div key={s.key}>
+                    {i > 0 && (
+                      <div className="flex items-center gap-2 pl-1 mb-1.5">
+                        <span style={{ color: stepRate >= 70 ? TEAL : GOLD, fontFamily: MONO }} className="text-[11px] font-600">
+                          {/* FIXED: Added a fallback (stepRate || 0) to ensure toFixed never breaks */}
+                          {(stepRate || 0).toFixed(0)}% advance
+                        </span>
+                        <span className="text-[11px] text-white/30">·</span>
+                        <span className="text-[11px]" style={{ color: CORAL }}>{fmtInt(leaked)} dropped</span>
+                      </div>
+                    )}
+                    <div className="relative h-14 rounded-xl overflow-hidden bg-white/[0.04]">
+                      <div className="absolute inset-y-0 left-0 rounded-xl" style={{ width: `${w}%`, background: `linear-gradient(90deg, ${s.color}33, ${s.color}cc)` }} />
+                      <div className="absolute inset-0 flex items-center justify-between px-4">
+                        <span style={{ fontFamily: DISPLAY }} className="text-[15px] tracking-[0.04em] uppercase font-500 text-white/90">{s.label}</span>
+                        <div className="flex items-baseline gap-2">
+                          <span style={{ fontFamily: MONO }} className="text-[10px] text-white/44">
+                            {topFunnel > 0 ? ((s.value / topFunnel) * 100).toFixed(0) : 0}%
+                          </span>
+                          <span style={{ fontFamily: DISPLAY }} className="text-[26px] font-600 tabular-nums leading-none text-white">{fmtInt(s.value)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Glass>
+
+          {/* ── LOWER CONTENT SPLIT ────────────────────────────────────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
+            <div className="lg:col-span-2 space-y-4">
+
+              {/* Hourly Trend */}
+              <Glass>
+                <Eyebrow>Conversions by Hour</Eyebrow>
+                <div className="flex items-end gap-1.5 h-28 mt-4">
+                  {(d.hours || []).map((h) => {
+                    const ht = Math.max(4, (h.conv / maxHour) * 100);
+                    return (
+                      <div key={h.hour} className="flex-1 flex flex-col items-center gap-1">
+                        <div className="w-full rounded-t-md bg-white/10" style={{ height: `${ht}%` }} />
+                        <span className="text-[9px] text-white/30" style={{ fontFamily: MONO }}>{h.hour}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Glass>
+
+              {/* Source Performance Leaderboard */}
+              <Glass>
+                <Eyebrow>Top Lines</Eyebrow>
+                <div className="mt-4 space-y-3">
+                  {(d.sources || []).map((s, i) => {
+                    const srcCvr = (s.converted / s.calls) * 100;
+                    return (
+                      <div key={s.id} className="flex items-center gap-3">
+                        <span style={{ fontFamily: DISPLAY }} className="text-[18px] w-5 text-white/30 font-600">{i + 1}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[13px] font-500 text-white/85 truncate">{s.name}</span>
+                            <div className="flex items-center gap-3 shrink-0">
+                              <span style={{ fontFamily: MONO }} className="text-[12px] text-white/45">{srcCvr.toFixed(0)}% cvr</span>
+                              <span style={{ fontFamily: MONO, color: GOLD }} className="text-[14px] font-600 w-7 text-right">{s.converted}</span>
+                            </div>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-white/8 overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${(s.converted / maxSource) * 100}%`, background: GOLD }} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Glass>
+            </div>
+
+            {/* Recent Live Feed */}
+            <Glass className="flex flex-col">
+              <div className="flex items-center justify-between mb-3">
+                <Eyebrow color={TEAL}>Recent Conversions</Eyebrow>
+                <span className="relative flex h-2 w-2">
+                  <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: TEAL }} />
+                </span>
+              </div>
+              <div className="space-y-2 overflow-hidden">
+                {(d.feed || []).map((f) => (
+                  <div key={f.id} className="flex items-center gap-3 rounded-xl px-3 py-2.5 border border-white/8 bg-white/[0.03]">
+                    <div className="grid place-items-center w-8 h-8 rounded-lg shrink-0" style={{ background: `${GOLD}22`, color: GOLD }}>
+                      <span style={{ fontFamily: DISPLAY }} className="text-[13px] font-700">✓</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div style={{ fontFamily: MONO }} className="text-[13px] text-white/85 truncate">{f.phone} <span className="text-white/35">{f.state}</span></div>
+                      <div className="text-[11px] text-white/40 truncate">{f.source}</div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div style={{ fontFamily: MONO, color: GOLD }} className="text-[14px] font-600">+{fmt$(f.payout)}</div>
+                      <div style={{ fontFamily: MONO }} className="text-[10px] text-white/30">{f.time}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Glass>
+          </div>
+
+        </div>
+      </div>
+    );
+  };
 
   // ============================================
   // MAIN RENDER
@@ -2431,7 +2898,7 @@ const renderSDRCard = () => {
             <div className={`nav-item ${activePage === 'sdr-pipeline' ? 'active' : ''}`} onClick={() => setActivePage('sdr-pipeline')}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="23" y1="21" x2="23" y2="19" /><line x1="19" y1="21" x2="19" y2="17" /><path d="M21 3l-3 3 3 3" /><path d="M21 6h-6" /></svg>
               SDR → Closer
-              <span className="nav-badge gold" id="sdr-ready-badge">{sdrAgents.filter(a => a.status === 'READY').length}</span>
+              <span className="nav-badge gold" id="sdr-ready-badge">{sdrAgents.length}</span>
             </div>
           </div>
 
@@ -2480,6 +2947,10 @@ const renderSDRCard = () => {
             <div className={`nav-item ${activePage === 'zendesk' ? 'active' : ''}`} onClick={() => setActivePage('zendesk')}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" /></svg>
               Zendesk Tickets
+            </div>
+            <div className={`nav-item ${activePage === 'conversion-board' ? 'active' : ''}`} onClick={() => setActivePage('conversion-board')}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>
+              Conversion Board
             </div>
           </div>
         </nav>
@@ -3088,7 +3559,7 @@ const renderSDRCard = () => {
 
             {/* Render main content containers safely if active payload exists */}
             {!isDataLoading && academyData && (
-              <div className="academy-layout" style={{ height: 'calc(100vh - var(--topbar-h) - 32px - 80px - 48px)' }}>
+              <div className="academy-layout" style={{ height: 'calc(100vh - var(--topbar-h) - 32px - 1px - 48px)' }}>
                 <div className="academy-main" style={{ overflowY: 'auto' }}>
                   {renderAcademyCallList()}
                 </div>
@@ -3172,15 +3643,15 @@ const renderSDRCard = () => {
                 <button className="topbar-btn primary" onClick={() => showPromoteModal()}>🚀 Promote to Closer</button>
               </div>
             </div>
-              {sdrView === 'board'  && renderSDRTopBar()}
-              {sdrView === 'table'  && renderSDRTopBar()}
-              {sdrView === 'strategy'  && renderSDRTopBar()}
-            <div className="sdr-layout" style={{height:'calc(100vh - var(--topbar-h) - 32px - 80px - 48px'}}>
+            {sdrView === 'board' && renderSDRTopBar()}
+            {sdrView === 'table' && renderSDRTopBar()}
+            {sdrView === 'strategy' && renderSDRTopBar()}
+            <div className="sdr-layout" style={{ height: 'calc(100vh - var(--topbar-h) - 32px - 80px - 48px' }}>
               {sdrView === 'board' && renderSDRCard()}
               {sdrView === 'table' && renderSDRTable()}
               {sdrView === 'strategy' && renderSDRStrategy()}
 
-              <div className="sdr-sidebar" style={{  right: 0, top: 'var(--topbar-h)', width: '300px', height: 'calc(100vh - var(--topbar-h))' }}>
+              <div className="sdr-sidebar" style={{ right: 0, top: 'var(--topbar-h)', width: '300px', height: 'calc(100vh - var(--topbar-h))' }}>
                 <div style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>
                   <div className="split-sidebar-title">This Week's Decisions</div>
                   <div id="sdr-decisions">
@@ -3239,8 +3710,8 @@ const renderSDRCard = () => {
                   </div>
                 </div>
               </div>
-              </div>
-            
+            </div>
+
           </div>
 
           {/* KPI Board Pages */}
@@ -3252,6 +3723,7 @@ const renderSDRCard = () => {
           <div className={`page ${activePage === 'tax-debt-backend' ? 'active' : ''}`}>{renderTaxDebtBackendPage()}</div>
           <div className={`page ${activePage === 'tax-prep' ? 'active' : ''}`}>{renderTaxPrepPage()}</div>
           <div className={`page ${activePage === 'zendesk' ? 'active' : ''}`}>{renderZendeskPage()}</div>
+          <div className={`page ${activePage === 'conversion-board' ? 'active' : ''}`}>{renderConversionPage()}</div>
         </div>
       </div>
 
