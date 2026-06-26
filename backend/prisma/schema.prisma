@@ -55,7 +55,6 @@ model Department {
   deletedAt          DateTime? @map("deleted_at")
  
   users  User[]
-  agents Agent[]
   calls  Call[]
  
   @@map("departments")
@@ -120,18 +119,16 @@ model Agent {
   email String? @unique
   phone String  @unique
  
-  departmentId Int @map("department_id")
+  departmentId Int? @map("department_id")
  
-  callerReadyExtensionId String @map("rc_extension_id")
+  callerReadyExtensionId String? @map("rc_extension_id")
  
   active Boolean @default(true)
  
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
- 
-  department Department @relation(fields: [departmentId], references: [id])
- 
+  
   calls Call[]
  
   @@map("agents")

@@ -65,7 +65,7 @@ router.get("/live-feed-widget-data", async (req: Request, res: Response) => {
                     COALESCE(ca.flags::jsonb, '[]'::jsonb) AS flags
                 FROM calls c
                 LEFT JOIN call_analytics ca ON ca.call_id = c.id
-                WHERE ${whereClause}
+                WHERE ${whereClause} AND c.agent_id IS NOT NULL
             )
             SELECT
                 COUNT(*) AS "totalCalls",
@@ -137,11 +137,6 @@ router.get("/live-feed-widget-data", async (req: Request, res: Response) => {
 });
 
 router.get("/calls", async (req: Request, res: Response) => {
-    const mode = String(req.query.mode || 'all');
-    const rawDateFrom = String(req.query.dateFrom || '2026-06-16');
-    const rawDateTo = String(req.query.dateTo || '2026-06-18');
-    const dateFrom = `${rawDateFrom} 00:00:00`;
-    const dateTo = `${rawDateTo} 23:59:59`;
 
     const client = await db.connect();
 
@@ -152,25 +147,94 @@ router.get("/calls", async (req: Request, res: Response) => {
 
         const dateFrom = req.query.dateFrom as string | undefined;
         const dateTo = req.query.dateTo as string | undefined;
+        const flags = req.query.flags as string | undefined;
+        const agentDept = req.query.agentDept as string | undefined;
+        const score = req.query.score as string | undefined;
+        const outcome = req.query.outcome as string | undefined;
 
         // Build WHERE clause
-        const conditions: string[] = ["c.deleted_at IS NULL"];
+        const conditions: string[] = [
+            "c.deleted_at IS NULL",
+            "a.name IS NOT NULL"
+        ];
+
         const params: any[] = [];
 
+        // Date From
         if (dateFrom) {
             params.push(dateFrom);
             conditions.push(`c.started_at >= $${params.length}::date`);
         }
+
+        // Date To
         if (dateTo) {
             params.push(dateTo);
             conditions.push(`c.started_at < ($${params.length}::date + INTERVAL '1 day')`);
+        }
+
+        // Outcome
+        if (
+            outcome &&
+            outcome !== "All Outcome"
+        ) {
+            params.push(outcome);
+            conditions.push(`c.outcome = $${params.length}`);
+        }
+
+        // Department
+        if (
+            agentDept &&
+            agentDept !== "All Depts"
+        ) {
+            params.push(agentDept);
+            conditions.push(`ca.ai_generated_department = $${params.length}`);
+        }
+
+        // Score
+        if (score && score !== "All Scores") {
+            const [min, max] = score.split("-").map(Number);
+
+            if (!isNaN(min) && !isNaN(max)) {
+                params.push(min);
+                const minParam = params.length;
+
+                params.push(max);
+                const maxParam = params.length;
+
+                conditions.push(
+                    `ca.overall_call_score BETWEEN $${minParam} AND $${maxParam}`
+                );
+            }
+        }
+
+        // Flags
+        if (
+            flags &&
+            flags !== "All Flags"
+        ) {
+            params.push(flags);
+
+            // flags column is JSONB array
+            conditions.push(`
+        EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements_text(ca.flags) f
+            WHERE f = $${params.length}
+        )
+    `);
         }
 
         const whereClause = conditions.join(" AND ");
 
         // Count query for total
         const countResult = await client.query(
-            `SELECT COUNT(*) AS total FROM calls c WHERE ${whereClause}`,
+            `
+            SELECT COUNT(*) AS total
+            FROM calls c
+            LEFT JOIN agents a ON a.id = c.agent_id
+            LEFT JOIN call_analytics ca ON ca.call_id = c.id
+            WHERE ${whereClause}
+            `,
             params
         );
         const total = parseInt(countResult.rows[0].total);
@@ -261,7 +325,7 @@ router.get('/leaderboard', async (req: Request, res: Response): Promise<void> =>
             FROM calls c
             LEFT JOIN agents a ON c.agent_id = a.id
             LEFT JOIN call_analytics ca ON ca.call_id = c.id
-            WHERE c.deleted_at IS NULL
+            WHERE c.deleted_at IS NULL and a.name IS NOT NULL
               AND (c.started_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP))
             GROUP BY a.id, a.name, ca.ai_generated_department;
         `;
@@ -288,7 +352,7 @@ router.get('/leaderboard', async (req: Request, res: Response): Promise<void> =>
             const mockEff = (Math.random() * 1.75 + 1.25).toFixed(2) + 'x';
 
             return {
-                name: row.name || "Unknown Agent",
+                name: row.name,
                 dept: row.dept,
                 score: row.avgScore || 0, // Uses real call quality score average, falls back safely
                 calls: callsCount,
@@ -332,7 +396,7 @@ router.get('/analytics', async (req: Request, res: Response): Promise<void> => {
                 COUNT(CASE WHEN LOWER(TRIM(c.outcome)) = 'hotique' THEN 1 END)::int AS "hotique"
             FROM calls c
             LEFT JOIN call_analytics ca ON ca.call_id = c.id
-            WHERE (c.started_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP));
+            WHERE (c.started_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP)) AND c.agent_id IS NOT NULL;
         `;
         const overviewRes = await db.query(overviewQuery, [dateFrom, dateTo]);
         const overviewData = overviewRes.rows[0];

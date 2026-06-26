@@ -294,8 +294,8 @@ const PAGE_TITLES: Record<string, [string, string]> = {
 const agentColor = (i: number) => AGENT_COLORS[i % AGENT_COLORS.length];
 const scoreClass = (s: number) => s >= 80 ? 'great' : s >= 50 ? 'ok' : 'bad';
 const scoreColor = (s: number) => s >= 80 ? 'var(--green)' : s >= 50 ? 'var(--gold)' : 'var(--red)';
-const initials = (name: string) => name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-const outcomeClass = (o: string) => {
+const initials = (name?: string | null) => {if (!name) return "";return name.trim().split(" ").map(word => word[0]).join("").toUpperCase();
+};const outcomeClass = (o: string) => {
   const map: Record<string, string> = { 'Enrolled': 'green', 'Callback': 'blue', 'Declined': 'red', 'Debt Pitch': 'gold', 'Hotique': 'orange', 'Loan Transfer': 'purple', 'Not Qualified': 'grey' };
   return map[o] || 'grey';
 };
@@ -439,7 +439,11 @@ const Dashboard: React.FC = () => {
   const [sdrFilter, setSdrFilter] = useState<'all' | 'ready' | 'watch' | 'not-yet' | 'promoted'>('all');
   const [sdrView, setSdrView] = useState<'board' | 'table' | 'strategy'>('board');
   const [dateFrom, setDateFrom] = useState<string>(getFormattedDateString(1));
-  const [dateTo, setDateTo] = useState<string>(getFormattedDateString(0));
+  const [callOutcome, setCallOutcome] = useState<string>('All Outcome');
+  const [callFlag, setcallFlag] = useState<string>('All Flags');
+  const [callScore, setcallScore] = useState<string>('All Scores');
+  const [callDepartment, setcallDepartment] = useState<string>('All Depts');
+  const [dateTo, setDateTo] = useState<string>(getFormattedDateString(-1));
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
 
   // 1. State to hold dynamic backend data
@@ -530,7 +534,23 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     fetchLiveFeedData();
     fetchLiveFeedwidgetData();
-  }, []);
+  }, [callOutcome,callFlag,callScore,callDepartment]);
+  const outcomeCounts = useMemo(() => {
+    // 1. Initialize your dynamic counter object with 0s
+    const counts = { enrolled: 0, pitch: 0, callback: 0, declined: 0, hotique: 0, };
+    // 2. Loop through all calls exactly once
+    allCalls.forEach(c => {
+      // Normalize string to lowercase to prevent typos/casing mismatches
+      const outcome = c.outcome?.toLowerCase();
+      if (outcome === 'enrolled') counts.enrolled++;
+      else if (outcome === 'debt pitch') counts.pitch++;
+      else if (outcome === 'callback') counts.callback++;
+      else if (outcome === 'declined') counts.declined++;
+      else if (outcome === 'hotique') counts.hotique++;
+    });
+
+    return counts;
+  }, [allCalls]);
 
   // 1. Dynamically compute occurrences and max value for the progress bar widths
   const deviationsData = useMemo(() => {
@@ -562,7 +582,7 @@ const Dashboard: React.FC = () => {
     try {
       setLoadingCalls(true);
       const response = await fetch(
-        `${API_URL}/api/dashboard/calls?dateFrom=${dateFrom}&dateTo=${dateTo}&page=${page}&pageSize=${ROWS_PER_PAGE}`
+        `${API_URL}/api/dashboard/calls?dateFrom=${dateFrom}&dateTo=${dateTo}&flags=${callFlag}&agentDept=${callDepartment}&score=${callScore}&outcome=${callOutcome}&page=${page}&pageSize=${ROWS_PER_PAGE}`
       );
       if (!response.ok) throw new Error('Network error syncing calls database.');
 
@@ -838,9 +858,24 @@ const Dashboard: React.FC = () => {
     // setCurrentPage(1);                // reset to page 1 on filter change
   };
 
-  const handleFilterChange = (key: string, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  };
+const handleFilterChange = (key: string, value: string) => {
+  console.log(key,'keykey');
+  console.log(value,'valuevalue');
+  setFilters(prev => ({ ...prev, [key]: value }));
+
+  if (key === 'outcome') {
+    setCallOutcome(value);
+  }
+  if (key === 'flag') {
+    setcallFlag(value);
+  }
+  if (key === 'score') {
+    setcallScore(value);
+  }
+  if (key === 'dept') {
+    setcallDepartment(value);
+  }
+};
 
   const handleDateRangeApply = () => {
     showToast('info', 'Date Range Applied', 'Refreshing data for selected date range...', setToasts);
@@ -1000,7 +1035,7 @@ const Dashboard: React.FC = () => {
     }
 
     // allCalls is already the current page's slice from the backend
-    const rows = allCalls.map(c => {
+    const rows = allCalls.filter(c => c.agentName != null).map(c => {
       const color = agentColor(c.agentIdx);
       const init = initials(c.agentName);
       const dateStr = c.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + c.date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -2994,7 +3029,7 @@ const Dashboard: React.FC = () => {
               <div className="split-main">
                 <div className="filter-row">
                   <select className="filter-select" value={filters.outcome} onChange={(e) => handleFilterChange('outcome', e.target.value)}>
-                    <option value="">All Outcomes</option>
+                    <option value="All Outcome">All Outcomes</option>
                     {OUTCOMES.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
                   <select className="filter-select" value={filters.flag} onChange={(e) => handleFilterChange('flag', e.target.value)}>
@@ -3002,18 +3037,21 @@ const Dashboard: React.FC = () => {
                     {FLAGS.map(f => <option key={f} value={f}>{f}</option>)}
                   </select>
                   <select className="filter-select" value={filters.score} onChange={(e) => handleFilterChange('score', e.target.value)}>
-                    <option value="">All Scores</option>
-                    <option value="red">Red (0–49)</option>
-                    <option value="yellow">Yellow (50–79)</option>
-                    <option value="green">Great (80–100)</option>
+                    <option value="All Scores">All Scores</option>
+                    <option value="0-49">Red (0–49)</option>
+                    <option value="50-79">Yellow (50–79)</option>
+                    <option value="80-100">Great (80–100)</option>
                   </select>
                   <select className="filter-select" value={filters.dept} onChange={(e) => handleFilterChange('dept', e.target.value)}>
-                    <option value="">All Depts</option>
+                    <option value="All Depts">All Depts</option>
                     <option value="Debt Sales">Debt Sales</option>
                     <option value="Verification">Verification</option>
                     <option value="Customer Service">Customer Service</option>
                     <option value="Case Managers">Case Managers</option>
                     <option value="City Financial">City Financial</option>
+                    <option value="SDR">SDR</option>
+                    <option value="Jr Closer">Jr Closer</option>
+                    <option value="Sr Closer">Sr Closer</option>
                   </select>
                   <span className="filter-count">{callFilterCount.toLocaleString()} calls</span>
                 </div>
