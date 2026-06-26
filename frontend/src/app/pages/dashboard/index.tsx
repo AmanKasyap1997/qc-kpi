@@ -77,7 +77,6 @@ interface QaLiveFeedCallWidget {
 }
 interface LeadSource {
   source: string;
-  subId: string;
   campaign: string;
   adSet: string;
   leads: number;
@@ -174,13 +173,13 @@ const FLAGS = ['Early Debt Pitch', 'Skipped Qualifying', 'Early Decline', 'Skipp
 const CLIENTS = ['Cory Sowders', 'Manny Leon', 'Dorian Jenkins', 'James Thompson', 'Maria Rodriguez', 'Linda Chen', 'Robert Williams'];
 
 const LEAD_SOURCES: LeadSource[] = [
-  { source: 'Facebook', subId: 'FB_CL_003_CA_25-45', campaign: 'CityLending_Debt_Mar', adSet: '25-45_Homeowner_CA', leads: 842, contacts: 338, billable: 112, enrolls: 18, avgDeal: 3800, qaAvg: 55.2, score: 74, flag: 'SCALE' },
-  { source: 'Google', subId: 'GGL_DT_001_NAT', campaign: 'DebtRelief_Search', adSet: 'Broad_National', leads: 621, contacts: 211, billable: 68, enrolls: 12, avgDeal: 4200, qaAvg: 58.1, score: 71, flag: 'SCALE' },
-  { source: 'Inbound Web', subId: 'WEB_ORG_001', campaign: 'Organic Traffic', adSet: 'SEO', leads: 289, contacts: 162, billable: 58, enrolls: 8, avgDeal: 3600, qaAvg: 61.0, score: 68, flag: 'SCALE' },
-  { source: 'Facebook', subId: 'FB_CL_007_TX_35-55', campaign: 'CityLending_Debt_Mar', adSet: '35-55_TX_Renter', leads: 388, contacts: 108, billable: 31, enrolls: 3, avgDeal: 2900, qaAvg: 52.4, score: 48, flag: 'WATCH' },
-  { source: 'Aged Lead', subId: 'AGED_Q4_2025_001', campaign: 'Aged List Q4', adSet: '30-60day aged', leads: 201, contacts: 54, billable: 12, enrolls: 1, avgDeal: 2200, qaAvg: 49.8, score: 32, flag: 'KILL' },
-  { source: 'Facebook', subId: 'FB_CL_012_FL_ALL', campaign: 'CityLending_Broad_Mar', adSet: 'All_FL_Ages', leads: 312, contacts: 68, billable: 14, enrolls: 1, avgDeal: 1800, qaAvg: 48.2, score: 28, flag: 'KILL' },
-  { source: 'Google', subId: 'GGL_DT_004_LOC', campaign: 'Local_Debt_Search', adSet: 'Local_CA', leads: 192, contacts: 88, billable: 32, enrolls: 6, avgDeal: 4100, qaAvg: 59.3, score: 69, flag: 'SCALE' },
+  { source: 'Facebook', campaign: 'CityLending_Debt_Mar', adSet: '25-45_Homeowner_CA', leads: 842, contacts: 338, billable: 112, enrolls: 18, avgDeal: 3800, qaAvg: 55.2, score: 74, flag: 'SCALE' },
+  { source: 'Google', campaign: 'DebtRelief_Search', adSet: 'Broad_National', leads: 621, contacts: 211, billable: 68, enrolls: 12, avgDeal: 4200, qaAvg: 58.1, score: 71, flag: 'SCALE' },
+  { source: 'Inbound Web', campaign: 'Organic Traffic', adSet: 'SEO', leads: 289, contacts: 162, billable: 58, enrolls: 8, avgDeal: 3600, qaAvg: 61.0, score: 68, flag: 'SCALE' },
+  { source: 'Facebook', campaign: 'CityLending_Debt_Mar', adSet: '35-55_TX_Renter', leads: 388, contacts: 108, billable: 31, enrolls: 3, avgDeal: 2900, qaAvg: 52.4, score: 48, flag: 'WATCH' },
+  { source: 'Aged Lead', campaign: 'Aged List Q4', adSet: '30-60day aged', leads: 201, contacts: 54, billable: 12, enrolls: 1, avgDeal: 2200, qaAvg: 49.8, score: 32, flag: 'KILL' },
+  { source: 'Facebook', campaign: 'CityLending_Broad_Mar', adSet: 'All_FL_Ages', leads: 312, contacts: 68, billable: 14, enrolls: 1, avgDeal: 1800, qaAvg: 48.2, score: 28, flag: 'KILL' },
+  { source: 'Google', campaign: 'Local_Debt_Search', adSet: 'Local_CA', leads: 192, contacts: 88, billable: 32, enrolls: 6, avgDeal: 4100, qaAvg: 59.3, score: 69, flag: 'SCALE' },
 ];
 
 const CHECKPOINTS_ALL: CheckpointCategory[] = [
@@ -288,6 +287,22 @@ const PAGE_TITLES: Record<string, [string, string]> = {
   'zendesk': ['Zendesk Tickets', 'KPI Board'],
   'conversion-board': ['Conversion Board', 'KPI Board'],
 };
+
+interface LeadAttribution {
+  source: string;
+  total_leads: number;
+  total_calls: number;
+  total_answered_calls: number;
+  total_missed_calls: number;
+  total_credit_pulls: number;
+  total_transfers: number;
+  total_sales: number;
+  close_rate: number;
+  avg_debt_load: number;
+  total_debt_enrolled: number;
+  debt_affiliate: number;
+  debt_inhouse: number;
+}
 
 // ============================================
 // HELPER FUNCTIONS
@@ -450,6 +465,7 @@ const Dashboard: React.FC = () => {
 
   // 1. State to hold dynamic backend data
   const [leaderboardData, setLeaderboardData] = useState<Agent[]>([]);
+  const [leadAttributionData, setLeadAttributionData] = useState<LeadAttribution[]>([]);
   const [isDataLoading, setIsDataLoading] = useState<boolean>(false);
   const [analyticsData, setAnalyticsData] = useState(null);
   const [academyData, setAcademyData] = useState<any[]>([]);
@@ -461,6 +477,53 @@ const Dashboard: React.FC = () => {
   const [selectedDept, setSelectedDept] = React.useState('All Depts');
   const [boardData, setBoardData] = React.useState(null);
   const [sdrAgents, setSdrAgents] = useState<any[]>([]);
+const summary = leadAttributionData.reduce(
+    (acc: any, item: any) => {
+      acc.totalLeads += Number(item.total_leads);
+      acc.totalCalls += Number(item.total_calls);
+      acc.totalAnsweredCalls += Number(item.total_answered_calls);
+      acc.totalMissedCalls += Number(item.total_missed_calls);
+      acc.totalCreditPulls += Number(item.total_credit_pulls);
+      acc.totalTransfers += Number(item.total_transfers);
+      acc.totalSales += Number(item.total_sales);
+      acc.totalDebtLoad += Number(item.avg_debt_load || 0);
+      acc.totalDebtEnrolled += Number(item.total_debt_enrolled);
+      acc.debtAffiliate += Number(item.debt_affiliate);
+      acc.debtInhouse += Number(item.debt_inhouse);
+
+      return acc;
+    },
+    {
+      totalLeads: 0,
+      totalCalls: 0,
+      totalAnsweredCalls: 0,
+      totalMissedCalls: 0,
+      totalCreditPulls: 0,
+      totalTransfers: 0,
+      totalSales: 0,
+      totalDebtLoad: 0,
+      totalDebtEnrolled: 0,
+      debtAffiliate: 0,
+      debtInhouse: 0,
+    }
+  );
+
+  const responseRate =
+    summary.totalLeads > 0
+      ? ((summary.totalCalls / summary.totalLeads) * 100).toFixed(1)
+      : "0.0";
+
+  const closeRate =
+    summary.totalLeads > 0
+      ? ((summary.totalDebtEnrolled / summary.totalLeads) * 100).toFixed(1)
+      : "0.0";
+
+  const avgDebtLoad =
+    leadAttributionData.length > 0
+      ? (
+        summary.totalDebtLoad / leadAttributionData.length
+      ).toFixed(2)
+      : "0.00";
   const [recentActivities, setRecentActivities] = React.useState<Array<{
     id: string;
     icon: string;
@@ -533,16 +596,15 @@ const Dashboard: React.FC = () => {
     if (activePage === 'sdr-pipeline') fetchsdrcloserData();
     if (activePage === 'pips') fetchPipData();
     if (activePage === 'conversion-board') fetchConversionBoardData();
+    if (activePage === 'lead-attribution') fetchLeadAttributionData();
 
   }, [filters, allCalls, activePage, leaderboardMode, leaderboardTime]);
 
   useEffect(() => {
     fetchLiveFeedData();
     fetchLiveFeedwidgetData();
-  }, [callOutcome, callFlag, callScore, callDepartment]);
-
-
-  useEffect(() => {
+  }, [callOutcome,callFlag,callScore,callDepartment]);
+    useEffect(() => {
     socket.on("db_calls_updated", () => {
       console.log("WebSocket event captured! Syncing UI indicators with DB data layers...");
       fetchConversionBoardData();
@@ -551,7 +613,6 @@ const Dashboard: React.FC = () => {
       socket.off("db_calls_updated");
     };
   }, []);
-
   const outcomeCounts = useMemo(() => {
     // 1. Initialize your dynamic counter object with 0s
     const counts = { enrolled: 0, pitch: 0, callback: 0, declined: 0, hotique: 0, };
@@ -677,7 +738,35 @@ const Dashboard: React.FC = () => {
       setIsDataLoading(false);
     }
   }
+  const fetchLeadAttributionData = async () => {
+    try {
+      setIsDataLoading(true);
 
+      const response = await fetch(
+        `${API_URL}/api/dashboard/lead-attribution?mode=${leaderboardMode}&dateFrom=${dateFrom}&dateTo=${dateTo}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      console.log("Lead Attribution:", result);
+
+      if (result.success) {
+        setLeadAttributionData(result.data);
+      } else {
+        console.error(result.message);
+        setLeadAttributionData([]);
+      }
+    } catch (error) {
+      console.error("Error fetching lead attribution data:", error);
+      setLeadAttributionData([]);
+    } finally {
+      setIsDataLoading(false);
+    }
+  };
   const fetchAnalitycsData = async () => {
     try {
       setIsDataLoading(true);
@@ -1336,27 +1425,82 @@ const Dashboard: React.FC = () => {
     ));
   };
 
+
   const renderLeadRows = () => {
-    const data = leadFlagFilter ? LEAD_SOURCES.filter(l => l.flag === leadFlagFilter) : LEAD_SOURCES;
-    return data.map((l, i) => {
-      const contactRate = ((l.contacts / l.leads) * 100).toFixed(1);
-      const billableRate = ((l.billable / l.leads) * 100).toFixed(1);
-      const enrollRate = ((l.enrolls / l.leads) * 100).toFixed(1);
+    return leadAttributionData.map((l: any, i) => {
+      const responseRate =
+        l.total_leads > 0
+          ? ((l.total_calls / l.total_leads) * 100).toFixed(1)
+          : "0.0";
+
       return (
-        <tr key={l.subId}>
+        <tr key={i}>
           <td className="mono text-muted">{i + 1}</td>
+
           <td className="fw-600">{l.source}</td>
-          <td><div className="fs-11 fw-600">{l.subId}</div><div className="fs-10 text-muted">{l.campaign}</div></td>
-          <td className="mono">{l.leads.toLocaleString()}</td>
-          <td className="mono">{l.contacts}</td>
-          <td className={`mono ${parseFloat(contactRate) > 35 ? 'text-green' : parseFloat(contactRate) > 20 ? 'text-gold' : 'text-red'}`}>{contactRate}%</td>
-          <td className={`mono ${parseFloat(billableRate) > 15 ? 'text-green' : parseFloat(billableRate) > 8 ? 'text-gold' : 'text-red'}`}>{billableRate}%</td>
-          <td className={`mono ${l.enrolls > 5 ? 'text-green' : l.enrolls > 0 ? 'text-gold' : 'text-red'}`}>{l.enrolls}</td>
-          <td className={`mono ${parseFloat(enrollRate) > 2 ? 'text-green' : 'text-muted'}`}>{enrollRate}%</td>
-          <td className="mono">${l.avgDeal.toLocaleString()}</td>
-          <td className="mono" style={{ color: scoreColor(l.qaAvg) }}>{l.qaAvg}</td>
-          <td><div className={`lead-score-badge ${l.flag === 'SCALE' ? 'flag-scale' : l.flag === 'WATCH' ? 'flag-watch' : 'flag-kill'}`}>{l.score}</div></td>
-          <td><span className={`scale-kill-badge ${l.flag}`}>{l.flag === 'SCALE' ? '🟢 ' + l.flag : l.flag === 'WATCH' ? '🟡 ' + l.flag : '🔴 ' + l.flag}</span></td>
+
+          <td className="mono">
+            {Number(l.total_leads).toLocaleString()}
+          </td>
+
+          <td
+            className={`mono ${Number(responseRate) >= 80
+                ? "text-green"
+                : Number(responseRate) >= 50
+                  ? "text-gold"
+                  : "text-red"
+              }`}
+          >
+            {responseRate}%
+          </td>
+
+          <td className="mono">
+            {Number(l.total_answered_calls).toLocaleString()}
+          </td>
+
+          <td className="mono">
+            {Number(l.total_missed_calls).toLocaleString()}
+          </td>
+
+          <td className="mono">
+            {Number(l.total_credit_pulls).toLocaleString()}
+          </td>
+
+          <td className="mono">
+            {Number(l.total_transfers).toLocaleString()}
+          </td>
+
+          <td className="mono">
+            $
+            {Number(l.total_sales).toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </td>
+
+          <td className="mono">
+            {Number(l.close_rate).toFixed(2)}%
+          </td>
+
+          <td className="mono">
+            $
+            {Number(l.avg_debt_load || 0).toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </td>
+
+          <td className="mono">
+            {Number(l.total_debt_enrolled).toLocaleString()}
+          </td>
+
+          <td className="mono">
+            {Number(l.debt_affiliate).toLocaleString()}
+          </td>
+
+          <td className="mono">
+            {Number(l.debt_inhouse).toLocaleString()}
+          </td>
         </tr>
       );
     });
@@ -3484,40 +3628,61 @@ const Dashboard: React.FC = () => {
           {/* Lead Attribution Page */}
           <div className={`page ${activePage === 'lead-attribution' ? 'active' : ''}`}>
             <div className="section-hdr">
-              <span className="section-hdr-title">Lead Attribution & Sub ID Tracking</span>
+              <span className="section-hdr-title">Lead Attribution Tracking</span>
               <div className="section-hdr-actions">
-                <div className="lb-toggle">
-                  <button className={`lb-toggle-btn ${leadViewMode === 'source' ? 'active' : ''}`} onClick={() => leadView('source')}>By Source</button>
-                  <button className={`lb-toggle-btn ${leadViewMode === 'subid' ? 'active' : ''}`} onClick={() => leadView('subid')}>By Sub ID</button>
-                </div>
-                <select className="filter-select" onChange={(e) => filterLeads(e.target.value)}>
-                  <option value="">All Flags</option>
-                  <option value="SCALE">🟢 Scale</option>
-                  <option value="WATCH">🟡 Watch</option>
-                  <option value="KILL">🔴 Kill</option>
-                </select>
               </div>
             </div>
             <div style={{ padding: '10px 14px', background: 'var(--bg2)', borderBottom: '1px solid var(--border)', display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <span className="fs-10 text-muted uppercase fw-600" style={{ letterSpacing: '0.06em' }}>Lead Score Weights:</span>
-              <span className="fs-11 text-muted">Contact Rate <strong className="text-gold">25%</strong></span>
-              <span className="fs-11 text-muted">Billable Rate <strong className="text-gold">25%</strong></span>
-              <span className="fs-11 text-muted">Enrollment Rate <strong className="text-gold">20%</strong></span>
-              <span className="fs-11 text-muted">Deal Value <strong className="text-gold">15%</strong></span>
-              <span className="fs-11 text-muted">Call Duration <strong className="text-gold">10%</strong></span>
-              <span className="fs-11 text-muted">QA Score <strong className="text-gold">5%</strong></span>
+
             </div>
-            <div style={{ padding: '14px', display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '12px', borderBottom: '1px solid var(--border)' }}>
-              <div className="stat-card"><div className="stat-card-label">Total Leads</div><div className="stat-val">2,847</div></div>
-              <div className="stat-card"><div className="stat-card-label">Contact Rate</div><div className="stat-val gold">38.2%</div></div>
-              <div className="stat-card"><div className="stat-card-label">Billable Rate</div><div className="stat-val gold">12.4%</div></div>
-              <div className="stat-card"><div className="stat-card-label">Enrollment Rate</div><div className="stat-val green">2.2%</div></div>
-              <div className="stat-card"><div className="stat-card-label">Avg Deal Value</div><div className="stat-val green">$3,840</div></div>
+            <div
+              style={{
+                padding: "14px",
+                display: "grid",
+                gridTemplateColumns: "repeat(5,1fr)",
+                gap: "12px",
+                borderBottom: "1px solid var(--border)",
+              }}
+            >
+              <div className="stat-card">
+                <div className="stat-card-label">Total Leads</div>
+                <div className="stat-val">
+                  {summary.totalLeads.toLocaleString()}
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-card-label">Response Rate</div>
+                <div className="stat-val gold">
+                  {responseRate}%
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-card-label">Answered Calls</div>
+                <div className="stat-val">
+                  {summary.totalAnsweredCalls.toLocaleString()}
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-card-label">Close Rate</div>
+                <div className="stat-val green">
+                  {closeRate}%
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-card-label">Total Sales</div>
+                <div className="stat-val green">
+                  ${summary.totalSales.toLocaleString()}
+                </div>
+              </div>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table className="data-table" style={{ minWidth: '900px' }}>
                 <thead>
-                  <tr><th>#</th><th>Source</th><th>Sub ID / Campaign</th><th>Leads</th><th>Contacts</th><th>Contact Rate</th><th>Billable Rate</th><th>Enrollments</th><th>Enroll Rate</th><th>Avg Deal</th><th>QA Avg</th><th>Lead Score</th><th>Flag</th></tr>
+                  <tr><th>#</th><th>Source</th><th>Total leads</th><th>Total response rate</th><th>Total Answered calls</th><th>Total missed calls</th><th>Total credit pulls</th><th>Total transfers</th><th>Total Sales</th><th>Close Rate</th><th>Avg Debt Load</th><th>Total Debt Enrolled</th><th>Debt Affiliate</th><th>Debt In-house</th></tr>
                 </thead>
                 <tbody>{renderLeadRows()}</tbody>
               </table>

@@ -136,6 +136,111 @@ router.get("/live-feed-widget-data", async (req: Request, res: Response) => {
     }
 });
 
+router.get("/lead-attribution", async (req, res) => {
+    const client = await db.connect();
+
+    try {
+        const { dateFrom, dateTo } = req.query;
+
+        const result = await client.query(
+            `
+            SELECT
+                ls.name AS source,
+
+                COUNT(DISTINCT la.id) AS total_leads,
+
+                COUNT(DISTINCT c.lead_attribution_id) AS total_calls,
+
+                COUNT(DISTINCT CASE
+                    WHEN c.connected = 'Yes'
+                    THEN c.lead_attribution_id
+                END) AS total_answered_calls,
+
+                COUNT(DISTINCT CASE
+                    WHEN c.id IS NULL
+                    THEN la.id
+                END) AS total_missed_calls,
+
+                COUNT(DISTINCT CASE
+                    WHEN la.contact_made = TRUE
+                    THEN la.id
+                END) AS total_credit_pulls,
+
+                COUNT(DISTINCT CASE
+                    WHEN c.outcome = 'Loan Transfer'
+                    THEN c.lead_attribution_id
+                END) AS total_transfers,
+
+                COALESCE(SUM(la.deal_value),0) AS total_sales,
+
+                ROUND(
+                    (
+                        COUNT(DISTINCT CASE
+                            WHEN la.enrolled = TRUE
+                            THEN la.id
+                        END)::numeric
+                        /
+                        NULLIF(COUNT(DISTINCT la.id),0)
+                    ) * 100,
+                    2
+                ) AS close_rate,
+
+                AVG(la.deal_value) AS avg_debt_load,
+
+                COUNT(DISTINCT CASE
+                    WHEN la.enrolled = TRUE
+                    THEN la.id
+                END) AS total_debt_enrolled,
+
+                COUNT(DISTINCT CASE
+                    WHEN la.enrolled = TRUE
+                    AND la.type = 'Affiliate'
+                    THEN la.id
+                END) AS debt_affiliate,
+
+                COUNT(DISTINCT CASE
+                    WHEN la.enrolled = TRUE
+                    AND la.type = 'In-house'
+                    THEN la.id
+                END) AS debt_inhouse
+
+            FROM lead_attributions la
+
+            JOIN lead_sources ls
+                ON ls.id = la.source_id
+
+            LEFT JOIN calls c
+                ON c.lead_attribution_id = la.id
+
+            WHERE
+                ($1::date IS NULL OR la.lead_date >= $1)
+            AND ($2::date IS NULL OR la.lead_date <= $2)
+
+            GROUP BY ls.name
+            ORDER BY ls.name;
+            `,
+            [
+                dateFrom || null,
+                dateTo || null,
+            ]
+        );
+
+        res.json({
+            success: true,
+            data: result.rows,
+        });
+    } catch (err: any) {
+        console.log(err);
+
+        res.status(500).json({
+            success: false,
+            message: err.message,
+        });
+    } finally {
+        client.release();
+    }
+});
+
 router.get("/calls", async (req: Request, res: Response) => {
 
     const client = await db.connect();

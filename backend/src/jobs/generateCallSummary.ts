@@ -79,6 +79,7 @@ interface TranscriptAnalysis {
 interface CallRecord {
     id: number;
     recording_url: string;
+    client_phone: string;
 }
 
 async function sleep(ms: number) {
@@ -369,6 +370,7 @@ export async function generateAiSummary(recordingUrl: string): Promise<{
 
 export async function updateRecordAiData(
     callId: number,
+    clientPhone: string,
     transcript: string,
     analysis: TranscriptAnalysis
 ): Promise<void> {
@@ -381,6 +383,14 @@ export async function updateRecordAiData(
         await client.query(`UPDATE calls SET transcript_details = $2, outcome = $3, next_action = $4, revenue = $5, campaign = $6, updated_at = NOW() WHERE id = $1 `,
             [callId, transcript, analysis.outcome, analysis.nextAction, analysis.enrollmentValue,analysis.campaign]
         );
+        if(analysis.outcome == 'Enrolled'){
+            const getLeadAttributionId = await client.query(`SELECT lead_attribution_id FROM leads WHERE phone = $1 LIMIT 1`,[clientPhone]);
+            if(getLeadAttributionId.rows[0]){
+                await client.query(`UPDATE lead_attributions SET enrolled = $2, enrolled_at = NOW(), deal_value = $3 WHERE id = $1 `,
+                    [getLeadAttributionId.rows[0].lead_attribution_id, true, analysis.enrollmentValue]
+                );
+            }
+        }
 
         // Upsert analytics
         await client.query(`INSERT INTO call_analytics (
@@ -482,7 +492,7 @@ export async function getRecordingRecords(): Promise<CallRecord[]> {
     const client = await db.connect();
 
     try {
-        const result = await client.query(`SELECT id, recording_url FROM calls WHERE recording_url IS NOT NULL AND recording_url <> '' AND transcript_details IS NULL ORDER BY id
+        const result = await client.query(`SELECT id, recording_url, client_phone FROM calls WHERE recording_url IS NOT NULL AND recording_url <> '' AND transcript_details IS NULL ORDER BY id
             LIMIT 10`);
         return result.rows;
     } finally {
@@ -496,6 +506,7 @@ export async function processSingleCall(call: CallRecord): Promise<void> {
         const result = await generateAiSummary(call.recording_url);
         await updateRecordAiData(
             call.id,
+            call.client_phone,
             result.transcript,
             result.analysis
         );
@@ -509,7 +520,7 @@ export async function processSingleCall(call: CallRecord): Promise<void> {
 }
 
 export function processCallRecordingRecords(): void {
-    cron.schedule("*/1 * * * *", async () => {
+    cron.schedule("*/5 * * * *", async () => {
         if (isRunning) {
             console.log(
                 "⛔ Recording processor already running"

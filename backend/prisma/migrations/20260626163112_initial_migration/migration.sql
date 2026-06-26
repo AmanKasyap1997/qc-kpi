@@ -193,12 +193,13 @@ CREATE TABLE "lead_attributions" (
     "source_id" INTEGER,
     "sub_id_id" INTEGER,
     "lead_date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "type" TEXT,
     "contact_made" BOOLEAN NOT NULL DEFAULT false,
     "contact_at" TIMESTAMP(3),
     "billable" BOOLEAN NOT NULL DEFAULT false,
     "enrolled" BOOLEAN NOT NULL DEFAULT false,
     "enrolled_at" TIMESTAMP(3),
-    "dealValue" DECIMAL(10,2),
+    "deal_value" DECIMAL(10,2),
     "program_type" TEXT,
     "agent_id" INTEGER,
     "contact_rate_score" DECIMAL(5,2),
@@ -340,9 +341,6 @@ CREATE INDEX "idx_user_deleted_at" ON "users"("deleted_at");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_tenant_id_key" ON "users"("email", "tenant_id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "agents_email_key" ON "agents"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "agents_phone_key" ON "agents"("phone");

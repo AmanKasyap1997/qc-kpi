@@ -116,7 +116,7 @@ model Agent {
   id Int @id @default(autoincrement())
  
   name  String
-  email String? @unique
+  email String?
   phone String  @unique
  
   departmentId Int? @map("department_id")
@@ -264,6 +264,7 @@ model LeadAttribution {
   subIdId  Int? @map("sub_id_id")
  
   leadDate DateTime @default(now()) @map("lead_date")
+  type String? 
  
   contactMade Boolean   @default(false) @map("contact_made")
   contactAt   DateTime? @map("contact_at")
@@ -273,7 +274,7 @@ model LeadAttribution {
   enrolled   Boolean   @default(false)
   enrolledAt DateTime? @map("enrolled_at")
  
-  dealValue   Decimal? @db.Decimal(10, 2)
+  dealValue   Decimal? @map("deal_value")@db.Decimal(10, 2)
   programType String?  @map("program_type")
  
   agentId Int? @map("agent_id")
