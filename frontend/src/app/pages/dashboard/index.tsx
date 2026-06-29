@@ -1015,6 +1015,7 @@ const Dashboard: React.FC = () => {
     if (activePage === 'sdr-pipeline') { fetchsdrcloserData(); fetchLiveFeedwidgetData(); }
     if (activePage === 'pips') { fetchPipData(); fetchLiveFeedwidgetData(); }
     if (activePage === 'conversion-board') { fetchConversionBoardData(); fetchLiveFeedwidgetData(); }
+    if (activePage === 'lead-attribution') { fetchLeadAttributionData(); fetchLiveFeedwidgetData(); }
 
   };
 
