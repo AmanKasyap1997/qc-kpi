@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { API_URL } from '@/config';
 import { io } from "socket.io-client"; // 1. Import Socket.IO client
 
@@ -449,6 +449,7 @@ const Dashboard: React.FC = () => {
   const [leaderboardMode, setLeaderboardMode] = useState<'agent' | 'campaign'>('agent');
   const [leaderboardTime, setLeaderboardTime] = useState<'1d' | '2w' | '1m'>('1d');
   const [leadViewMode, setLeadViewMode] = useState<'source' | 'subid'>('source');
+  const [leadFlagFilter, setLeadFlagFilter] = useState('');
   const [academyFilter, setAcademyFilter] = useState<'all' | 'exemplar' | 'featured' | 'warning'>('all');
   const [academyDept, setAcademyDept] = useState('');
   const [academyMarker, setAcademyMarker] = useState('');
@@ -476,7 +477,7 @@ const Dashboard: React.FC = () => {
   const [selectedDept, setSelectedDept] = React.useState('All Depts');
   const [boardData, setBoardData] = React.useState(null);
   const [sdrAgents, setSdrAgents] = useState<any[]>([]);
-  const summary = leadAttributionData.reduce(
+const summary = leadAttributionData.reduce(
     (acc: any, item: any) => {
       acc.totalLeads += Number(item.total_leads);
       acc.totalCalls += Number(item.total_calls);
@@ -536,9 +537,6 @@ const Dashboard: React.FC = () => {
   const socket = io(API_URL, {
     transports: ["websocket"] // This disables the repeating HTTP polling requests
   });
-
-  const dateFromRef = useRef(dateFrom);
-  const dateToRef = useRef(dateTo);
 
   const formatPlaybackTime = (seconds: any) => {
     if (!seconds || isNaN(seconds)) return "0:00";
@@ -605,51 +603,16 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     fetchLiveFeedData();
     fetchLiveFeedwidgetData();
-  }, [callOutcome, callFlag, callScore, callDepartment]);
-
-  useEffect(() => {
-    dateFromRef.current = dateFrom;
-    dateToRef.current = dateTo;
-  }, [dateFrom, dateTo]);
-
-  const fetchConversionBoardData = useCallback(async () => {
-    try {
-      setIsDataLoading(true);
-
-      // Always pull the absolute freshest values directly from the refs
-      const currentFrom = dateFromRef.current;
-      const currentTo = dateToRef.current;
-
-      console.log('-- Real-time Fetch Dates --', currentFrom, '---', currentTo);
-
-      const response = await fetch(
-        `${API_URL}/api/dashboard/conversion-board?dateFrom=${currentFrom}&dateTo=${currentTo}`
-      );
-      const result = await response.json();
-      if (result) {
-        setBoardData(result);
-      }
-    } catch (error) {
-      console.error("Error fetching leaderboard data:", error);
-    } finally {
-      setIsDataLoading(false);
-    }
-  }, [API_URL]);
-
-  // 4. Clean WebSocket listener safely separated from UI state volatility
-  useEffect(() => {
-    const handleLiveUpdate = () => {
+  }, [callOutcome,callFlag,callScore,callDepartment]);
+    useEffect(() => {
+    socket.on("db_calls_updated", () => {
       console.log("WebSocket event captured! Syncing UI indicators with DB data layers...");
       fetchConversionBoardData();
-    };
-
-    socket.on("db_calls_updated", handleLiveUpdate);
-
+    });
     return () => {
-      socket.off("db_calls_updated", handleLiveUpdate);
+      socket.off("db_calls_updated");
     };
-  }, [fetchConversionBoardData]);
-
+  }, []);
   const outcomeCounts = useMemo(() => {
     // 1. Initialize your dynamic counter object with 0s
     const counts = { enrolled: 0, pitch: 0, callback: 0, declined: 0, hotique: 0, };
@@ -880,22 +843,22 @@ const Dashboard: React.FC = () => {
       setIsDataLoading(false);
     }
   }
-  // const fetchConversionBoardData = async () => {
-  //   try {
-  //     setIsDataLoading(true);
-  //     console.log('-- dateFrom --', dateFrom, '---', dateTo);
+  const fetchConversionBoardData = async () => {
+    try {
+      setIsDataLoading(true);
+      console.log('-- dateFrom --', dateFrom, '---', dateTo);
 
-  //     const response = await fetch(`${API_URL}/api/dashboard/conversion-board?dateFrom=${dateFrom}&dateTo=${dateTo}`);
-  //     const result = await response.json();
-  //     if (result) {
-  //       setBoardData(result)
-  //     }
-  //   } catch (error) {
-  //     console.error("Error fetching leaderboard data:", error);
-  //   } finally {
-  //     setIsDataLoading(false);
-  //   }
-  // }
+      const response = await fetch(`${API_URL}/api/dashboard/conversion-board?dateFrom=${dateFrom}&dateTo=${dateTo}`);
+      const result = await response.json();
+      if (result) {
+        setBoardData(result)
+      }
+    } catch (error) {
+      console.error("Error fetching leaderboard data:", error);
+    } finally {
+      setIsDataLoading(false);
+    }
+  }
 
   const handleTimePresetClick = (preset: '1d' | '2w' | '1m') => {
     setLeaderboardTime(preset); // Updates your active button state highlights
@@ -1026,13 +989,13 @@ const Dashboard: React.FC = () => {
     showToast('info', 'Date Range Applied', 'Refreshing data for selected date range...', setToasts);
     setCurrentPage(1);
     if (activePage === 'qa-live') { fetchLiveFeedData(1); fetchLiveFeedwidgetData(); }
-    if (activePage === 'zendesk') { fetchZendeskData(); }
-    if (activePage === 'leaderboard') { fetchLeaderBoardData(); }
-    if (activePage === 'analytics') { fetchAnalitycsData(); }
-    if (activePage === 'academy') { fetchAcademyData(); }
-    if (activePage === 'sdr-pipeline') fetchsdrcloserData();
-    if (activePage === 'pips') { fetchPipData(); }
-    if (activePage === 'conversion-board') fetchConversionBoardData();
+    if (activePage === 'zendesk') { fetchZendeskData(); fetchLiveFeedwidgetData();}
+    if (activePage === 'leaderboard') { fetchLeaderBoardData(); fetchLiveFeedwidgetData();}
+    if (activePage === 'analytics') { fetchAnalitycsData(); fetchLiveFeedwidgetData();}
+    if (activePage === 'academy') { fetchAcademyData(); fetchLiveFeedwidgetData();}
+    if (activePage === 'sdr-pipeline') {fetchsdrcloserData(); fetchLiveFeedwidgetData();}
+    if (activePage === 'pips') { fetchPipData(); fetchLiveFeedwidgetData();}
+    if (activePage === 'conversion-board') {fetchConversionBoardData(); fetchLiveFeedwidgetData();}
 
   };
 
@@ -1133,6 +1096,14 @@ const Dashboard: React.FC = () => {
   const showStageDetail = (stage: number) => {
     const labels = ['', 'Week 1: Observe', 'Week 2: Qualify', 'Eval Gate', 'Closer Track'];
     showToast('info', `Stage ${stage}: ${labels[stage]}`, `Click Strategy tab for full stage details.`, setToasts);
+  };
+
+  const leadView = (mode: 'source' | 'subid') => {
+    setLeadViewMode(mode);
+  };
+
+  const filterLeads = (flag: string) => {
+    setLeadFlagFilter(flag);
   };
 
   // ============================================
@@ -1474,10 +1445,10 @@ const Dashboard: React.FC = () => {
 
           <td
             className={`mono ${Number(responseRate) >= 80
-              ? "text-green"
-              : Number(responseRate) >= 50
-                ? "text-gold"
-                : "text-red"
+                ? "text-green"
+                : Number(responseRate) >= 50
+                  ? "text-gold"
+                  : "text-red"
               }`}
           >
             {responseRate}%
@@ -3820,7 +3791,7 @@ const Dashboard: React.FC = () => {
                   <div style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>
                     <div className="split-sidebar-title">Training Collections</div>
                     <div id="academy-collections">
-                      {(academyData as any).collections?.map((col: any) => (
+                      {academyData.collections?.map((col) => (
                         <div
                           key={col.name}
                           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
