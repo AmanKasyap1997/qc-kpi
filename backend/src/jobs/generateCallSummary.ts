@@ -126,8 +126,8 @@ export async function getTranscript(
     console.log("Downloaded:", filePath);
 
     const pythonExe = path.resolve(
-        process.cwd(),
-        "../venv/Scripts/python.exe"
+    process.cwd(),
+    "../venv/bin/python"
     );
 
     const scriptPath = path.resolve(
