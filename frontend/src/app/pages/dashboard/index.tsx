@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { API_URL } from '@/config';
 import { io } from "socket.io-client"; // 1. Import Socket.IO client
 
@@ -477,7 +477,7 @@ const Dashboard: React.FC = () => {
   const [selectedDept, setSelectedDept] = React.useState('All Depts');
   const [boardData, setBoardData] = React.useState(null);
   const [sdrAgents, setSdrAgents] = useState<any[]>([]);
-const summary = leadAttributionData.reduce(
+  const summary = leadAttributionData.reduce(
     (acc: any, item: any) => {
       acc.totalLeads += Number(item.total_leads);
       acc.totalCalls += Number(item.total_calls);
@@ -537,6 +537,9 @@ const summary = leadAttributionData.reduce(
   const socket = io(API_URL, {
     transports: ["websocket"] // This disables the repeating HTTP polling requests
   });
+
+  const dateFromRef = useRef(dateFrom);
+  const dateToRef = useRef(dateTo);
 
   const formatPlaybackTime = (seconds: any) => {
     if (!seconds || isNaN(seconds)) return "0:00";
@@ -603,16 +606,48 @@ const summary = leadAttributionData.reduce(
   useEffect(() => {
     fetchLiveFeedData();
     fetchLiveFeedwidgetData();
-  }, [callOutcome,callFlag,callScore,callDepartment]);
-    useEffect(() => {
-    socket.on("db_calls_updated", () => {
+  }, [callOutcome, callFlag, callScore, callDepartment]);
+  useEffect(() => {
+    dateFromRef.current = dateFrom;
+    dateToRef.current = dateTo;
+  }, [dateFrom, dateTo]);
+
+  // 3. Wrap the data fetcher in a useCallback
+  const fetchConversionBoardData = useCallback(async () => {
+    try {
+      setIsDataLoading(true);
+      const currentFrom = dateFromRef.current;
+      const currentTo = dateToRef.current;
+
+      // console.log('-- Real-time Fetch Dates --', currentFrom, '---', currentTo);
+
+      const response = await fetch(
+        `${API_URL}/api/dashboard/conversion-board?dateFrom=${currentFrom}&dateTo=${currentTo}`
+      );
+      const result = await response.json();
+      if (result) {
+        setBoardData(result);
+      }
+    } catch (error) {
+      console.error("Error fetching leaderboard data:", error);
+    } finally {
+      setIsDataLoading(false);
+    }
+  }, [API_URL]);
+
+  useEffect(() => {
+    const handleLiveUpdate = () => {
       console.log("WebSocket event captured! Syncing UI indicators with DB data layers...");
       fetchConversionBoardData();
-    });
-    return () => {
-      socket.off("db_calls_updated");
     };
-  }, []);
+
+    socket.on("db_calls_updated", handleLiveUpdate);
+
+    return () => {
+      socket.off("db_calls_updated", handleLiveUpdate);
+    };
+  }, [fetchConversionBoardData]);
+
   const outcomeCounts = useMemo(() => {
     // 1. Initialize your dynamic counter object with 0s
     const counts = { enrolled: 0, pitch: 0, callback: 0, declined: 0, hotique: 0, };
@@ -843,22 +878,6 @@ const summary = leadAttributionData.reduce(
       setIsDataLoading(false);
     }
   }
-  const fetchConversionBoardData = async () => {
-    try {
-      setIsDataLoading(true);
-      console.log('-- dateFrom --', dateFrom, '---', dateTo);
-
-      const response = await fetch(`${API_URL}/api/dashboard/conversion-board?dateFrom=${dateFrom}&dateTo=${dateTo}`);
-      const result = await response.json();
-      if (result) {
-        setBoardData(result)
-      }
-    } catch (error) {
-      console.error("Error fetching leaderboard data:", error);
-    } finally {
-      setIsDataLoading(false);
-    }
-  }
 
   const handleTimePresetClick = (preset: '1d' | '2w' | '1m') => {
     setLeaderboardTime(preset); // Updates your active button state highlights
@@ -989,13 +1008,13 @@ const summary = leadAttributionData.reduce(
     showToast('info', 'Date Range Applied', 'Refreshing data for selected date range...', setToasts);
     setCurrentPage(1);
     if (activePage === 'qa-live') { fetchLiveFeedData(1); fetchLiveFeedwidgetData(); }
-    if (activePage === 'zendesk') { fetchZendeskData(); fetchLiveFeedwidgetData();}
-    if (activePage === 'leaderboard') { fetchLeaderBoardData(); fetchLiveFeedwidgetData();}
-    if (activePage === 'analytics') { fetchAnalitycsData(); fetchLiveFeedwidgetData();}
-    if (activePage === 'academy') { fetchAcademyData(); fetchLiveFeedwidgetData();}
-    if (activePage === 'sdr-pipeline') {fetchsdrcloserData(); fetchLiveFeedwidgetData();}
-    if (activePage === 'pips') { fetchPipData(); fetchLiveFeedwidgetData();}
-    if (activePage === 'conversion-board') {fetchConversionBoardData(); fetchLiveFeedwidgetData();}
+    if (activePage === 'zendesk') { fetchZendeskData(); fetchLiveFeedwidgetData(); }
+    if (activePage === 'leaderboard') { fetchLeaderBoardData(); fetchLiveFeedwidgetData(); }
+    if (activePage === 'analytics') { fetchAnalitycsData(); fetchLiveFeedwidgetData(); }
+    if (activePage === 'academy') { fetchAcademyData(); fetchLiveFeedwidgetData(); }
+    if (activePage === 'sdr-pipeline') { fetchsdrcloserData(); fetchLiveFeedwidgetData(); }
+    if (activePage === 'pips') { fetchPipData(); fetchLiveFeedwidgetData(); }
+    if (activePage === 'conversion-board') { fetchConversionBoardData(); fetchLiveFeedwidgetData(); }
 
   };
 
@@ -1445,10 +1464,10 @@ const summary = leadAttributionData.reduce(
 
           <td
             className={`mono ${Number(responseRate) >= 80
-                ? "text-green"
-                : Number(responseRate) >= 50
-                  ? "text-gold"
-                  : "text-red"
+              ? "text-green"
+              : Number(responseRate) >= 50
+                ? "text-gold"
+                : "text-red"
               }`}
           >
             {responseRate}%
