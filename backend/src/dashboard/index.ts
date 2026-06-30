@@ -411,68 +411,114 @@ router.get("/calls", async (req: Request, res: Response) => {
 
 router.get('/leaderboard', async (req: Request, res: Response): Promise<void> => {
     try {
-        const mode = String(req.query.mode || 'all');
         const rawDateFrom = String(req.query.dateFrom || '2026-06-16');
         const rawDateTo = String(req.query.dateTo || '2026-06-18');
+
         const dateFrom = `${rawDateFrom} 00:00:00`;
         const dateTo = `${rawDateTo} 23:59:59`;
 
-        // 1. Super simple SQL query getting only core metrics
         const sqlQuery = `
-            SELECT 
-                a.name AS "name",
-                COALESCE(ca.ai_generated_department, 'Sales') AS "dept",
-                COUNT(c.id) AS "calls",
-                AVG(COALESCE(ca.overall_call_score, 0))::INT AS "avgScore",
-                AVG(COALESCE(c.duration_seconds, 0))::INT AS "avgDurationSeconds",
-                SUM(CASE WHEN c.outcome = 'Enrolled' THEN 1 ELSE 0 END) AS "enrolls",
-                SUM(CASE WHEN jsonb_array_length(COALESCE(ca.flags, '[]'::jsonb)) > 0 THEN 1 ELSE 0 END) AS "flagged"
+            SELECT
+                MAX(a.name) AS "name",
+                LOWER(TRIM(a.email)) AS "email",
+
+                STRING_AGG(
+                    DISTINCT COALESCE(ca.ai_generated_department, 'Sales'),
+                    ', '
+                ) AS "dept",
+
+                COUNT(c.id)::INT AS "calls",
+
+                ROUND(
+                    AVG(COALESCE(ca.overall_call_score, 0))
+                )::INT AS "avgScore",
+
+                ROUND(
+                    AVG(COALESCE(c.duration_seconds, 0))
+                )::INT AS "avgDurationSeconds",
+
+                COUNT(*) FILTER (
+                    WHERE c.outcome = 'Enrolled'
+                )::INT AS "enrolls",
+
+                COUNT(*) FILTER (
+                    WHERE jsonb_array_length(COALESCE(ca.flags, '[]'::jsonb)) > 0
+                )::INT AS "flagged"
+
             FROM calls c
-            LEFT JOIN agents a ON c.agent_id = a.id
-            LEFT JOIN call_analytics ca ON ca.call_id = c.id
-            WHERE c.deleted_at IS NULL and a.name IS NOT NULL
-              AND (c.started_at BETWEEN CAST($1 AS TIMESTAMP) AND CAST($2 AS TIMESTAMP))
-            GROUP BY a.id, a.name, ca.ai_generated_department;
+            INNER JOIN agents a
+                ON a.id = c.agent_id
+
+            LEFT JOIN call_analytics ca
+                ON ca.call_id = c.id
+
+            WHERE
+                c.deleted_at IS NULL
+                AND a.name IS NOT NULL
+                AND a.email IS NOT NULL
+                AND a.email <> ''
+                AND c.started_at BETWEEN $1::TIMESTAMP AND $2::TIMESTAMP
+
+            GROUP BY LOWER(TRIM(a.email))
+
+            ORDER BY "calls" DESC, "avgScore" DESC;
         `;
 
-        const queryParams = [dateFrom, dateTo];
-        const result = await db.query(sqlQuery, queryParams);
+        const result = await db.query(sqlQuery, [dateFrom, dateTo]);
 
-        // 2. Format DB results, falling back to static generation only where missing
         const formattedRows = result.rows.map((row: any) => {
-            const callsCount = Number(row.calls || 0);
-            const enrollsCount = Number(row.enrolls || 0);
-            const flaggedCount = Number(row.flagged || 0);
+            const calls = Number(row.calls || 0);
+            const enrolls = Number(row.enrolls || 0);
+            const flagged = Number(row.flagged || 0);
+            const avgScore = Number(row.avgScore || 0);
+            const avgDurationSeconds = Number(row.avgDurationSeconds || 0);
 
-            // Calculate exact Average Length from db (MM:SS)
-            const avgSecondsTotal = Number(row.avgDurationSeconds || 0);
-            const minutes = Math.floor(avgSecondsTotal / 60);
-            const seconds = String(avgSecondsTotal % 60).padStart(2, '0');
-            const calculatedAvgLen = `${minutes}:${seconds}`;
+            // MM:SS
+            const minutes = Math.floor(avgDurationSeconds / 60);
+            const seconds = String(avgDurationSeconds % 60).padStart(2, '0');
+            const avgLen = `${minutes}:${seconds}`;
 
-            // Calculate exact Flag Rate from live data flags
-            const calculatedFlagRate = callsCount > 0
-                ? Math.round((flaggedCount / callsCount) * 100) + '%'
-                : '0%';
-            const mockEff = (Math.random() * 1.75 + 1.25).toFixed(2) + 'x';
+            const enrollRate = calls > 0
+                ? (enrolls / calls) * 100
+                : 0;
+
+            const flagRate = calls > 0
+                ? (flagged / calls) * 100
+                : 0;
+
+            /**
+             * Efficiency Formula
+             * 50% QA Score
+             * 40% Enrollment Rate
+             * 10% Flag Rate (lower is better)
+             */
+            const efficiency =
+                (avgScore * 0.5) +
+                (enrollRate * 0.4) +
+                ((100 - flagRate) * 0.1);
 
             return {
                 name: row.name,
+                email: row.email,
                 dept: row.dept,
-                score: row.avgScore || 0, // Uses real call quality score average, falls back safely
-                calls: callsCount,
-                enrolls: enrollsCount,
-                avgLen: calculatedAvgLen,
-                eff: mockEff,
-                flagged: flaggedCount,
-                flagRate: calculatedFlagRate
+                score: avgScore,
+                calls,
+                enrolls,
+                avgLen,
+                flagged,
+                flagRate: `${flagRate.toFixed(1)}%`,
+                enrollRate: `${enrollRate.toFixed(1)}%`,
+                eff: `${Math.round(efficiency)}%`
             };
         });
 
         res.status(200).json(formattedRows);
     } catch (error) {
-        console.error("Database query failed:", error);
-        res.status(500).json({ message: "Failed to fetch leaderboard data from DB", error });
+        console.error('Leaderboard Error:', error);
+        res.status(500).json({
+            message: 'Failed to fetch leaderboard',
+            error
+        });
     }
 });
 
