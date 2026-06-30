@@ -207,23 +207,32 @@ export async function getTranscript(
 }
 
 async function analyzeTranscript(transcript: string): Promise<TranscriptAnalysis> {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash",
+        generationConfig: {
+            responseMimeType: "application/json",
+            temperature: 0.2,
+            maxOutputTokens: 16384, // large schema — low caps cause mid-string truncation
+        },
+    });
 
     const prompt = `
 You are a QA analyst for City Financial, a debt relief and lending company.
-Analyze this call transcript and return ONLY a valid JSON object. No markdown, no explanation, no preamble.
+Analyze this call transcript and return ONLY a valid JSON object.
 
 SCORING RULES:
 - callQuality (0-100): rapport, empathy, listening, tone, interruptions (maps to CQ01-CQ12 checkpoints)
-- disclosuresPercentage (0-100): rate of required disclosures delivered (CD01-CD05 are AUTO-FAIL if missed)
+- disclosuresPercentage (0-100): rate of required disclosures delivered
 - compliancePercentage (0-100): overall regulatory compliance
 - overallCallScore (0-100): weighted average — callQuality×0.45 + disclosuresPercentage×0.40 + compliancePercentage×0.15
-- If ANY of CD01-CD05 are 'fail', disclosuresPercentage must be ≤ 40 and overallCallScore ≤ 50
+- Only CD01-CD05 are compliance auto-fail checkpoints. If ANY of CD01-CD05 are 'fail', disclosuresPercentage must be ≤ 40 and overallCallScore ≤ 50.
+- CQ02 (permission to record) is a call-quality checkpoint only. A 'fail' on CQ02 should lower callQuality but must NOT be treated as a compliance auto-fail and must NOT cap overallCallScore.
+- Mark a checkpoint 'fail' ONLY when the transcript gives clear evidence the agent did not do it. If the transcript is ambiguous, silent, or you're inferring from absence in a short excerpt, mark 'na' rather than defaulting to 'fail'. Do not assume failure just because something wasn't explicitly mentioned — only fail on clear, specific violations.
 
 CHECKPOINT IDs to evaluate (return 'pass', 'fail', or 'na'):
-callQualityRapport: CQ01(professional greeting), CQ02(permission to record — AUTO-FAIL), CQ03(stated purpose), CQ04(acknowledged client by name), CQ05(acknowledged financial stress), CQ06(used empathetic statements), CQ07(avoided judgmental language), CQ08(allowed client to explain), CQ09(minimized interruptions), CQ10(asked follow-up questions), CQ11(paraphrased client), CQ12(warm tone throughout)
+callQualityRapport: CQ01(professional greeting), CQ02(permission to record), CQ03(stated purpose), CQ04(acknowledged client by name), CQ05(acknowledged financial stress), CQ06(used empathetic statements), CQ07(avoided judgmental language), CQ08(allowed client to explain), CQ09(minimized interruptions), CQ10(asked follow-up questions), CQ11(paraphrased client), CQ12(warm tone throughout)
 discoveryQualification: DQ01(asked about debt type/amount/status), DQ02(identified client goals), DQ03(explained options), DQ04(explained settlement/litigation), DQ05(avoided jargon), DQ06(set realistic expectations), DQ07(addressed risks/benefits honestly)
-complianceDisclosures: CD01(disclosed NOT debt settlement — AUTO-FAIL), CD02(disclosed NOT credit repair — AUTO-FAIL), CD03(explained lawsuit representation scope — AUTO-FAIL), CD04(obtained consent for soft credit pull — AUTO-FAIL), CD05(verified client identity — AUTO-FAIL), CD06(disclosed credit impact), CD07(disclosed asset repossession risk), CD08(explained settlement responsibility), CD09(clarified payments not to creditors), CD10(explained payments for legal fees), CD11(stopping payments implications), CD12(summons disclosure), CD13(required disclaimers), CD14(no legal/financial guarantees), CD15(avoided prohibited language)
+complianceDisclosures: CD01(disclosed NOT debt settlement — compliance auto-fail), CD02(disclosed NOT credit repair — compliance auto-fail), CD03(explained lawsuit representation scope — compliance auto-fail), CD04(obtained consent for soft credit pull — compliance auto-fail), CD05(verified client identity — compliance auto-fail), CD06(disclosed credit impact), CD07(disclosed asset repossession risk), CD08(explained settlement responsibility), CD09(clarified payments not to creditors), CD10(explained payments for legal fees), CD11(stopping payments implications), CD12(summons disclosure), CD13(required disclaimers), CD14(no legal/financial guarantees), CD15(avoided prohibited language)
 objectionHandlingClose: OH01(acknowledged objections calmly), OH02(provided factual responses), OH03(confidence without pressure), OH04(explained next steps), OH05(confirmed client understanding), OH06(ended with reassurance)
 
 GOOD TRACKERS (return which ones were detected):
@@ -252,6 +261,8 @@ ACADEMY TAG rules:
 - overallCallScore ≥ 82 → "exemplar", collection: "Disclosure Excellence" or "Discovery Masters"
 - overallCallScore ≤ 38 → "warning", collection: "Common Mistakes"
 - null otherwise (do not assign "featured" — that is manual only)
+
+Keep all text fields (callSummary, agentStrengths, agentImprovements, aiInsights, coachingActions) concise — 1-2 sentences each. Do not exceed the lengths implied by the field names.
 
 Return this exact JSON structure:
 {
@@ -308,23 +319,88 @@ Transcript:
 ${transcript}
 `;
 
-    const result = await model.generateContent(prompt);
+    async function callModelOnce(): Promise<string> {
+        const result = await model.generateContent(prompt);
+        const response = result.response;
 
-    let text = result.response.text()
-        .replace(/```json/g, "")
-        .replace(/```/g, "")
-        .trim();
+        const candidate = response.candidates?.[0];
+        const finishReason = candidate?.finishReason;
+
+        if (finishReason === "MAX_TOKENS") {
+            throw new Error("TRUNCATED: model hit maxOutputTokens before completing JSON");
+        }
+        if (finishReason === "SAFETY") {
+            throw new Error("BLOCKED: response blocked by safety filters");
+        }
+        if (finishReason && finishReason !== "STOP") {
+            throw new Error(`UNEXPECTED_FINISH: finishReason=${finishReason}`);
+        }
+
+        const raw = response.text();
+        if (!raw || !raw.trim()) {
+            throw new Error("EMPTY_RESPONSE: model returned no text");
+        }
+
+        return raw
+            .replace(/```json/g, "")
+            .replace(/```/g, "")
+            .trim();
+    }
+
+    let text: string | undefined;
+    let lastErr: Error | undefined;
+
+    // Retry on truncation / parse failure / transient issues — these are
+    // usually non-deterministic generation hiccups, not prompt problems.
+    const MAX_ATTEMPTS = 3;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        try {
+            const candidateText = await callModelOnce();
+            JSON.parse(candidateText); // validate before accepting
+            text = candidateText;
+            break;
+        } catch (err) {
+            lastErr = err as Error;
+            console.warn(
+                `[analyzeTranscript] attempt ${attempt}/${MAX_ATTEMPTS} failed: ${lastErr.message}`
+            );
+            if (attempt < MAX_ATTEMPTS) {
+                await new Promise(r => setTimeout(r, 500 * attempt)); // small backoff
+            }
+        }
+    }
+
+    if (!text) {
+        throw new Error(
+            `Failed to get valid JSON after ${MAX_ATTEMPTS} attempts. Last error: ${lastErr?.message}`
+        );
+    }
 
     const parsed = JSON.parse(text) as TranscriptAnalysis;
 
-    // Enforce AUTO-FAIL scoring on the server side as a safety net
-    const autoFailIds = ['CD01', 'CD02', 'CD03', 'CD04', 'CD05', 'CQ02'];
-    const hasAutoFail = autoFailIds.some(id => {
-        const cat = id.startsWith('CD')
-            ? parsed.checkpointResults?.complianceDisclosures
-            : parsed.checkpointResults?.callQualityRapport;
-        return cat?.[id] === 'fail';
-    });
+    // --- Defensive defaults so downstream code never crashes on missing fields ---
+    parsed.complianceFlags = parsed.complianceFlags ?? [];
+    parsed.riskFlags = parsed.riskFlags ?? [];
+    parsed.flags = parsed.flags ?? [];
+    parsed.goodTrackersHit = parsed.goodTrackersHit ?? [];
+    parsed.badTrackersTriggered = parsed.badTrackersTriggered ?? [];
+    parsed.agentStrengths = parsed.agentStrengths ?? [];
+    parsed.agentImprovements = parsed.agentImprovements ?? [];
+    parsed.aiInsights = parsed.aiInsights ?? [];
+    parsed.coachingActions = parsed.coachingActions ?? [];
+    parsed.checkpointResults = parsed.checkpointResults ?? ({} as any);
+    parsed.checkpointResults.callQualityRapport = parsed.checkpointResults.callQualityRapport ?? {};
+    parsed.checkpointResults.discoveryQualification = parsed.checkpointResults.discoveryQualification ?? {};
+    parsed.checkpointResults.complianceDisclosures = parsed.checkpointResults.complianceDisclosures ?? {};
+    parsed.checkpointResults.objectionHandlingClose = parsed.checkpointResults.objectionHandlingClose ?? {};
+
+    // --- Enforce AUTO-FAIL scoring on the server side — CD01-CD05 ONLY. ---
+    // CQ02 is intentionally excluded: it's a call-quality issue, not a
+    // compliance auto-fail, and must not cap overallCallScore.
+    const complianceAutoFailIds = ['CD01', 'CD02', 'CD03', 'CD04', 'CD05'];
+    const cd = parsed.checkpointResults.complianceDisclosures;
+    const failedAutoFailIds = complianceAutoFailIds.filter(id => cd?.[id] === 'fail');
+    const hasAutoFail = failedAutoFailIds.length > 0;
 
     if (hasAutoFail) {
         parsed.disclosuresPercentage = Math.min(parsed.disclosuresPercentage, 40);
@@ -332,9 +408,15 @@ ${transcript}
         if (!parsed.complianceFlags.includes('AUTO-FAIL triggered')) {
             parsed.complianceFlags.push('AUTO-FAIL triggered');
         }
+        for (const id of failedAutoFailIds) {
+            const flag = `${id} auto-fail`;
+            if (!parsed.complianceFlags.includes(flag)) {
+                parsed.complianceFlags.push(flag);
+            }
+        }
     }
 
-    // Enforce academy tag thresholds
+    // --- Enforce academy tag thresholds ---
     if (parsed.overallCallScore >= 82) {
         parsed.academyTag = 'exemplar';
         if (!parsed.academyCollection) parsed.academyCollection = 'Disclosure Excellence';
@@ -346,8 +428,14 @@ ${transcript}
         parsed.academyCollection = '';
     }
 
-    // Enforce bad tracker count
-    parsed.badTrackerCount = parsed.badTrackersTriggered?.length ?? 0;
+    // --- Derived counts ---
+    parsed.badTrackerCount = parsed.badTrackersTriggered.length;
+
+    const oh = parsed.checkpointResults.objectionHandlingClose;
+    parsed.objectionHandledCount = Object.values(oh ?? {}).filter(v => v === 'pass').length;
+
+    const cdPassCount = complianceAutoFailIds.filter(id => cd?.[id] === 'pass').length;
+    parsed.disclosureAdherence = Math.round((cdPassCount / complianceAutoFailIds.length) * 100);
 
     return parsed;
 }

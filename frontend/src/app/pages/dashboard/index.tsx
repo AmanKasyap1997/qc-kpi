@@ -2983,10 +2983,10 @@ const Dashboard: React.FC = () => {
                 <Eyebrow>Conversions by Hour</Eyebrow>
                 <div className="flex items-end gap-1.5 h-28 mt-4">
                   {(d.hours || []).map((h) => {
-                    const ht = Math.max(4, (h.conv / maxHour) * 100);
+                    const ht = Math.max( (h.conv / maxHour) * 100);
                     return (
                       <div key={h.hour} className="flex-1 flex flex-col items-center gap-1">
-                        <div className="w-full rounded-t-md bg-white/10" style={{ height: `${ht}%` }} />
+                        <div className="w-full rounded-t-md bg-white/10" style={{ height: `${ht}%` }} />{ht}
                         <span className="text-[9px] text-white/30" style={{ fontFamily: MONO }}>{h.hour}</span>
                       </div>
                     );
