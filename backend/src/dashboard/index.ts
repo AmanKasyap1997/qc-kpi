@@ -1,6 +1,7 @@
 import express from "express";
 import { Request, Response } from "express";
 import db from "../db/pool";
+import axios from 'axios';
 const router = express.Router();
 
 
@@ -1300,5 +1301,526 @@ router.get('/conversion-board', async (req: Request, res: Response): Promise<voi
         client.release();
     }
 })
+
+router.get('/dashboard', async (req: Request, res: Response): Promise<void> => {
+    try {
+        // Exact static structure mapped out for the front-end dashboard
+        const dashboardData = {
+            stats: {
+                ongoing: 7,
+                live: 10,
+                convertedToday: 76,
+                totalToday: 96,
+                revenueToday: 3040,
+                revenueLast4h: 1880,
+                revenueLast1h: 1320,
+                revenueYesterday: 2000,
+                liveCapUsed: 76,
+                totalCap: 160
+            },
+            buyerPerformance: [
+                {
+                    id: "byr_nxfi",
+                    name: "NXFI / CITY FB",
+                    number: "(949) 401-9299",
+                    offer: "$40/10 (PPC)",
+                    todayCount: 96,
+                    liveCount: 3,
+                    capUsed: 76,
+                    totalCap: 160,
+                    revenue: 3040
+                }
+            ],
+            liveBreakdown: [
+                { label: "Converted", count: 66, color: "#B8860B", bg: "#FBF3E0" },
+                { label: "Forwarded", count: 10, color: "#0E9F6E", bg: "#E3F5EC" },
+                { label: "Finished", count: 7, color: "#64748B", bg: "#EEF2F6" },
+                { label: "Missed", count: 13, color: "#E5484D", bg: "#FBE7E7" }
+            ]
+        };
+
+        res.status(200).json({
+            success: true,
+            data: dashboardData
+        });
+    } catch (error: any) {
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Internal Server Error'
+        });
+    }
+});
+
+// router.get('/marketing-lines', async (req: Request, res: Response): Promise<void> => {
+//     const client = await db.connect();
+//     const rawDateFrom = String(req.query.dateFrom || '2026-06-16');
+//     const rawDateTo = String(req.query.dateTo || '2026-06-18');
+//     const dateFrom = `${rawDateFrom} 00:00:00`;
+//     const dateTo = `${rawDateTo} 23:59:59`;
+//     try {
+//         const conditions: string[] = [
+//             "ml.deleted_at IS NULL"
+//         ];
+
+//         // $1 = start of today, $2 = end of today
+//         const params: any[] = [dateFrom, dateTo];
+
+//         const whereClause = conditions.join(" AND ");
+
+//         const linesQuery = `
+//             SELECT 
+//                 ml.id,
+//                 ml.name,
+//                 ml.source AS campaignsource,
+//                 ml.did,
+//                 b.name AS "buyerName",
+//                 ml.payout,
+//                 ml.cap_per_day AS "capPerDay",
+//                 ml.active,
+//                 COALESCE(COUNT(c.id), 0)::integer AS "todayTotal",
+//                 COALESCE(SUM(CASE WHEN c.outcome = 'Enrolled' THEN 1 ELSE 0 END), 0)::integer AS "todayConverted"
+
+//             FROM public.marketing_lines ml
+//             LEFT JOIN buyers b ON ml.buyer_id = b.id
+//             LEFT JOIN calls c ON (c.campaign = ml.source) 
+//                              AND c.deleted_at IS NULL 
+//                              AND c.started_at BETWEEN $1::timestamp AND $2::timestamp
+//             WHERE ${whereClause}
+//             GROUP BY ml.id, b.name
+//             ORDER BY ml.id ASC;
+//         `;
+
+//         const linesResult = await client.query(linesQuery, params);
+
+//         const detailedLines = linesResult.rows.map((row: any) => {
+//             const numericPayout = typeof row.payout === 'string'
+//                 ? parseFloat(row.payout.replace(/[^0-9.]/g, ''))
+//                 : row.payout;
+
+//             return {
+//                 id: row.id,
+//                 name: row.name,
+//                 campaignsource: row.campaignsource,
+//                 did: row.did,
+//                 buyerName: row.buyerName || 'unassigned',
+//                 payout: numericPayout || 0,
+//                 todayConverted: row.todayConverted,
+//                 todayTotal: row.todayTotal,
+//                 capPerDay: row.capPerDay,
+//                 active: row.active
+//             };
+//         });
+
+//         // 5. Fetch the dropdown options for active buyers
+//         const buyersQuery = `
+//             SELECT id, name 
+//             FROM buyers 
+//             WHERE deleted_at IS NULL 
+//             AND created_at BETWEEN $1::timestamp AND $2::timestamp;
+//         `;
+
+//         const buyersResult = await client.query(buyersQuery, [dateFrom, dateTo]);
+//         const buyersList = buyersResult.rows;
+
+//         // 6. Return response
+//         res.status(200).json({
+//             success: true,
+//             data: detailedLines,
+//             buyersList: buyersList
+//         });
+
+//     } catch (error: any) {
+//         console.error("GET /marketing-lines error:", error);
+//         res.status(500).json({
+//             success: false,
+//             message: "Internal server error reading pipeline configurations",
+//             error: error.message
+//         });
+//     } finally {
+//         // 7. Safely release connection back to pool
+//         client.release();
+//     }
+// });
+
+router.get('/marketing-lines', async (req: Request, res: Response): Promise<void> => {
+    const client = await db.connect();
+    try {
+        const conditions: string[] = [
+            "ml.deleted_at IS NULL"
+        ];
+        const whereClause = conditions.join(" AND ");
+
+        const linesQuery = `
+            SELECT 
+                ml.id,
+                ml.name,
+                ml.source AS campaignsource,
+                ml.did,
+                COALESCE(SUM(CASE WHEN c.connected = 'Yes' OR c.connected = 'No' THEN 1 ELSE 0 END), 0)::integer AS "callover",
+                ml.payout,
+                ml.cap_per_day AS "capPerDay",
+                ml.active,
+                COALESCE(COUNT(c.id), 0)::integer AS "todayTotal",
+                COALESCE(SUM(CASE WHEN c.outcome = 'Enrolled' THEN 1 ELSE 0 END), 0)::integer AS "todayConverted",
+                COALESCE(SUM(CASE WHEN c.connected = 'No' AND c.outcome ILIKE '%Missed%' THEN 1 ELSE 0 END), 0)::integer AS "todayMissed",
+                COALESCE(SUM(CASE WHEN c.duration_seconds > 0 THEN 1 ELSE 0 END), 0)::integer AS "todayAnswered",
+                COALESCE(AVG(c.duration_seconds), 0)::integer AS "acl"
+            FROM public.marketing_lines ml
+            LEFT JOIN public.agents a ON a.phone = ml.did AND a.deleted_at IS NULL
+            LEFT JOIN public.calls c ON c.agent_id = a.id 
+                                    AND c.deleted_at IS NULL 
+            WHERE ${whereClause}
+            GROUP BY ml.id
+            ORDER BY ml.id ASC;
+        `;
+
+        const linesResult = await client.query(linesQuery);
+
+        const detailedLines = linesResult.rows.map((row: any) => {
+            const numericPayout = typeof row.payout === 'string'
+                ? parseFloat(row.payout.replace(/[^0-9.]/g, ''))
+                : row.payout;
+
+            const payoutValue = numericPayout || 0;
+            const converted = row.todayConverted || 0;
+            const totalCalls = row.todayTotal || 0;
+
+            // Derived Metric Formulas
+            const totalSpent = converted * payoutValue;
+            const callsPerSale = converted > 0 ? (totalCalls / converted).toFixed(1) : '0';
+            const costPerAcquisition = converted > 0 ? (totalSpent / converted).toFixed(2) : '0';
+
+            return {
+                id: row.id,
+                name: row.name,
+                campaignsource: row.campaignsource,
+                did: row.did,
+                buyerName: row.callover || 0,
+                payout: payoutValue,
+                todayConverted: converted,
+                todayTotal: totalCalls,
+                todayMissed: row.todayMissed,
+                todayAnswered: row.todayAnswered,
+                callsPerSale: callsPerSale,
+                acl: row.acl, // in seconds
+                totalSpent: totalSpent,
+                costPerAcquisition: costPerAcquisition,
+                capPerDay: row.capPerDay,
+                active: row.active
+            };
+        });
+
+        // CRITICAL BUG FIX FOR THE BUYER DROPDOWN: 
+        // Removed the strict date filter window so active options show up regardless of when they were created
+        const buyersQuery = `
+            SELECT id, name 
+            FROM buyers 
+            WHERE deleted_at IS NULL;
+        `;
+
+        const buyersResult = await client.query(buyersQuery);
+        const buyersList = buyersResult.rows;
+
+        res.status(200).json({
+            success: true,
+            data: detailedLines,
+            buyersList: buyersList
+        });
+
+    } catch (error: any) {
+        console.error("GET /marketing-lines error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error reading pipeline configurations",
+            error: error.message
+        });
+    } finally {
+        client.release();
+    }
+});
+
+const fetchBuyerName = async (buyerId: number): Promise<number> => {
+    const result = await db.query('SELECT name FROM buyers WHERE id = $1', [buyerId]);
+    return result.rows[0] ? result.rows[0].name : 0;
+};
+
+router.post('/marketing-lines', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { name, campaignsource, did, buyerId, offer, payout, capPerDay } = req.body;
+
+        const sqlInsert = `
+            INSERT INTO marketing_lines (name, source, did, buyer_id, offer, payout, cap_per_day, active)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, true)
+            RETURNING id, name, source, did, buyer_id, offer, payout, cap_per_day, active;
+        `;
+
+        const result = await db.query(sqlInsert, [name, campaignsource, did, buyerId, offer, payout, capPerDay]);
+        const newRow = result.rows[0];
+        const buyerName = await fetchBuyerName(newRow.buyer_id);
+
+        res.status(201).json({
+            success: true,
+            data: {
+                id: newRow.id,
+                name: newRow.name,
+                campaignsource: newRow.source,
+                did: newRow.did,
+                buyerName,
+                payout: newRow.payout,
+                todayConverted: 0,
+                todayTotal: 0,
+                capPerDay: newRow.cap_per_day,
+                active: newRow.active
+            }
+        });
+    } catch (error) {
+        console.error("Database storage exception within POST /marketing-lines:", error);
+        res.status(500).json({ success: false, message: error });
+    }
+});
+
+router.put('/marketing-lines/:id', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const { name, campaignsource, did, buyerId, offer, payout, capPerDay } = req.body;
+
+        const sqlUpdate = `
+      UPDATE marketing_lines 
+      SET name = $1, source = $2, did = $3, buyer_id = $4, offer = $5, payout = $6, cap_per_day = $7, updated_at = NOW()
+      WHERE id = $8 AND deleted_at IS NULL
+      RETURNING id, name, source, did, buyer_id, offer, payout, cap_per_day, active;
+    `;
+
+        const result = await db.query(sqlUpdate, [name, campaignsource, did, buyerId, offer, payout, capPerDay, id]);
+
+        if (result.rows.length === 0) {
+            res.status(404).json({ success: false, message: "Target configuration dataset node not discovered." });
+            return;
+        }
+
+        const updatedRow = result.rows[0];
+        const buyerName = await fetchBuyerName(updatedRow.buyer_id);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                id: updatedRow.id,
+                name: updatedRow.name,
+                campaignsource: updatedRow.source,
+                did: updatedRow.did,
+                buyerName,
+                payout: updatedRow.payout,
+                todayConverted: 0, // Preserve local tracking stats fallback defaults
+                todayTotal: 0,
+                capPerDay: updatedRow.cap_per_day,
+                active: updatedRow.active
+            }
+        });
+    } catch (error) {
+        console.error("Database exception within PUT /marketing-lines:", error);
+        res.status(500).json({ success: false, message: "Internal updating execution database fault." });
+    }
+});
+
+router.delete('/marketing-lines/:id', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+
+        if (!id) {
+            res.status(400).json({ success: false, message: "Buyer parameter identifier missing." });
+            return;
+        }
+
+        const sqlDeleteQuery = `
+                UPDATE marketing_lines 
+                SET deleted_at = NOW(), active = false
+                WHERE id = $1
+                RETURNING id;   
+                `;
+
+        const result = await db.query(sqlDeleteQuery, [id]);
+
+        if (result.rows.length === 0) {
+            res.status(404).json({ success: false, message: "Target records not found." });
+            return;
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Marketing line successfully dropped from the DB."
+        });
+    } catch (error) {
+        console.error("Database connection pool query failure during DELETE processing:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error processing dataset subtraction node."
+        });
+    }
+});
+
+router.get('/buyers', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const sqlQuery = `
+            SELECT id, name, forward_to, offer, payout, lines, cap 
+            FROM buyers 
+            WHERE deleted_at IS NULL
+            ORDER BY created_at DESC;
+        `;
+
+        const result = await db.query(sqlQuery);
+
+        // Map rows cleanly from snake_case to the frontend's camelCase expectations
+        const formattedBuyers = result.rows.map((row: any) => ({
+            id: row.id,
+            name: row.name,
+            forwardTo: row.forward_to, // Normalized for UI state compatibility
+            offer: row.offer,
+            payout: row.payout,
+            lines: row.lines,
+            cap: row.cap
+        }));
+
+        // Dynamic Live Calls Summary total aggregator (or replace with a dynamic aggregate query if tracking live channels)
+        const liveCallsCount = formattedBuyers.reduce((acc: number, b: any) => acc + (b.lines || 0), 0);
+
+        res.status(200).json({
+            success: true,
+            data: formattedBuyers,
+            liveCallsSummary: liveCallsCount || 6
+        });
+    } catch (error) {
+        console.error("Database layer pool query error on GET /buyers:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error fetching real-time buyer streams."
+        });
+    }
+});
+
+router.post('/buyers', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { name, forwardTo, offer, payout, lines, cap } = req.body;
+        if (!name || !forwardTo) {
+            res.status(400).json({ success: false, message: "Missing required fields." });
+            return;
+        }
+        const fallbackOffer = offer || '—';
+        const fallbackCap = cap || '0/80';
+        const computedLines = lines ? parseInt(lines, 10) : 0;
+        const defaultStatus = 'inactive';
+
+        // SQL query mapping camelCase variables to snake_case columns
+        // Note: If using MySQL pool, change $1, $2 to ? tokens
+        const sqlQuery = `
+                        INSERT INTO buyers (name, forward_to, offer, payout, lines, cap, status, created_at)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+                        RETURNING id, name, forward_to, offer, payout, lines, cap;
+        `;
+
+        const queryValues = [
+            name,
+            forwardTo,
+            fallbackOffer,
+            payout,
+            computedLines,
+            fallbackCap,
+            defaultStatus
+        ];
+
+        // Execute through the database pool connection
+        const result = await db.query(sqlQuery, queryValues);
+        const newBuyer = result.rows[0]; // Retaining standard row configuration maps
+
+        res.status(201).json({
+            success: true,
+            data: {
+                id: newBuyer.id,
+                name: newBuyer.name,
+                forwardTo: newBuyer.forward_to, // Normalized back to frontend camelCase expectations
+                offer: newBuyer.offer,
+                payout: newBuyer.payout,
+                lines: newBuyer.lines,
+                cap: newBuyer.cap
+            }
+        });
+    } catch (error) {
+        console.error("Database layer pool query error:", error);
+        res.status(500).json({ success: false, message: "Failed to save buyer data entry." });
+    }
+});
+
+router.put('/buyers/:id', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const { name, forwardTo, offer, payout, cap } = req.body;
+
+        const sqlUpdate = `
+      UPDATE buyers 
+      SET name = $1, forward_to = $2, offer = $3, payout = $4, cap = $5, updated_at = NOW()
+      WHERE id = $6
+      RETURNING id, name, forward_to, offer, payout, lines, cap;
+    `;
+
+        const result = await db.query(sqlUpdate, [name, forwardTo, offer, payout, cap, id]);
+
+        if (result.rows.length === 0) {
+            res.status(404).json({ success: false, message: "Target account records not found." });
+            return;
+        }
+
+        const updatedRow = result.rows[0];
+        res.status(200).json({
+            success: true,
+            data: {
+                id: updatedRow.id,
+                name: updatedRow.name,
+                forwardTo: updatedRow.forward_to,
+                offer: updatedRow.offer,
+                payout: updatedRow.payout,
+                lines: updatedRow.lines,
+                cap: updatedRow.cap
+            }
+        });
+    } catch (error) {
+        console.error("Pool query update exception:", error);
+        res.status(500).json({ success: false, message: "Internal update modification error." });
+    }
+});
+
+router.delete('/buyers/:id', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+
+        if (!id) {
+            res.status(400).json({ success: false, message: "Buyer parameter identifier missing." });
+            return;
+        }
+
+        const sqlDeleteQuery = `
+                UPDATE buyers 
+                SET deleted_at = NOW(), status = 'deleted'
+                WHERE id = $1
+                RETURNING id;
+                `;
+
+        const result = await db.query(sqlDeleteQuery, [id]);
+
+        if (result.rows.length === 0) {
+            res.status(404).json({ success: false, message: "Target account records not found." });
+            return;
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Buyer successfully dropped from the DB."
+        });
+    } catch (error) {
+        console.error("Database connection pool query failure during DELETE processing:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error processing dataset subtraction node."
+        });
+    }
+});
 
 export default router;

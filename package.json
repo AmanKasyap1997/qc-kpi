@@ -17,16 +17,19 @@
     "import:test": "npm run import:test -w backend"
   },
   "devDependencies": {
+    "@types/tough-cookie": "^4.0.5",
     "concurrently": "^10.0.3"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "axios": "^1.18.0",
+    "axios": "^1.18.1",
+    "axios-cookiejar-support": "^7.0.0",
     "dotenv": "^17.4.2",
     "node-cron": "^4.2.1",
     "openai": "^6.44.0",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
+    "tough-cookie": "^6.0.1",
     "winston": "^3.19.0"
   }
 }

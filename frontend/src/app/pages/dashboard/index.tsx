@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { API_URL } from '@/config';
-import { io } from "socket.io-client"; // 1. Import Socket.IO client
+import { io } from "socket.io-client";
+import { Plus, Pencil, Trash2, RefreshCw, X } from 'lucide-react';
 
 // ============================================
 // TYPES
@@ -277,8 +278,19 @@ const PAGE_TITLES: Record<string, [string, string]> = {
   'pips': ['PIPs', 'Performance Improvement Plans'],
   'lead-attribution': ['Lead Attribution', 'Sub ID Tracking'],
   'reports': ['Reports', 'Nightly & Friday Executive'],
-  'zendesk': ['Zendesk Tickets', 'City Call Desk'],
-  'conversion-board': ['Conversion Board', 'City Call Desk'],
+  'accounting': ['Accounting', 'KPI Board'],
+  'debt-board': ['Debt Board', 'KPI Board'],
+  'finance-board': ['Finance Board', 'KPI Board'],
+  'bbb': ['BBB Dashboard', 'KPI Board'],
+  'marketing': ['Marketing KPIs', 'KPI Board'],
+  'tax-debt-backend': ['Tax & Debt Backend', 'KPI Board'],
+  'tax-prep': ['Tax Prep Tracking', 'KPI Board'],
+  'zendesk': ['Zendesk Tickets', 'KPI Board'],
+  'conversion-board': ['Conversion Board', 'KPI Board'],
+  'Dashboard': ['Dashboard', 'City Call Desk'],
+  'marketing-lines': ['Marketing Lines', 'City Call Desk'],
+  'live-calls': ['Live Calls', 'City Call Desk'],
+  'buyers': ['Buyers', 'City Call Desk'],
 };
 
 interface LeadAttribution {
@@ -455,6 +467,15 @@ const Dashboard: React.FC = () => {
   const [callDepartment, setcallDepartment] = useState<string>('All Depts');
   const [dateTo, setDateTo] = useState<string>(getFormattedDateString(-1));
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [lines, setLines] = useState([]);
+  const [buyersList, setBuyersList] = useState([]);
+  const [buyers, setBuyers] = useState<any[]>([]);
+  const [liveCallsCount, setLiveCallsCount] = useState(6);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({ name: '', forwardTo: '', offer: '', payout: '', dailyCap: '' });
+  const [formDataLines, setFormDataLines] = useState({ name: '', Campaignsource: '', did: '', buyerName: '0', offer: '$40/10 (PPC)', payout: '$40', capPerDay: '80' });
+  const [editingId, setEditingId] = useState<number | string | null>(null);
 
   // 1. State to hold dynamic backend data
   const [leaderboardData, setLeaderboardData] = useState<Agent[]>([]);
@@ -593,6 +614,9 @@ const Dashboard: React.FC = () => {
     if (activePage === 'pips') fetchPipData();
     if (activePage === 'conversion-board') fetchConversionBoardData();
     if (activePage === 'lead-attribution') fetchLeadAttributionData();
+    if (activePage === 'dashboard') fetchDashboardData();
+    if (activePage === 'marketing-lines') fetchMarketingLinesData();
+    if (activePage === 'buyers') fetchBuyersData();
 
   }, [filters, allCalls, activePage, leaderboardMode, leaderboardTime]);
 
@@ -793,6 +817,60 @@ const Dashboard: React.FC = () => {
       setLeadAttributionData([]);
     } finally {
       setIsDataLoading(false);
+    }
+  };
+  const fetchDashboardData = async () => {
+    try {
+      setLoadingCalls(true);
+      const response = await fetch(
+        `${API_URL}/api/dashboard/dashboard?dateFrom=${dateFrom}&dateTo=${dateTo}`
+      );
+      const result = await response.json();
+      if (result.success) {
+        setDashboardData(result.data);
+
+      }
+    } catch (err: any) {
+      showToast('critical', 'Database Link Error', err.message || 'Could not fetch call records.', setToasts);
+    } finally {
+      setLoadingCalls(false);
+
+    }
+  };
+  const fetchMarketingLinesData = async () => {
+    try {
+      setIsDataLoading(true);
+      const response = await fetch(
+        `${API_URL}/api/dashboard/marketing-lines`
+      );
+      const res = await response.json();
+      if (res.success) {
+        setLines(res.data);
+        setBuyersList(res.buyersList);
+      }
+    } catch (err: any) {
+      showToast('critical', 'Database Link Error', err.message || 'Could not fetch call records.', setToasts);
+    } finally {
+      setIsDataLoading(false);
+
+    }
+  };
+  const fetchBuyersData = async () => {
+    try {
+      setIsDataLoading(true);
+      const response = await fetch(
+        `${API_URL}/api/dashboard/buyers?dateFrom=${dateFrom}&dateTo=${dateTo}`
+      );
+      const res = await response.json();
+      if (res.success) {
+        setBuyers(res.data);
+        setLiveCallsCount(res.liveCallsSummary || 6);
+      }
+    } catch (err: any) {
+      showToast('critical', 'Database Link Error', err.message || 'Could not fetch call records.', setToasts);
+    } finally {
+      setIsDataLoading(false);
+
     }
   };
   const fetchAnalitycsData = async () => {
@@ -1008,7 +1086,10 @@ const Dashboard: React.FC = () => {
     if (activePage === 'sdr-pipeline') { fetchsdrcloserData(); fetchLiveFeedwidgetData(); }
     if (activePage === 'pips') { fetchPipData(); fetchLiveFeedwidgetData(); }
     if (activePage === 'conversion-board') { fetchConversionBoardData(); fetchLiveFeedwidgetData(); }
-    if (activePage === 'lead-attribution') { fetchLeadAttributionData(); fetchLiveFeedwidgetData(); }
+    if (activePage === 'dashboard') { fetchDashboardData(); fetchLiveFeedwidgetData(); }
+    if (activePage === 'marketing-lines') { fetchMarketingLinesData(); fetchLiveFeedwidgetData(); }
+    // if (activePage === 'live-calls') { fetchMarketingLinesData(); fetchLiveFeedwidgetData(); }
+    if (activePage === 'buyers') { fetchBuyersData(); fetchLiveFeedwidgetData(); }
 
   };
 
@@ -2983,7 +3064,7 @@ const Dashboard: React.FC = () => {
                 <Eyebrow>Conversions by Hour</Eyebrow>
                 <div className="flex items-end gap-1.5 h-28 mt-4">
                   {(d.hours || []).map((h) => {
-                    const ht = Math.max( (h.conv / maxHour) * 100);
+                    const ht = Math.max((h.conv / maxHour) * 100);
                     return (
                       <div key={h.hour} className="flex-1 flex flex-col items-center gap-1">
                         <div className="w-full rounded-t-md bg-white/10" style={{ height: `${ht}%` }} />{ht}
@@ -3051,6 +3132,752 @@ const Dashboard: React.FC = () => {
           </div>
 
         </div>
+      </div>
+    );
+  };
+
+
+  const renderDashboardPage = () => {
+    if (isDataLoading) {
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-slate-50">
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm font-semibold text-slate-500">Syncing dashboard pipelines...</span>
+          </div>
+        </div>
+      );
+    }
+    if (!dashboardData) {
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-slate-50">
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm font-semibold text-slate-500">Syncing dashboard pipelines...</span>
+          </div>
+        </div>
+      );
+    }
+
+
+    const { stats, buyerPerformance, liveBreakdown } = dashboardData;
+
+    const LiveBubble = ({ n }) => {
+      if (!n) return null;
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-[11px] font-bold tracking-wide">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          {n} on call
+        </span>
+      );
+    };
+
+    return (
+      <div className="flex flex-col min-h-screen bg-slate-50">
+        {/* 1. Header Block on Top */}
+        <header className="h-16 shrink-0 bg-white border-b border-slate-200 flex items-center gap-3 px-4 md:px-6">
+          <button className="md:hidden -ml-1 p-2 rounded hover:bg-slate-100">
+            <span className="block w-5 h-0.5 bg-slate-700 mb-1" />
+            <span className="block w-5 h-0.5 bg-slate-700 mb-1" />
+            <span className="block w-5 h-0.5 bg-slate-700" />
+          </button>
+          <h1 className="text-[17px] font-bold tracking-tight text-slate-900">Dashboard</h1>
+          <span className="hidden sm:flex items-center gap-1.5 text-[12px] text-slate-500">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            updated just now
+          </span>
+          <div className="ml-auto flex items-center gap-2">
+            <LiveBubble n={stats.ongoing} />
+          </div>
+        </header>
+
+        {/* 2. Main Dashboard Scrollable Content */}
+        <div className="flex-1 p-4 md:p-6 space-y-6 overflow-y-auto">
+
+          {/* Metric Summary Card Counters */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Card 1: Ongoing Calls */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 relative overflow-hidden">
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500" />
+              <div className="text-[11px] uppercase tracking-wide text-slate-400 font-bold">Ongoing Calls</div>
+              <div style={{ fontFamily: MONO }} className="text-[28px] font-extrabold text-slate-800 mt-1 leading-none">
+                {stats.ongoing}/{stats.live}
+              </div>
+              <div className="text-[11.5px] text-slate-400 mt-2">{stats.live - stats.ongoing} ringing</div>
+            </div>
+
+            {/* Card 2: Converted Today */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 relative overflow-hidden">
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500" />
+              <div className="text-[11px] uppercase tracking-wide text-slate-400 font-bold">Converted Today</div>
+              <div style={{ fontFamily: MONO }} className="text-[28px] font-extrabold text-slate-800 mt-1 leading-none">
+                {stats.convertedToday}/{stats.totalToday}
+              </div>
+              <div className="text-[11.5px] text-slate-400 mt-2">
+                {stats.totalToday > 0 ? Math.round((stats.convertedToday / stats.totalToday) * 100) : 0}% conversion
+              </div>
+            </div>
+
+            {/* Card 3: Revenue Today */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 relative overflow-hidden">
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500" />
+              <div className="text-[11px] uppercase tracking-wide text-slate-400 font-bold">Revenue Today</div>
+              <div style={{ fontFamily: MONO }} className="text-[28px] font-extrabold text-slate-800 mt-1 leading-none">
+                ${stats.revenueToday.toLocaleString()}
+              </div>
+              <div className="text-[11.5px] text-slate-400 mt-2">
+                ${stats.revenueLast4h.toLocaleString()} last 4h
+              </div>
+            </div>
+
+            {/* Card 4: Live Cap Used */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 relative overflow-hidden">
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500" />
+              <div className="text-[11px] uppercase tracking-wide text-slate-400 font-bold">Live Cap Used</div>
+              <div style={{ fontFamily: MONO }} className="text-[28px] font-extrabold text-slate-800 mt-1 leading-none">
+                {stats.liveCapUsed}/{stats.totalCap}
+              </div>
+              <div className="text-[11.5px] text-slate-400 mt-2">across active lines</div>
+            </div>
+          </div>
+
+          {/* Analytics Table and Breakdown Column Grid Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            {/* Left Columns Container Area */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Buyer Performance Panel */}
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                  <h2 className="text-[12px] font-bold uppercase tracking-[0.08em] text-slate-500">Buyer Performance — Today</h2>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[13px]">
+                    <thead>
+                      <tr className="text-left text-slate-400 text-[11px] uppercase tracking-wide border-b border-slate-100 bg-slate-50/50">
+                        <th className="px-5 py-3 font-semibold">Buyer / Offer</th>
+                        <th className="px-3 py-3 font-semibold text-right">Today</th>
+                        <th className="px-3 py-3 font-semibold text-right">Live</th>
+                        <th className="px-3 py-3 font-semibold text-right">Cap</th>
+                        <th className="px-5 py-3 font-semibold text-right">Revenue</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {buyerPerformance.map((buyer) => (
+                        <tr key={buyer.id} className="border-b border-slate-50 hover:bg-slate-50/80 transition-colors">
+                          <td className="px-5 py-4">
+                            <div className="font-bold text-slate-800">{buyer.name}</div>
+                            <div style={{ fontFamily: MONO }} className="text-[11px] text-slate-400 mt-0.5">
+                              {buyer.number} · {buyer.offer}
+                            </div>
+                          </td>
+                          <td className="px-3 py-4 text-right">
+                            <span style={{ fontFamily: MONO }} className="font-semibold text-slate-800">{buyer.todayCount}</span>
+                          </td>
+                          <td className="px-3 py-4 text-right">
+                            <span style={{ fontFamily: MONO }} className="text-emerald-600 font-bold">{buyer.liveCount}</span>
+                          </td>
+                          <td className="px-3 py-4 text-right">
+                            <span style={{ fontFamily: MONO }} className="text-slate-500">{buyer.capUsed}/{buyer.totalCap}</span>
+                          </td>
+                          <td className="px-5 py-4 text-right">
+                            <span style={{ fontFamily: MONO }} className="font-extrabold text-slate-900">${buyer.revenue.toLocaleString()}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Revenue Trend Block */}
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                <h2 className="text-[12px] font-bold uppercase tracking-[0.08em] text-slate-500 mb-4">Revenue Trend — Rolling Windows</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { label: "Today", value: stats.revenueToday, meta: `${stats.convertedToday} converted`, textClass: "text-emerald-600" },
+                    { label: "Last 4h", value: stats.revenueLast4h, meta: "47 converted", textClass: "text-emerald-600" },
+                    { label: "Last 1h", value: stats.revenueLast1h, meta: "33 converted", textClass: "text-emerald-600" },
+                    { label: "Yesterday", value: stats.revenueYesterday, meta: "50 converted", textClass: "text-slate-500" },
+                  ].map((windowItem, idx) => (
+                    <div key={idx} className="rounded-xl bg-slate-50 border border-slate-150 p-4">
+                      <div className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">{windowItem.label}</div>
+                      <span style={{ fontFamily: MONO }} className="block text-[20px] font-extrabold text-slate-800 mt-1.5 mb-0.5">
+                        ${windowItem.value.toLocaleString()}
+                      </span>
+                      <span className={`text-[11px] font-medium ${windowItem.textClass}`}>{windowItem.meta}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Live Summary Sidebar Area Panel */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col justify-between">
+              <div>
+                <h2 className="text-[12px] font-bold uppercase tracking-[0.08em] text-slate-500 mb-4">Live Now</h2>
+
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 py-5 text-center mb-4">
+                  <span style={{ fontFamily: MONO }} className="block text-[42px] font-extrabold text-emerald-600 leading-none">
+                    {stats.live}
+                  </span>
+                  <div className="text-[11px] uppercase tracking-wide font-bold text-emerald-600 mt-1">
+                    calls in progress
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-5">
+                  <div className="rounded-xl bg-slate-50 border border-slate-100 p-3.5 text-center">
+                    <span style={{ fontFamily: MONO }} className="block text-[22px] font-bold text-emerald-600 leading-none">
+                      {stats.ongoing}
+                    </span>
+                    <div className="text-[10px] uppercase tracking-wide font-semibold text-slate-400 mt-1">Connected</div>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 border border-slate-100 p-3.5 text-center">
+                    <span style={{ fontFamily: MONO }} className="block text-[22px] font-bold text-amber-500 leading-none">
+                      {stats.live - stats.ongoing}
+                    </span>
+                    <div className="text-[10px] uppercase tracking-wide font-semibold text-slate-400 mt-1">Ringing</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-2 border-t border-slate-100">
+                {liveBreakdown.map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between text-[13px]">
+                    <span
+                      style={{ color: item.color, background: item.bg }}
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold"
+                    >
+                      {item.label}
+                    </span>
+                    <span style={{ fontFamily: MONO }} className="font-bold text-slate-700">
+                      {item.count}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderMarketingLinePage = () => {
+    const fmtPhone = (p: string) => {
+      const d = p.replace(/\D/g, "").replace(/^1/, "");
+      return d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : p;
+    };
+
+    if (isDataLoading) {
+      return <div className="text-slate-500 text-sm p-6 text-center">Syncing line configuration metrics...</div>;
+    }
+
+    // Open Modal cleanly in Create Mode
+    const handleAddClick = () => {
+      setEditingId(null);
+      setFormDataLines({
+        name: '',
+        Campaignsource: '',
+        did: '',
+        buyerName: '0',
+        // buyerId: '',
+        offer: '$40/10 (PPC)',
+        payout: '$40',
+        capPerDay: '80'
+      });
+      setIsModalOpen(true);
+    };
+
+    // Open Modal cleanly in Edit Mode populated with previous configuration states
+    const handleEditClick = (line: any) => {
+      setEditingId(line.id);
+      setFormDataLines({
+        name: line.name,
+        Campaignsource: line.campaignsource,
+        did: line.did,
+        buyerName: line.buyerName || '0',
+        // buyerId: '',
+        offer: line.offer || '$40/10 (PPC)',
+        payout: typeof line.payout === 'number' ? `$${line.payout} ` : (line.payout?.startsWith('$') ? line.payout : `$${line.payout || '0'}`),
+        capPerDay: line.capPerDay || '80'
+      });
+      setIsModalOpen(true);
+    };
+
+    const closeModal = () => {
+      setIsModalOpen(false);
+      setEditingId(null);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!formDataLines.name || !formDataLines.did) {
+        alert("Please ensure all fields are complete and a buyer has been selected.");
+        return;
+      }
+
+      const targetPayload = {
+        name: formDataLines.name,
+        campaignsource: formDataLines.Campaignsource || '',
+        did: formDataLines.did,
+        // buyerId: Number(formDataLines.buyerId), // Ensure standard database index representation
+        offer: formDataLines.offer || '—',
+        payout: typeof formDataLines.payout === 'number' ? `$${formDataLines.payout}` : (formDataLines.payout?.startsWith('$') ? formDataLines.payout : `$${formDataLines.payout || '0'}`),
+        capPerDay: Number(formDataLines.capPerDay || 0)
+      };
+
+      try {
+        const apiEndpoint = editingId ? `${API_URL}/api/dashboard/marketing-lines/${editingId}` : `${API_URL}/api/dashboard/marketing-lines`;
+        const apiMethod = editingId ? 'PUT' : 'POST';
+
+        const response = await fetch(apiEndpoint, {
+          method: apiMethod,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(targetPayload),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          if (editingId) {
+            // Edit Mode: Replace old instance element immediately
+            setLines(prev => prev.map((l: any) => l.id === editingId ? result.data : l));
+          } else {
+            // Add Mode: Append newly minted element safely
+            setLines(prev => [...prev, result.data]);
+          }
+          closeModal();
+        }
+      } catch (error) {
+        console.error("Critical submission payload network failure:", error);
+      }
+    };
+
+    // 3. DELETE: Drop Account Target Routing Pipeline Node
+    const handleDeleteClick = async (id: number | string) => {
+      if (!window.confirm("Are you sure you want to delete this Marketing Line?")) return;
+
+      try {
+        const response = await fetch(`${API_URL}/api/dashboard/marketing-lines/${id}`, { method: 'DELETE' });
+        const result = await response.json();
+
+        if (result.success) {
+          setLines(prev => prev.filter((l: any) => l.id !== id));
+        }
+      } catch (error) {
+        console.error("Network communication fault dropping tracking target:", error);
+      }
+    };
+
+    return (
+      <div className="space-y-4 flex flex-col min-h-screen bg-[#F8FAFC]">
+        <header className="h-16 shrink-0 bg-white border-b border-slate-200 flex items-center gap-3 px-4 md:px-6">
+          <h1 className="text-[17px] font-bold tracking-tight text-slate-900">Marketing Lines</h1>
+          <span className="text-[12px] text-slate-500 hidden sm:inline">updated 10:05 PM</span>
+          <div className="ml-auto flex items-center gap-2">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="text-[12.5px] font-semibold text-emerald-700" style={{ fontFamily: MONO }}>
+                {liveCallsCount} on call
+              </span>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+          <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+              <h1 className="text-[17px] font-bold tracking-tight text-slate-900">Marketing lines</h1>
+              <button onClick={handleAddClick} className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[12.5px] font-semibold px-3 py-1.5 rounded-md transition-colors">
+                <Plus size={15} /> Add line
+              </button>
+            </div>
+
+            <div className="overflow-x-auto p-5">
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr className="text-left text-slate-400 text-[11px] uppercase tracking-wide border-b border-slate-100 bg-slate-50/50">
+                    <th className="px-4 py-2.5 font-semibold">Line</th>
+                    <th className="px-3 py-2.5 font-semibold">calls Tracking</th>
+                    <th className="px-3 py-2.5 font-semibold">calls over</th>
+                    <th className="px-3 py-2.5 font-semibold text-center">missed calls</th>
+                    <th className="px-3 py-2.5 font-semibold text-center">Answered calls</th>
+                    <th className="px-3 py-2.5 font-semibold">Calls per sales</th>
+                    <th className="px-3 py-2.5 font-semibold text-center">ACL</th>
+                    <th className="px-3 py-2.5 font-semibold">Total spent/Campaign</th>
+                    <th className="px-3 py-2.5 font-semibold">Cost/Acquisition</th>
+                    <th className="px-4 py-2.5 font-semibold text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Replace the matching segment inside your lines.map loop with this block */}
+                  {lines.map((l: any) => (
+                    <tr key={l.id} className="border-b border-slate-50 hover:bg-slate-50/80 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-slate-800">{l.name}</div>
+                        <div className="text-[11px] text-slate-400">{l.campaignsource}</div>
+                      </td>
+                      <td className="px-3 py-3">
+                        <span style={{ fontFamily: MONO }} className="text-slate-700 font-medium">{fmtPhone(l.did)}</span>
+                      </td>
+                      <td className="px-3 py-3 text-slate-600 text-center">
+                        {l.buyerName && (typeof l.buyerName === 'number' ? l.buyerName > 0 : String(l.buyerName).trim().length > 0) ? l.buyerName : 0}
+                      </td>
+
+                      {/* Missed Calls */}
+                      <td className="px-3 py-3 text-center">
+                        <span style={{ fontFamily: MONO }} className="text-red-600 font-medium">{l.todayMissed || 0}</span>
+                      </td>
+
+                      {/* Answered Calls */}
+                      <td className="px-3 py-3 text-center">
+                        <span style={{ fontFamily: MONO }} className="text-emerald-600 font-medium">{l.todayAnswered || 0}</span>
+                      </td>
+
+                      {/* Calls Per Sales */}
+                      <td className="px-3 py-3 text-center">
+                        <span style={{ fontFamily: MONO }} className="text-slate-600">{l.callsPerSale || 0}</span>
+                      </td>
+
+                      {/* ACL (Average Call Length formatted to MM:SS) */}
+                      <td className="px-3 py-3 text-center">
+                        <span style={{ fontFamily: MONO }} className="text-slate-600">
+                          {l.acl ? `${Math.floor(l.acl / 60)}m ${l.acl % 60}s` : '0s'}
+                        </span>
+                      </td>
+
+                      {/* Total Spent / Campaign */}
+                      <td className="px-3 py-3 text-center">
+                        <span style={{ fontFamily: MONO }} className="font-semibold text-slate-800">${l.totalSpent || 0}</span>
+                      </td>
+
+                      {/* Cost / Acquisition */}
+                      <td className="px-3 py-3 text-center">
+                        <span style={{ fontFamily: MONO }} className="text-slate-600">${l.costPerAcquisition || 0}</span>
+                      </td>
+
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex justify-end gap-1">
+                          <button onClick={() => handleEditClick(l)} className="p-1.5 rounded hover:bg-slate-100 text-slate-500 transition-colors"><Pencil size={14} /></button>
+                          <button onClick={() => handleDeleteClick(l.id)} className="p-1.5 rounded hover:bg-red-50 text-red-400 transition-colors"><Trash2 size={14} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </main>
+
+        {/* ─── MODAL DIALOG PORTAL (MATCHING IMAGE_093278) ─── */}
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div onClick={closeModal} className="absolute inset-0 bg-slate-900/40 backdrop-blur-[1px]" />
+            <div className="relative bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                <h3 className="text-[15px] font-bold text-slate-800">
+                  {editingId ? 'Edit marketing line' : 'Add marketing line'}
+                </h3>
+                <button onClick={closeModal} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmit} className="p-5 space-y-4 text-[13px]">
+                {/* LINE NAME */}
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-0.5">Line name</label>
+                  <input type="text" placeholder="City FB — Debt Relief" value={formDataLines.name} onChange={e => setFormDataLines({ ...formDataLines, name: e.target.value })} className="w-full h-10 px-3 bg-white rounded-xl border border-slate-200 focus:border-emerald-500 font-medium text-slate-800 outline-none transition-all shadow-sm text-[13px]" required />
+                  <span className="text-[11px] text-slate-400 mt-0.5 block">What you'll recognize it by</span>
+                </div>
+
+                {/* CAMPAIGN SOURCE */}
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-0.5">Campaign source</label>
+                  <input type="text" placeholder="NXFI/CITY FB - $40/10 (PPC)" value={formDataLines.Campaignsource} onChange={e => setFormDataLines({ ...formDataLines, Campaignsource: e.target.value })} className="w-full h-10 px-3 bg-white rounded-xl border border-slate-200 focus:border-emerald-500 font-medium text-slate-800 outline-none transition-all shadow-sm text-[13px]" required />
+                  <span className="text-[11px] text-slate-400 mt-0.5 block">The traffic source / sub-id</span>
+                </div>
+
+                {/* TRACKING NUMBER (PROVISION INLINE) */}
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-0.5">Tracking number</label>
+                  <div className="flex gap-2">
+                    <input type="number" placeholder="+11234567890" value={formDataLines.did} onChange={e => setFormDataLines({ ...formDataLines, did: e.target.value })} className="flex-1 h-10 px-3 bg-white rounded-xl border border-slate-200 focus:border-emerald-500 font-medium text-slate-800 outline-none transition-all shadow-sm text-[13px]" style={{ fontFamily: MONO }} required />
+                    {/* <button type="button" onClick={handleProvisionNumber} className="h-10 px-3 border border-slate-200 hover:border-slate-300 rounded-xl bg-white flex items-center gap-1.5 font-medium text-slate-700 text-[12.5px] transition-colors shadow-sm whitespace-nowrap">
+                      <RefreshCw size={13} className="text-slate-400" /> Provision
+                    </button> */}
+                  </div>
+                  {/* <span className="text-[11px] text-slate-400 mt-0.5 block">Provision a dedicated DID for this line</span> */}
+                </div>
+
+                {/* BUYER / OFFER MULTI GRID ROW */}
+                <div className="">
+                  {/* <div>
+                    <label className="block font-semibold text-slate-700 mb-0.5">Buyer</label>
+                    <select value={formDataLines.buyerId || ""} onChange={e => setFormDataLines({ ...formDataLines, buyerId: e.target.value })} className="w-full h-10 px-2.5 bg-white rounded-xl border border-slate-200 focus:border-emerald-500 font-medium text-slate-800 outline-none transition-all shadow-sm text-[13px]" required >
+                      <option value="" disabled >Select a buyer</option>
+                      {buyersList && buyersList.map((buyer: any) => (
+                        <option key={buyer.id} value={buyer.id}>
+                          {buyer.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div> */}
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-0.5">Offer</label>
+                    <input type="text" placeholder="$40/10 (PPC)" value={formDataLines.offer} onChange={e => setFormDataLines({ ...formDataLines, offer: e.target.value })} className="w-full h-10 px-3 bg-white rounded-xl border border-slate-200 focus:border-emerald-500 font-medium text-slate-800 outline-none transition-all shadow-sm text-[13px]" />
+                  </div>
+                </div>
+
+                {/* PAYOUT / DAILY CAP EMBEDDED DIV PREFIX (MATCHING IMAGE_FEC537) */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-0.5">Payout per conversion</label>
+                    <div className="flex items-center w-full h-10 px-3 bg-white rounded-xl border border-slate-200 focus-within:border-emerald-500 transition-all shadow-sm overflow-hidden">
+                      <span className="text-slate-400 font-bold mr-1.5">$</span>
+                      <input type="text" placeholder="40" value={formDataLines.payout.replace('$', '')} onChange={e => setFormDataLines({ ...formDataLines, payout: e.target.value })} className="w-full h-full bg-transparent outline-none font-bold text-slate-800 text-[13px]" style={{ fontFamily: MONO }} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-0.5">Daily cap</label>
+                    <input type="number" placeholder="80" value={formDataLines.capPerDay} onChange={e => setFormDataLines({ ...formDataLines, capPerDay: e.target.value })} className="w-full h-10 px-3 bg-white rounded-xl border border-slate-200 focus:border-emerald-500 font-medium text-slate-800 outline-none transition-all shadow-sm text-[13px]" style={{ fontFamily: MONO }} />
+                  </div>
+                </div>
+
+                {/* CONTROLS */}
+                <div className="pt-3 flex gap-3 justify-end items-center">
+                  <button type="button" onClick={closeModal} className="px-4 h-10 rounded-xl text-slate-600 hover:text-slate-800 font-semibold text-[13px] transition-colors">
+                    Cancel
+                  </button>
+                  <button type="submit" className="px-5 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[13px] transition-colors shadow-sm">
+                    {editingId ? 'Update line' : 'Add line'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderBuyersPage = () => {
+    const CloseIcon = ({ size = 18 }: { size?: number }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 6 6 18M6 6l12 12" />
+      </svg>
+    );
+
+    const handleDeleteClick = async (id: number | string) => {
+      if (!window.confirm("Are you sure you want to permanently remove this buyer?")) return;
+
+      try {
+        const response = await fetch(`${API_URL}/api/dashboard/buyers/${id}`, {
+          method: 'DELETE',
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Instantly drop the row from your reactive state array loop on successful database mutation
+          setBuyers((prevBuyers) => prevBuyers.filter((b: any) => b.id !== id));
+        } else {
+          console.error("Backend validation error on delete action:", result.message);
+        }
+      } catch (error) {
+        console.error("Network communication loss with the database pool layer:", error);
+      }
+    };
+
+    const handleEditClick = (buyer: any) => {
+      setEditingId(buyer.id);
+
+      const simpleCap = buyer.cap && buyer.cap.includes('/') ? buyer.cap.split('/')[1] : buyer.cap;
+
+      setFormData({
+        name: buyer.name,
+        forwardTo: buyer.forwardTo,
+        offer: buyer.offer,
+        payout: buyer.payout,
+        dailyCap: simpleCap || ''
+      });
+      setIsModalOpen(true);
+    };
+
+    const closeModal = () => {
+      setIsModalOpen(false);
+      setEditingId(null);
+      setFormData({ name: '', forwardTo: '', offer: '', payout: '40', dailyCap: '50' });
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!formData.name || !formData.forwardTo) return;
+
+      const targetPayload = {
+        name: formData.name,
+        forwardTo: formData.forwardTo,
+        offer: formData.offer || '—',
+        payout: formData.payout.startsWith('$') ? formData.payout : `$${formData.payout || '0'}`,
+        lines: 0,
+        cap: editingId
+          ? `0/${formData.dailyCap || '80'}` // Keeps baseline structure format 
+          : `0/${formData.dailyCap || '80'}`
+      };
+
+      try {
+        const apiEndpoint = editingId ? `${API_URL}/api/dashboard/buyers/${editingId}` : `${API_URL}/api/dashboard/buyers`;
+        const apiMethod = editingId ? 'PUT' : 'POST';
+
+        const response = await fetch(apiEndpoint, {
+          method: apiMethod,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(targetPayload),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          if (editingId) {
+            // Edit Mode: Map update inline over the updated array row
+            setBuyers(prev => prev.map((b: any) => b.id === editingId ? result.data : b));
+          } else {
+            // Add Mode: Append newly minted resource node
+            setBuyers(prev => [...prev, result.data]);
+          }
+          closeModal();
+        }
+      } catch (error) {
+        console.error("Failed handling buyer synchronization submission:", error);
+      }
+    };
+
+
+
+    return (
+      <div className="flex flex-col min-h-screen bg-[#F8FAFC]">
+        {/* Top Banner Header Section */}
+        <header className="h-16 shrink-0 bg-white border-b border-slate-200 flex items-center gap-3 px-4 md:px-6">
+          <h1 className="text-[17px] font-bold tracking-tight text-slate-900">Buyers</h1>
+          <span className="text-[12px] text-slate-500 hidden sm:inline">updated 10:05 PM</span>
+          <div className="ml-auto flex items-center gap-2">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="text-[12.5px] font-semibold text-emerald-700" style={{ fontFamily: MONO }}>
+                {liveCallsCount} on call
+              </span>
+            </div>
+          </div>
+        </header>
+
+        {/* Content Container Body */}
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400">Buyers</h2>
+              <button onClick={() => setIsModalOpen(true)} className="inline-flex items-center gap-1.5 bg-[#059669] hover:bg-[#047857] text-white text-[13px] font-medium px-3 py-1.5 rounded-lg transition-colors">
+                <Plus size={16} /> Add buyer
+              </button>
+            </div>
+
+            {isDataLoading ? (
+              <div className="text-center p-12 text-slate-400 text-xs font-medium">Syncing records from DB...</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-[13px] border-collapse">
+                  <thead>
+                    <tr className="text-left text-slate-400 text-[11px] uppercase tracking-wider border-b border-slate-100 bg-slate-50/30">
+                      <th className="px-6 py-4 font-semibold">Buyer</th>
+                      <th className="px-6 py-4 font-semibold">Forward To</th>
+                      <th className="px-6 py-4 font-semibold">Offer</th>
+                      <th className="px-6 py-4 font-semibold text-right">Payout</th>
+                      <th className="px-6 py-4 font-semibold text-right">Lines</th>
+                      <th className="px-6 py-4 font-semibold text-right">Cap</th>
+                      <th className="px-6 py-4 font-semibold text-center">Edit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {buyers.map((b: any) => (
+                      <tr key={b.id} className="hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-0">
+                        <td className="px-6 py-4 font-bold text-slate-800">{b.name}</td>
+                        <td className="px-6 py-4 text-slate-600" style={{ fontFamily: MONO }}>{b.forwardTo}</td>
+                        <td className="px-6 py-4 text-slate-600">{b.offer}</td>
+                        <td className="px-6 py-4 text-right font-bold text-slate-900" style={{ fontFamily: MONO }}>{b.payout}</td>
+                        <td className="px-6 py-4 text-right text-slate-700" style={{ fontFamily: MONO }}>{b.lines}</td>
+                        <td className="px-6 py-4 text-right text-slate-600" style={{ fontFamily: MONO }}>{b.cap}</td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex items-center justify-center gap-3 text-slate-400">
+                            <button onClick={() => handleEditClick(b)} className="hover:text-slate-600 transition-colors"><Pencil size={15} /></button>
+                            <button onClick={() => handleDeleteClick(b.id)} className="hover:text-red-600 transition-colors"><Trash2 size={15} /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </main>
+
+        {/* Popup Add/Edit Buyer Dialog Modal */}
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div onClick={closeModal} className="absolute inset-0 bg-slate-900/40 backdrop-blur-[1px]" />
+            <div className="relative bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden border border-slate-100">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                {/* Dynamic Header Title Context */}
+                <h3 className="text-[15px] font-bold text-slate-800">
+                  {editingId ? 'Edit buyer' : 'Add buyer'}
+                </h3>
+                <button onClick={closeModal} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-50">
+                  <CloseIcon size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmit} className="p-5 space-y-4 text-[13px]">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Buyer Name</label>
+                  <input type="text" placeholder="NXFI / CITY FB" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full h-10 px-3 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:border-emerald-500 font-medium text-slate-800 outline-none transition-all" required />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Forward To</label>
+                  <input type="number" placeholder="+1 (949) 401-9299" value={formData.forwardTo} onChange={e => setFormData({ ...formData, forwardTo: e.target.value })} className="w-full h-10 px-3 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:border-emerald-500 font-medium text-slate-800 outline-none transition-all" style={{ fontFamily: MONO }} required />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Offer Label</label>
+                  <input type="text" placeholder="$40/10 (PPC)" value={formData.offer} onChange={e => setFormData({ ...formData, offer: e.target.value })} className="w-full h-10 px-3 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:border-emerald-500 font-medium text-slate-800 outline-none transition-all required" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Payout Rate</label>
+                    <div className="flex items-center w-full h-10 px-3 bg-slate-50 rounded-xl border border-slate-200 focus-within:bg-white focus-within:border-emerald-500 transition-all overflow-hidden">
+                      <span className="text-slate-400 font-bold mr-1">$</span>
+                      <input type="number" placeholder="40" value={formData.payout.replace('$', '')} onChange={e => setFormData({ ...formData, payout: `$${e.target.value}` })} className="w-full h-full bg-transparent outline-none font-bold text-slate-800" style={{ fontFamily: MONO }} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Daily Cap Target</label>
+                    <input type="number" placeholder="50" value={formData.dailyCap} onChange={e => setFormData({ ...formData, dailyCap: e.target.value })} className="w-full h-10 px-3 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:border-emerald-500 font-medium text-slate-800 outline-none transition-all" style={{ fontFamily: MONO }} />
+                  </div>
+                </div>
+                <div className="pt-3 flex gap-3">
+                  <button type="button" onClick={closeModal} className="flex-1 h-10 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-500 border border-slate-200 font-semibold transition-colors">
+                    Cancel
+                  </button>
+                  {/* Dynamic Button Action Text */}
+                  <button type="submit" className="flex-1 h-10 rounded-xl bg-[#059669] hover:bg-[#047857] text-white font-semibold transition-colors">
+                    {editingId ? 'Update buyer' : 'Add buyer'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -3127,17 +3954,33 @@ const Dashboard: React.FC = () => {
 
           <div className="nav-section">
             <div className="nav-section-label">City Call Desks</div>
+            <div className={`nav-item ${activePage === 'dashboard' ? 'active' : ''}`} onClick={() => setActivePage('dashboard')}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-layout-dashboard shrink-0" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>
+              Dashboard
+            </div>
             <div className={`nav-item ${activePage === 'conversion-board' ? 'active' : ''}`} onClick={() => setActivePage('conversion-board')}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>
               Conversion Board
+            </div>
+            <div className={`nav-item ${activePage === 'marketing-lines' ? 'active' : ''}`} onClick={() => setActivePage('marketing-lines')}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-radio shrink-0" aria-hidden="true"><path d="M16.247 7.761a6 6 0 0 1 0 8.478"></path><path d="M19.075 4.933a10 10 0 0 1 0 14.134"></path><path d="M4.925 19.067a10 10 0 0 1 0-14.134"></path><path d="M7.753 16.239a6 6 0 0 1 0-8.478"></path><circle cx="12" cy="12" r="2"></circle></svg>
+              Marketing Lines
+            </div>
+            <div className={`nav-item ${activePage === 'live-calls' ? 'active' : ''}`} onClick={() => setActivePage('live-calls')}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-phone-call shrink-0" aria-hidden="true"><path d="M13 2a9 9 0 0 1 9 9"></path><path d="M13 6a5 5 0 0 1 5 5"></path><path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"></path></svg>
+              Live Calls
+            </div>
+            <div className={`nav-item ${activePage === 'buyers' ? 'active' : ''}`} onClick={() => setActivePage('buyers')}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-users shrink-0" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><path d="M16 3.128a4 4 0 0 1 0 7.744"></path><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><circle cx="9" cy="7" r="4"></circle></svg>
+              Buyers
             </div>
             <div className={`nav-item ${activePage === 'zendesk' ? 'active' : ''}`} onClick={() => setActivePage('zendesk')}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" /></svg>
               Zendesk Tickets
             </div>
-
           </div>
         </nav>
+
 
         <div className="sidebar-bottom">
           <div className="user-avatar">NK</div>
@@ -3932,6 +4775,10 @@ const Dashboard: React.FC = () => {
           <div className={`page ${activePage === 'tax-prep' ? 'active' : ''}`}>{renderTaxPrepPage()}</div>
           <div className={`page ${activePage === 'zendesk' ? 'active' : ''}`}>{renderZendeskPage()}</div>
           <div className={`page ${activePage === 'conversion-board' ? 'active' : ''}`}>{renderConversionPage()}</div>
+          <div className={`page ${activePage === 'dashboard' ? 'active' : ''}`}>{renderDashboardPage()}</div>
+          <div className={`page ${activePage === 'marketing-lines' ? 'active' : ''}`}>{renderMarketingLinePage()}</div>
+          <div className={`page ${activePage === 'live-calls' ? 'active' : ''}`}>{ }</div>
+          <div className={`page ${activePage === 'buyers' ? 'active' : ''}`}>{renderBuyersPage()}</div>
         </div>
       </div>
 

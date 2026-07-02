@@ -458,4 +458,43 @@ model ZendeskTicket {
  
   @@map("zendesk_tickets")
 }
- 
+
+model Buyers {
+  id                Int   @id @default(autoincrement())
+  marketing_line_id Int?
+  name              String
+  forward_to        String
+  offer             String
+  payout            String
+  lines             Int
+  cap               String
+  status            String  @default("inactive")
+  created_at        DateTime @default(now())
+  updated_at        DateTime? @updatedAt
+  deleted_at        DateTime?
+
+  @@map("buyers")
+}
+
+
+model MarketingLine {
+  id              Int       @id @default(autoincrement())
+  name            String    
+  source          String    
+  did             String    
+  buyerId         Int?       @map("buyer_id")
+  offer           String?   
+  payout          String    
+  capPerDay       Int       @default(0) @map("cap_per_day")
+  active          Boolean   @default(true)
+  
+  // System Auditing Fields
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime?  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  // Optional: Relational link mapping constraint if you have a Buyer model defined
+  // buyer        Buyer?     @relation(fields: [buyerId], references: [id])
+
+  @@map("marketing_lines") // Enforces plural lowercase naming layout convention in SQL
+}
