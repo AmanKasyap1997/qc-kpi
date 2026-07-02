@@ -39,57 +39,309 @@ router.get("/live-feed-widget-data", async (req: Request, res: Response) => {
     try {
         const dateFrom = req.query.dateFrom as string | undefined;
         const dateTo = req.query.dateTo as string | undefined;
+        const departmentAndTeams = req.query.deptAndTeams;
 
-        const conditions: string[] = ["c.deleted_at IS NULL"];
-        const params: any[] = [];
+        // Base conditions (used for summary/sidebar)
+        const baseConditions: string[] = ["c.deleted_at IS NULL"];
+        const baseParams: any[] = [];
 
+        // Date From
         if (dateFrom) {
-            params.push(dateFrom);
-            conditions.push(`c.started_at >= $${params.length}::date`);
+            baseParams.push(dateFrom);
+            baseConditions.push(`c.started_at >= $${baseParams.length}::date`);
         }
+
+        // Date To
         if (dateTo) {
-            params.push(dateTo);
-            conditions.push(`c.started_at < ($${params.length}::date + INTERVAL '1 day')`);
+            baseParams.push(dateTo);
+            baseConditions.push(
+                `c.started_at < ($${baseParams.length}::date + INTERVAL '1 day')`
+            );
         }
 
-        const whereClause = conditions.join(" AND ");
+        // Copy for filtered queries
+        const conditions = [...baseConditions];
+        const params = [...baseParams];
 
+        // Department filter (ONLY for filtered queries)
+        if (departmentAndTeams && departmentAndTeams !== "null") {
+            let dept: string[] = [];
+
+            const closers = [
+                "Brandon%",
+                "Madynn%",
+                "Mikhail%",
+                "Jon%",
+                "Jacob%",
+                "Christina%",
+                "Jamison%",
+                "Dylan%",
+                "Nissa%",
+                "Asanta%",
+                "Saul%",
+                "Jaylen%",
+                "Manny%"
+            ];
+
+            const sdr = [
+                "Jenny%",
+                "Jayden%",
+                "Angel%",
+                "Mychel%",
+                "Clinton%",
+                "Eddie%",
+                "Leslie%",
+                "Dorian%",
+                "Amber%",
+                "Kevin%"
+            ];
+            const customer = [
+                'Eder%',
+                'Kaila%',
+                'Anna%',
+                'Kristy%'
+            ];
+            const verification = [
+                'Samantha Rodriguez%',
+                'Luis Guerrero%',
+                'Carlos Montero%',
+                'Junior Beriguete%'
+            ];
+            const caseManager = [
+                'Emma%',
+                'Richard%',
+                'Deanna%',
+                'Nicole%',
+                'Yonathan%',
+                'Mayra%'
+            ];
+            const rtc = [
+                'Luis Ogando%',
+            ];
+            const nsf = [
+                'Jefry Ogando%',
+            ];
+            const finance = [
+                'Mayra%',
+                'Danielle%',
+                'Sara%'
+            ];
+
+            if (departmentAndTeams === "Closers") {
+                dept = closers;
+            } else if (departmentAndTeams === "SDRs") {
+                dept = sdr;
+            } else if (departmentAndTeams === "customer") {
+                dept = customer;
+            } else if (departmentAndTeams === "verification") {
+                dept = verification;
+            } else if (departmentAndTeams === "caseManager") {
+                dept = caseManager;
+            } else if (departmentAndTeams === "rtc") {
+                dept = rtc;
+            } else if (departmentAndTeams === "nsf") {
+                dept = nsf;
+            } else if (departmentAndTeams === "finance") {
+                dept = finance;
+            } else if (departmentAndTeams === "All") {
+                dept = [...new Set([...closers, ...sdr])];
+            }
+
+            if (dept.length > 0) {
+                params.push(dept);
+
+                conditions.push(`
+            a.name ILIKE ANY ($${params.length}::text[])
+        `);
+            }
+        }
+
+        const sidebarWhereClause = baseConditions.join(" AND ");
+        const whereClause = conditions.join(" AND ");
         // ── Query 1: summary stats + flags in a single scan via CTE ──────────
         const mainResult = await client.query(
             `
             WITH base AS (
-                SELECT
-                    c.id,
-                    c.outcome,
-                    c.started_at,
-                    COALESCE(ca.overall_call_score, 0)  AS score,
-                    COALESCE(ca.flags::jsonb, '[]'::jsonb) AS flags
-                FROM calls c
-                LEFT JOIN call_analytics ca ON ca.call_id = c.id
-                WHERE ${whereClause} AND c.agent_id IS NOT NULL
-            )
             SELECT
-                COUNT(*) AS "totalCalls",
-                COALESCE(ROUND(AVG(score)::numeric, 2), 0) AS "avgScore",
-                COUNT(*) FILTER (WHERE outcome = 'Enrolled') AS "totalEnrolled",
-                COUNT(*) FILTER (WHERE outcome = 'Debt Pitch') AS "totalPitch",
-                COUNT(*) FILTER (WHERE outcome = 'Callback') AS "totalCallback",
-                COUNT(*) FILTER (WHERE outcome = 'Declined') AS "totalDeclined",
-                COUNT(*) FILTER (WHERE outcome = 'Hotique') AS "totalHotique",
-                COUNT(*) FILTER (WHERE flags @> '["Early Debt Pitch"]'::jsonb) AS "earlyDebtPitch",
-                COUNT(*) FILTER (WHERE flags @> '["Skipped Qualifying"]'::jsonb) AS "skippedQualifying",
-                COUNT(*) FILTER (WHERE flags @> '["Rushed Call"]'::jsonb) AS "rushedCall",
-                COUNT(*) FILTER (WHERE flags @> '["Skipped Credit Pull"]'::jsonb) AS "skippedCreditPull",
-                COUNT(*) FILTER (WHERE flags @> '["Early Decline"]'::jsonb) AS "earlyDecline",
-                COALESCE(
+                c.id,
+                c.outcome,
+                c.started_at,
+                a.name,
+                COALESCE(ca.overall_call_score, 0) AS score,
+                COALESCE(ca.flags::jsonb, '[]'::jsonb) AS flags
+            FROM calls c
+            LEFT JOIN call_analytics ca
+                ON ca.call_id = c.id
+            LEFT JOIN agents a
+                ON a.id = c.agent_id
+            WHERE ${sidebarWhereClause}
+            AND c.agent_id IS NOT NULL
+        ),
+        filtered AS (
+            SELECT *
+            FROM base
+            ${departmentAndTeams && departmentAndTeams !== "null"
+                ? `WHERE name ILIKE ANY ($${params.length}::text[])`
+                : ""
+            }
+        )
+
+        SELECT
+            (SELECT COUNT(*) FROM filtered) AS "totalCalls",
+
+            (SELECT COUNT(*) FROM base) AS "sidebarTotalCalls",
+
+            COUNT(*) FILTER (
+                WHERE
+                    name LIKE 'Brandon%' OR
+                    name LIKE 'Madynn%' OR
+                    name LIKE 'Mikhail%' OR
+                    name LIKE 'Jon%' OR
+                    name LIKE 'Jacob%' OR
+                    name LIKE 'Christina%' OR
+                    name LIKE 'Jamison%' OR
+                    name LIKE 'Dylan%' OR
+                    name LIKE 'Nissa%' OR
+                    name LIKE 'Asanta%' OR
+                    name LIKE 'Saul%' OR
+                    name LIKE 'Jaylen%' OR
+                    name LIKE 'Manny%'
+            ) AS "totalClosersCall",
+
+            COUNT(*) FILTER (
+                WHERE
+                    name LIKE 'Jenny%' OR
+                    name LIKE 'Jayden%' OR
+                    name LIKE 'Angel%' OR
+                    name LIKE 'Mychel%' OR
+                    name LIKE 'Clinton%' OR
+                    name LIKE 'Eddie%' OR
+                    name LIKE 'Leslie%' OR
+                    name LIKE 'Dorian%' OR
+                    name LIKE 'Amber%' OR
+                    name LIKE 'Kevin%'
+            ) AS "totalSDRsCall",
+
+            COUNT(*) FILTER (
+                WHERE
+                    name LIKE 'Eder%' OR
+                    name LIKE 'Kaila%' OR
+                    name LIKE 'Anna%' OR
+                    name LIKE 'Kristy%'
+            ) AS "customerService",
+
+            COUNT(*) FILTER (
+                WHERE
+                    name LIKE 'Samantha Rodriguez%' OR
+                    name LIKE 'Luis Guerrero%' OR
+                    name LIKE 'Carlos Montero%' OR
+                    name LIKE 'Junior Beriguete%'
+            ) AS "Verification",
+
+            COUNT(*) FILTER (
+                WHERE
+                    name LIKE 'Emma%' OR
+                    name LIKE 'Richard%' OR
+                    name LIKE 'Deanna%' OR
+                    name LIKE 'Nicole%' OR
+                    name LIKE 'Yonathan%' OR
+                    name LIKE 'Mayra%'
+            ) AS "caseManagers",
+
+            COUNT(*) FILTER (WHERE name LIKE 'Luis Ogando%') AS "rtc",
+
+            COUNT(*) FILTER (WHERE name LIKE 'Jefry Ogando%') AS "nsf",
+
+            COUNT(*) FILTER (
+                WHERE
+                    name LIKE 'Mayra%' OR
+                    name LIKE 'Danielle%' OR
+                    name LIKE 'Sara%'
+            ) AS "finance",
+
+            COALESCE(
+                (
+                    SELECT ROUND(AVG(score)::numeric, 2)
+                    FROM filtered
+                ),
+                0
+            ) AS "avgScore",
+
+            (
+                SELECT COUNT(*)
+                FROM filtered
+                WHERE outcome = 'Enrolled'
+            ) AS "totalEnrolled",
+
+            (
+                SELECT COUNT(*)
+                FROM filtered
+                WHERE outcome = 'Debt Pitch'
+            ) AS "totalPitch",
+
+            (
+                SELECT COUNT(*)
+                FROM filtered
+                WHERE outcome = 'Callback'
+            ) AS "totalCallback",
+
+            (
+                SELECT COUNT(*)
+                FROM filtered
+                WHERE outcome = 'Declined'
+            ) AS "totalDeclined",
+
+            (
+                SELECT COUNT(*)
+                FROM filtered
+                WHERE outcome = 'Hotique'
+            ) AS "totalHotique",
+
+            (
+                SELECT COUNT(*)
+                FROM filtered
+                WHERE flags @> '["Early Debt Pitch"]'::jsonb
+            ) AS "earlyDebtPitch",
+
+            (
+                SELECT COUNT(*)
+                FROM filtered
+                WHERE flags @> '["Skipped Qualifying"]'::jsonb
+            ) AS "skippedQualifying",
+
+            (
+                SELECT COUNT(*)
+                FROM filtered
+                WHERE flags @> '["Rushed Call"]'::jsonb
+            ) AS "rushedCall",
+
+            (
+                SELECT COUNT(*)
+                FROM filtered
+                WHERE flags @> '["Skipped Credit Pull"]'::jsonb
+            ) AS "skippedCreditPull",
+
+            (
+                SELECT COUNT(*)
+                FROM filtered
+                WHERE flags @> '["Early Decline"]'::jsonb
+            ) AS "earlyDecline",
+
+            (
+                SELECT COALESCE(
                     jsonb_agg(
-                        jsonb_build_object('id', id, 'flags', flags)
+                        jsonb_build_object(
+                            'id', id,
+                            'flags', flags
+                        )
                         ORDER BY started_at DESC
                     ),
                     '[]'::jsonb
-                ) AS "flagsData"
+                )
+                FROM filtered
+            ) AS "flagsData"
 
-            FROM base
+        FROM base;
             `,
             params
         );
@@ -98,20 +350,20 @@ router.get("/live-feed-widget-data", async (req: Request, res: Response) => {
         const agentResult = await client.query(
             `
             SELECT
-                a.id,
-                a.name AS "agentName",
-                COUNT(c.id) AS "totalCalls",
-                ROUND(
-                    SUM(COALESCE(ca.overall_call_score, 0))::numeric
-                    / NULLIF(COUNT(c.id), 0),
-                    2
-                ) AS "avgScore"
-            FROM calls c
-            INNER JOIN agents a  ON a.id  = c.agent_id
-            LEFT  JOIN call_analytics ca ON ca.call_id = c.id
-            WHERE ${whereClause}
-            GROUP BY a.id, a.name
-            ORDER BY "avgScore" DESC, a.name ASC
+            MIN(a.id) AS id,
+            MAX(a.name) AS "agentName",
+            LOWER(TRIM(a.email)) AS "email",
+            COUNT(c.id) AS "totalCalls",
+            ROUND(
+                AVG(COALESCE(ca.overall_call_score, 0))::numeric,
+                2
+            ) AS "avgScore"
+        FROM calls c
+        INNER JOIN agents a ON a.id = c.agent_id
+        LEFT JOIN call_analytics ca ON ca.call_id = c.id
+        WHERE ${whereClause}
+        GROUP BY LOWER(TRIM(a.email))
+        ORDER BY "avgScore" DESC, "agentName" ASC
             `,
             params
         );
@@ -257,6 +509,7 @@ router.get("/calls", async (req: Request, res: Response) => {
         const agentDept = req.query.agentDept as string | undefined;
         const score = req.query.score as string | undefined;
         const outcome = req.query.outcome as string | undefined;
+        const departmentAndTeams = req.query.deptAndTeams;
 
         // Build WHERE clause
         const conditions: string[] = [
@@ -307,9 +560,18 @@ router.get("/calls", async (req: Request, res: Response) => {
                 params.push(max);
                 const maxParam = params.length;
 
-                conditions.push(
-                    `ca.overall_call_score BETWEEN $${minParam} AND $${maxParam}`
-                );
+                if (min === 0) {
+                    conditions.push(`
+                (
+                    ca.call_id IS NULL
+                    OR ca.overall_call_score BETWEEN $${minParam} AND $${maxParam}
+                )
+            `);
+                } else {
+                    conditions.push(`
+                ca.overall_call_score BETWEEN $${minParam} AND $${maxParam}
+            `);
+                }
             }
         }
 
@@ -329,7 +591,100 @@ router.get("/calls", async (req: Request, res: Response) => {
         )
     `);
         }
+        if (
+            departmentAndTeams &&
+            departmentAndTeams !== "null"
+        ) {
+            let dept: string[] = [];
 
+            const closers = [
+                "Brandon%",
+                "Madynn%",
+                "Mikhail%",
+                "Jon%",
+                "Jacob%",
+                "Christina%",
+                "Jamison%",
+                "Dylan%",
+                "Nissa%",
+                "Asanta%",
+                "Saul%",
+                "Jaylen%",
+                "Manny%"
+            ];
+
+            const sdr = [
+                "Jenny%",
+                "Jayden%",
+                "Angel%",
+                "Mychel%",
+                "Clinton%",
+                "Eddie%",
+                "Leslie%",
+                "Dorian%",
+                "Amber%",
+                "Kevin%"
+            ];
+            const customer = [
+                'Eder%',
+                'Kaila%',
+                'Anna%',
+                'Kristy%'
+            ];
+            const verification = [
+                'Samantha Rodriguez%',
+                'Luis Guerrero%',
+                'Carlos Montero%',
+                'Junior Beriguete%'
+            ];
+            const caseManager = [
+                'Emma%',
+                'Richard%',
+                'Deanna%',
+                'Nicole%',
+                'Yonathan%',
+                'Mayra%'
+            ];
+            const rtc = [
+                'Luis Ogando%',
+            ];
+            const nsf = [
+                'Jefry Ogando%',
+            ];
+            const finance = [
+                'Mayra%',
+                'Danielle%',
+                'Sara%'
+            ];
+
+            if (departmentAndTeams === "Closers") {
+                dept = closers;
+            } else if (departmentAndTeams === "SDRs") {
+                dept = sdr;
+            } else if (departmentAndTeams === "customer") {
+                dept = customer;
+            } else if (departmentAndTeams === "verification") {
+                dept = verification;
+            } else if (departmentAndTeams === "caseManager") {
+                dept = caseManager;
+            } else if (departmentAndTeams === "rtc") {
+                dept = rtc;
+            } else if (departmentAndTeams === "nsf") {
+                dept = nsf;
+            } else if (departmentAndTeams === "finance") {
+                dept = finance;
+            } else if (departmentAndTeams === "All") {
+                dept = [...new Set([...closers, ...sdr])];
+            }
+
+            if (dept.length > 0) {
+                params.push(dept);
+
+                conditions.push(`
+            a.name ILIKE ANY ($${params.length}::text[])
+        `);
+            }
+        }
         const whereClause = conditions.join(" AND ");
 
         // Count query for total
@@ -418,15 +773,113 @@ router.get('/leaderboard', async (req: Request, res: Response): Promise<void> =>
         const dateFrom = `${rawDateFrom} 00:00:00`;
         const dateTo = `${rawDateTo} 23:59:59`;
 
+        const departmentMappings = [
+            {
+                department: "Closer",
+                names: [
+                    "Brandon%",
+                    "Madynn%",
+                    "Mikhail%",
+                    "Jon%",
+                    "Jacob%",
+                    "Christina%",
+                    "Jamison%",
+                    "Dylan%",
+                    "Nissa%",
+                    "Asanta%",
+                    "Saul%",
+                    "Jaylen%",
+                    "Manny%"
+                ]
+            },
+            {
+                department: "SDR",
+                names: [
+                    "Jenny%",
+                    "Jayden%",
+                    "Angel%",
+                    "Mychel%",
+                    "Clinton%",
+                    "Eddie%",
+                    "Leslie%",
+                    "Dorian%",
+                    "Amber%",
+                    "Kevin%"
+                ]
+            },
+            {
+                department: "Customer Service",
+                names: [
+                    "Eder%",
+                    "Kaila%",
+                    "Anna%",
+                    "Kristy%"
+                ]
+            },
+            {
+                department: "Verification",
+                names: [
+                    "Samantha Rodriguez%",
+                    "Luis Guerrero%",
+                    "Carlos Montero%",
+                    "Junior Beriguete%"
+                ]
+            },
+            {
+                department: "Case Manager",
+                names: [
+                    "Emma%",
+                    "Richard%",
+                    "Deanna%",
+                    "Nicole%",
+                    "Yonathan%",
+                    "Mayra%"
+                ]
+            },
+            {
+                department: "RTC",
+                names: [
+                    "Luis Ogando%"
+                ]
+            },
+            {
+                department: "NSF",
+                names: [
+                    "Jefry Ogando%"
+                ]
+            },
+            {
+                department: "Finance",
+                names: [
+                    "Danielle%",
+                    "Sara%"
+                ]
+            }
+        ];
+
+        const getDepartment = (name: string): string => {
+            if (!name) return "Sales";
+
+            const lowerName = name.trim().toLowerCase();
+
+            for (const mapping of departmentMappings) {
+                const matched = mapping.names.some(pattern => {
+                    const prefix = pattern.replace(/%$/, "").toLowerCase();
+                    return lowerName.startsWith(prefix);
+                });
+
+                if (matched) {
+                    return mapping.department;
+                }
+            }
+
+            return "Sales";
+        };
+
         const sqlQuery = `
             SELECT
                 MAX(a.name) AS "name",
                 LOWER(TRIM(a.email)) AS "email",
-
-                STRING_AGG(
-                    DISTINCT COALESCE(ca.ai_generated_department, 'Sales'),
-                    ', '
-                ) AS "dept",
 
                 COUNT(c.id)::INT AS "calls",
 
@@ -474,7 +927,6 @@ router.get('/leaderboard', async (req: Request, res: Response): Promise<void> =>
             const avgScore = Number(row.avgScore || 0);
             const avgDurationSeconds = Number(row.avgDurationSeconds || 0);
 
-            // MM:SS
             const minutes = Math.floor(avgDurationSeconds / 60);
             const seconds = String(avgDurationSeconds % 60).padStart(2, '0');
             const avgLen = `${minutes}:${seconds}`;
@@ -487,12 +939,6 @@ router.get('/leaderboard', async (req: Request, res: Response): Promise<void> =>
                 ? (flagged / calls) * 100
                 : 0;
 
-            /**
-             * Efficiency Formula
-             * 50% QA Score
-             * 40% Enrollment Rate
-             * 10% Flag Rate (lower is better)
-             */
             const efficiency =
                 (avgScore * 0.5) +
                 (enrollRate * 0.4) +
@@ -501,7 +947,7 @@ router.get('/leaderboard', async (req: Request, res: Response): Promise<void> =>
             return {
                 name: row.name,
                 email: row.email,
-                dept: row.dept,
+                dept: getDepartment(row.name),
                 score: avgScore,
                 calls,
                 enrolls,
@@ -514,8 +960,10 @@ router.get('/leaderboard', async (req: Request, res: Response): Promise<void> =>
         });
 
         res.status(200).json(formattedRows);
+
     } catch (error) {
         console.error('Leaderboard Error:', error);
+
         res.status(500).json({
             message: 'Failed to fetch leaderboard',
             error

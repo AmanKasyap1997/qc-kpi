@@ -52,8 +52,8 @@ app.get("/health", (_req, res) => {
   });
 });
 
-startAgentSyncJob();
-processCallRecordingRecords();
+// startAgentSyncJob();
+// processCallRecordingRecords();
 
 app.use(errorHandler);
 
