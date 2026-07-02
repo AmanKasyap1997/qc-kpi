@@ -1463,7 +1463,7 @@ router.get('/marketing-lines', async (req: Request, res: Response): Promise<void
                 COALESCE(COUNT(c.id), 0)::integer AS "todayTotal",
                 COALESCE(SUM(CASE WHEN c.outcome = 'Enrolled' THEN 1 ELSE 0 END), 0)::integer AS "todayConverted",
                 COALESCE(SUM(CASE WHEN c.connected = 'No' AND c.outcome ILIKE '%Missed%' THEN 1 ELSE 0 END), 0)::integer AS "todayMissed",
-                COALESCE(SUM(CASE WHEN c.duration_seconds > 0 THEN 1 ELSE 0 END), 0)::integer AS "todayAnswered",
+                COALESCE(SUM(CASE WHEN c.connected = 'Yes' AND c.duration_seconds > 0 THEN 1 ELSE 0 END), 0)::integer AS "todayAnswered",
                 COALESCE(AVG(c.duration_seconds), 0)::integer AS "acl"
             FROM public.marketing_lines ml
             LEFT JOIN public.agents a ON a.phone = ml.did AND a.deleted_at IS NULL
